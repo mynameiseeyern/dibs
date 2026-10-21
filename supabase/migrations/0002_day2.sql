@@ -25,3 +25,17 @@ language sql stable security definer set search_path = public as $$
 $$;
 
 alter publication supabase_realtime add table bills, bill_shares;
+
+-- One vote per person per plan: voting again moves your vote.
+create or replace function one_vote_per_plan() returns trigger language plpgsql as $$
+begin
+  delete from votes v
+  using options o_new, options o_old
+  where o_new.id = new.option_id
+    and o_old.id = v.option_id
+    and o_old.plan_id = o_new.plan_id
+    and v.member_id = new.member_id
+    and v.option_id <> new.option_id;
+  return new;
+end $$;
+create trigger one_vote_per_plan before insert on votes for each row execute function one_vote_per_plan();
