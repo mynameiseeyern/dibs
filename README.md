@@ -17,7 +17,7 @@ the whole flow locally. With keys, organisers sign in by magic link and everythi
 ## Set up Supabase (Sydney)
 
 1. New project in `ap-southeast-2`.
-2. SQL editor: run `supabase/migrations/0001_init.sql`.
+2. SQL editor: paste and run `supabase/setup.sql` (all migrations in one go).
 3. Auth > URL configuration: add `http://localhost:3000/auth/callback` and your domain's `/auth/callback`.
 4. Copy the URL, anon key and service role key into `apps/web/.env.local`, plus `GUEST_COOKIE_SECRET` (`openssl rand -hex 32`).
 
@@ -29,3 +29,9 @@ the whole flow locally. With keys, organisers sign in by magic link and everythi
 - `supabase/migrations` — schema, row-level security, PayID and settle-up functions
 
 Build plan: https://claude.ai/artifact/2Lce9vh9ZvGunTKngL6sWX
+
+## Deploy on Vercel
+
+Import the GitHub repo, set **Root Directory** to `apps/web` (Vercel picks up pnpm and the workspace),
+add the same env vars as `.env.local` with `NEXT_PUBLIC_SITE_URL` set to your domain, and deploy.
+Functions run in Sydney (`apps/web/vercel.json`).
