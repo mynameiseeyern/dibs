@@ -1,10 +1,12 @@
-// Shared row types. Mirrors supabase/migrations/0001_init.sql.
+// Shared row types. Mirrors supabase/migrations.
 // Replace with `supabase gen types typescript` once the project is linked.
 
 export type Vibe = "chill" | "extra" | "straight";
 export type PlanStatus = "voting" | "locked" | "wrapped" | "cancelled";
 export type Role = "organiser" | "cohost" | "guest";
 export type Rsvp = "in" | "maybe" | "out";
+export type SplitMode = "even" | "amount" | "percent" | "exclude" | "roulette";
+export type ShareStatus = "owed" | "says_paid" | "confirmed";
 
 export interface Plan {
   id: string;
@@ -41,5 +43,55 @@ export interface PlanMember {
   joined_at: string;
 }
 
+export interface PlanOption {
+  id: string;
+  plan_id: string;
+  kind: "venue" | "activity";
+  place_id: string | null;
+  label: string;
+  note: string | null;
+  added_by: string | null;
+  created_at: string;
+}
+
+export interface Vote {
+  option_id: string;
+  member_id: string;
+}
+
+export interface Message {
+  id: string;
+  plan_id: string;
+  member_id: string | null;
+  kind: "text" | "dibby" | "system";
+  body: string;
+  mentions_dibby: boolean;
+  created_at: string;
+}
+
+export interface Bill {
+  id: string;
+  plan_id: string;
+  payer_member_id: string;
+  title: string;
+  total_cents: number;
+  currency: string;
+  split_mode: SplitMode;
+  seed: string;
+  roulette_loser_id: string | null;
+  roulette_entrants: string[];
+  created_at: string;
+}
+
+export interface BillShare {
+  bill_id: string;
+  member_id: string;
+  amount_cents: number;
+  status: ShareStatus;
+  says_paid_at: string | null;
+  confirmed_at: string | null;
+}
+
 export const MONOGRAM_COLOURS = ["violet", "lime", "sun", "mint", "tangerine"] as const;
 export type MonogramColour = (typeof MONOGRAM_COLOURS)[number];
+

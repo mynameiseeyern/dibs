@@ -1,7 +1,7 @@
 import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { makeSlug, pickColour } from "@dibs/shared/plans";
-import type { NewMember, NewPlan, Plan, PlanMember, Store } from "./types";
+import type { Bill, BillShare, Message, NewMember, NewPlan, Plan, PlanMember, PlanOption, Store, Vote } from "./types";
 
 // Server-side Supabase store using the service key. Every caller checks access first
 // (lib/viewer.ts); row-level security still protects anything the browser reads directly.
@@ -97,5 +97,70 @@ export const supabaseStore: Store = {
   },
   async updateMember(memberId, patch) {
     must(await admin().from("plan_members").update(patch).eq("id", memberId));
+  },
+
+  async updatePlan(planId, patch) {
+    return must(await admin().from("plans").update(patch).eq("id", planId).select().single()) as Plan;
+  },
+
+  async listOptions(planId) {
+    return must(await admin().from("options").select("*").eq("plan_id", planId).order("created_at")) as PlanOption[];
+  },
+  async addOption({ planId, label, placeId, note, addedBy }) {
+    return must(
+      await admin().from("options").insert({ plan_id: planId, label, place_id: placeId ?? null, note: note ?? null, added_by: addedBy ?? null }).select().single()
+    ) as PlanOption;
+  },
+  async listVotes(planId) {
+    return must(await admin().from("votes").select("option_id, member_id, options!inner(plan_id)").eq("options.plan_id", planId)).map(
+      (v: { option_id: string; member_id: string }) => ({ option_id: v.option_id, member_id: v.member_id })
+    ) as Vote[];
+  },
+  async castVote(_planId, optionId, memberId) {
+    // The one_vote_per_plan trigger removes their earlier vote on this plan.
+    must(await admin().from("votes").upsert({ option_id: optionId, member_id: memberId }));
+  },
+
+  async listMessages(planId, limit = 100) {
+    const rows = must(await admin().from("messages").select("*").eq("plan_id", planId).order("created_at", { ascending: false }).limit(limit)) as Message[];
+    return rows.reverse();
+  },
+  async addMessage({ planId, memberId, kind, body, mentionsDibby }) {
+    return must(
+      await admin().from("messages").insert({ plan_id: planId, member_id: memberId, kind, body, mentions_dibby: Boolean(mentionsDibby) }).select().single()
+    ) as Message;
+  },
+
+  async listBills(planId) {
+    return must(await admin().from("bills").select("*").eq("plan_id", planId).order("created_at")) as Bill[];
+  },
+  async createBill(b, shares) {
+    const bill = must(await admin().from("bills").insert(b).select().single()) as Bill;
+    await this.replaceShares(bill.id, shares);
+    return bill;
+  },
+  async updateBill(billId, patch) {
+    must(await admin().from("bills").update(patch).eq("id", billId));
+  },
+  async replaceShares(billId, shares) {
+    must(await admin().from("bill_shares").delete().eq("bill_id", billId));
+    if (shares.length === 0) return;
+    const at = new Date().toISOString();
+    must(
+      await admin()
+        .from("bill_shares")
+        .insert(shares.map((s) => ({ ...s, bill_id: billId, confirmed_at: s.status === "confirmed" ? at : null })))
+    );
+  },
+  async listShares(planId) {
+    return must(await admin().from("bill_shares").select("*, bills!inner(plan_id)").eq("bills.plan_id", planId)).map(
+      ({ bills: _b, ...s }: BillShare & { bills: unknown }) => s
+    ) as BillShare[];
+  },
+  async updateShare(billId, memberId, patch) {
+    must(await admin().from("bill_shares").update(patch).eq("bill_id", billId).eq("member_id", memberId));
+  },
+  async recordSpin(billId, entrantIds, resultMemberId) {
+    must(await admin().from("roulette_spins").insert({ bill_id: billId, entrant_ids: entrantIds, result_member_id: resultMemberId }));
   },
 };

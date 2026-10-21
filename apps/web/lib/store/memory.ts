@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { makeSlug, pickColour } from "@dibs/shared/plans";
-import type { Guest, NewMember, NewPlan, Plan, PlanMember, Profile, Store } from "./types";
+import type { Bill, BillShare, Guest, Message, NewMember, NewPlan, Plan, PlanMember, PlanOption, Profile, Store, Vote } from "./types";
 
 // In-memory store for local runs without Supabase. Lost on restart.
 interface Db {
@@ -8,10 +8,25 @@ interface Db {
   guests: Map<string, Guest & { tokenHash: string }>;
   plans: Map<string, Plan>;
   members: Map<string, PlanMember>;
+  options: Map<string, PlanOption>;
+  votes: Vote[];
+  messages: Message[];
+  bills: Map<string, Bill>;
+  shares: BillShare[];
 }
 
 const g = globalThis as unknown as { __dibsDb?: Db };
-const db: Db = (g.__dibsDb ??= { profiles: new Map(), guests: new Map(), plans: new Map(), members: new Map() });
+const db: Db = (g.__dibsDb ??= {
+  profiles: new Map(),
+  guests: new Map(),
+  plans: new Map(),
+  members: new Map(),
+  options: new Map(),
+  votes: [],
+  messages: [],
+  bills: new Map(),
+  shares: [],
+});
 
 const now = () => new Date().toISOString();
 
@@ -106,4 +121,62 @@ export const memoryStore: Store = {
     const m = db.members.get(memberId);
     if (m) Object.assign(m, patch);
   },
+
+  async updatePlan(planId, patch) {
+    const plan = db.plans.get(planId);
+    if (!plan) throw new Error("Plan not found");
+    Object.assign(plan, patch);
+    return plan;
+  },
+
+  async listOptions(planId) {
+    return [...db.options.values()].filter((o) => o.plan_id === planId).sort((a, b) => a.created_at.localeCompare(b.created_at));
+  },
+  async addOption({ planId, label, placeId, note, addedBy }) {
+    const o: PlanOption = { id: randomUUID(), plan_id: planId, kind: "venue", place_id: placeId ?? null, label, note: note ?? null, added_by: addedBy ?? null, created_at: now() };
+    db.options.set(o.id, o);
+    return o;
+  },
+  async listVotes(planId) {
+    return db.votes.filter((v) => db.options.get(v.option_id)?.plan_id === planId);
+  },
+  async castVote(planId, optionId, memberId) {
+    db.votes = db.votes.filter((v) => !(v.member_id === memberId && db.options.get(v.option_id)?.plan_id === planId));
+    db.votes.push({ option_id: optionId, member_id: memberId });
+  },
+
+  async listMessages(planId, limit = 100) {
+    return db.messages.filter((m) => m.plan_id === planId).slice(-limit);
+  },
+  async addMessage({ planId, memberId, kind, body, mentionsDibby }) {
+    const m: Message = { id: randomUUID(), plan_id: planId, member_id: memberId, kind, body, mentions_dibby: Boolean(mentionsDibby), created_at: now() };
+    db.messages.push(m);
+    return m;
+  },
+
+  async listBills(planId) {
+    return [...db.bills.values()].filter((b) => b.plan_id === planId).sort((a, b) => a.created_at.localeCompare(b.created_at));
+  },
+  async createBill(b, shares) {
+    const bill: Bill = { ...b, id: randomUUID(), created_at: now(), roulette_entrants: [], roulette_loser_id: null };
+    db.bills.set(bill.id, bill);
+    await this.replaceShares(bill.id, shares);
+    return bill;
+  },
+  async updateBill(billId, patch) {
+    const bill = db.bills.get(billId);
+    if (bill) Object.assign(bill, patch);
+  },
+  async replaceShares(billId, shares) {
+    db.shares = db.shares.filter((s) => s.bill_id !== billId);
+    for (const s of shares) db.shares.push({ ...s, bill_id: billId, says_paid_at: null, confirmed_at: s.status === "confirmed" ? now() : null });
+  },
+  async listShares(planId) {
+    return db.shares.filter((s) => db.bills.get(s.bill_id)?.plan_id === planId);
+  },
+  async updateShare(billId, memberId, patch) {
+    const s = db.shares.find((x) => x.bill_id === billId && x.member_id === memberId);
+    if (s) Object.assign(s, patch);
+  },
+  async recordSpin() {},
 };

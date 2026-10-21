@@ -2,8 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { seededPick } from "@dibs/shared/bills";
 import { hasRoom } from "@dibs/shared/plans";
 import type { Rsvp } from "@dibs/shared/types";
+import { BRB, mentionsDibby, replyInThread } from "@/lib/dibby";
 import { clearGuestSession, createGuestSession } from "@/lib/guest";
 import { store } from "@/lib/store";
 import { loadPlan } from "@/lib/viewer";
@@ -62,4 +64,110 @@ export async function removeMe(slug: string): Promise<void> {
     await clearGuestSession();
   }
   redirect(`/p/${slug}`);
+}
+
+// ---------- Thread ----------
+
+export async function postMessage(slug: string, _prev: FormState, form: FormData): Promise<FormState> {
+  const view = await loadPlan(slug);
+  if (!view?.me) return { error: "Join the plan to chat." };
+  // Guests read the thread; signed-in members post (ARV-46).
+  if (!view.me.user_id) return { error: "Get the app to chat in the thread." };
+  const body = String(form.get("body") ?? "").trim().slice(0, 2000);
+  if (!body) return undefined;
+  const tagged = mentionsDibby(body);
+  await store.addMessage({ planId: view.plan.id, memberId: view.me.id, kind: "text", body, mentionsDibby: tagged });
+
+  if (tagged) {
+    const history = await store.listMessages(view.plan.id, 30);
+    if (history.filter((m) => m.mentions_dibby).length === 1) {
+      await store.addMessage({
+        planId: view.plan.id,
+        memberId: null,
+        kind: "system",
+        body: "Heads up: messages that tag @dibby are sent to an AI provider so Dibby can reply. Dibby only reads messages it's tagged in.",
+      });
+    }
+    await runDibby(view.plan.id, slug, body);
+  }
+  revalidatePath(`/p/${slug}`);
+  return undefined;
+}
+
+async function runDibby(planId: string, slug: string, ask: string) {
+  const view = await loadPlan(slug);
+  if (!view) return;
+  const [options, votes, recent] = await Promise.all([store.listOptions(planId), store.listVotes(planId), store.listMessages(planId, 20)]);
+  const names = new Map(view.members.map((m) => [m.id, m.display_name]));
+  try {
+    const out = await replyInThread(
+      {
+        plan: view.plan,
+        members: view.members,
+        options: options.map((o) => ({ ...o, votes: votes.filter((v) => v.option_id === o.id).length })),
+        recent,
+        nameOf: (id) => (id ? names.get(id) ?? "Someone" : "Dibby"),
+      },
+      ask
+    );
+    const existing = new Set(options.map((o) => o.label.toLowerCase()));
+    for (const v of out.addOptions) {
+      if (!existing.has(v.name.toLowerCase())) await store.addOption({ planId, label: v.name, placeId: v.placeId, note: v.address });
+    }
+    await store.addMessage({ planId, memberId: null, kind: "dibby", body: out.reply });
+  } catch (e) {
+    console.error("[dibby]", e);
+    await store.addMessage({ planId, memberId: null, kind: "dibby", body: BRB });
+  }
+}
+
+// ---------- Voting ----------
+
+export async function vote(slug: string, optionId: string): Promise<void> {
+  const view = await loadPlan(slug);
+  if (!view?.me || view.plan.status !== "voting") return;
+  const options = await store.listOptions(view.plan.id);
+  if (!options.some((o) => o.id === optionId)) return;
+  await store.castVote(view.plan.id, optionId, view.me.id);
+  revalidatePath(`/p/${slug}`);
+}
+
+export async function addOption(slug: string, _prev: FormState, form: FormData): Promise<FormState> {
+  const view = await loadPlan(slug);
+  if (!view?.me || view.plan.status !== "voting") return { error: "Voting's closed." };
+  const label = String(form.get("label") ?? "").replace(/\s+/g, " ").trim().slice(0, 80);
+  if (!label) return { error: "Type a place or idea." };
+  const options = await store.listOptions(view.plan.id);
+  if (options.length >= 8) return { error: "That's plenty of options. Time to vote." };
+  if (options.some((o) => o.label.toLowerCase() === label.toLowerCase())) return { error: "That one's already on the list." };
+  await store.addOption({ planId: view.plan.id, label, addedBy: view.me.id });
+  revalidatePath(`/p/${slug}`);
+  return undefined;
+}
+
+/** Host locks the plan to the winning option. A tie is settled by a seeded spin. */
+export async function lockPlan(slug: string): Promise<void> {
+  const view = await loadPlan(slug);
+  if (!view?.isHost || view.plan.status !== "voting") return;
+  const [options, votes] = await Promise.all([store.listOptions(view.plan.id), store.listVotes(view.plan.id)]);
+  if (options.length === 0) return;
+  const counts = options.map((o) => ({ o, n: votes.filter((v) => v.option_id === o.id).length }));
+  const top = Math.max(...counts.map((c) => c.n));
+  const tied = counts.filter((c) => c.n === top).map((c) => c.o);
+  let winner = tied[0]!;
+  let note = `Locked in: ${winner.label}`;
+  if (tied.length > 1) {
+    const pickId = seededPick(tied.map((t) => t.id), `${view.plan.id}:tie`);
+    winner = tied.find((t) => t.id === pickId)!;
+    note = `It was a tie, so Dibby spun for it: ${winner.label}`;
+  }
+  await store.updatePlan(view.plan.id, {
+    status: "locked",
+    venue_name: winner.label,
+    venue_place_id: winner.place_id,
+    version: view.plan.version + 1,
+    updated_note: note,
+  });
+  await store.addMessage({ planId: view.plan.id, memberId: null, kind: "dibby", body: `${note}. See you there.` });
+  revalidatePath(`/p/${slug}`);
 }
