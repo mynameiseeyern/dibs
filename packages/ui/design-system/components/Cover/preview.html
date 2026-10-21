@@ -1,0 +1,32 @@
+<!-- @dsCard height=300 -->
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><link rel="stylesheet" href="../../../src/tokens.css"><link rel="stylesheet" href="../../../src/components.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=DM+Mono:wght@400;500&display=swap"><title>Dibs cover</title>
+<style>
+html,body{margin:0;padding:0;background:var(--bg-white-0)}
+.cv{position:relative;width:960px;height:300px;overflow:hidden;background:var(--bg-white-0)}
+.violet{fill:var(--primary-base)}.lime{fill:var(--accent-base)}.ink{fill:var(--bg-strong-950)}.tint{fill:var(--primary-lighter)}.fr{fill:var(--static-white);fill-opacity:.55}
+.name{position:absolute;left:48px;bottom:72px;font:800 120px/.92 var(--font-display);letter-spacing:-0.03em;color:var(--text-strong-950);margin:0}
+.tag{position:absolute;left:52px;bottom:40px;font:400 14px/20px var(--font-sans);color:var(--text-sub-600);margin:0;max-width:440px}
+</style></head>
+<body>
+<div class="cv">
+<!-- blocks: primary-base slab 240x300, accent-base pill, bg-strong-950 tile radius-lg, primary-lighter tint
+     arrangement: one tall violet slab bleeding off top and bottom with satellites stacked to its left
+     pattern: discs and pills (the friends in the V3 mark) because the system is soft, round, radius-full everywhere
+     scales: gaps space-6 (24), radii radius-lg 24 and radius-icon 24%, pills radius-full -->
+<svg width="960" height="300" viewBox="0 0 960 300" style="position:absolute;inset:0" aria-hidden="true">
+<rect class="tint" x="480" y="24" width="168" height="120" rx="24"/>
+<rect class="ink" x="480" y="168" width="168" height="108" rx="24"/>
+<circle class="lime" cx="564" cy="84" r="36"/>
+<rect class="lime" x="672" y="24" width="48" height="252" rx="24"/>
+<rect class="violet" x="744" y="-24" width="240" height="348" rx="56"/>
+<circle class="fr" cx="800" cy="196" r="34"/><circle class="fr" cx="918" cy="196" r="34"/>
+<circle class="lime" cx="859" cy="140" r="40"/><rect class="lime" x="847" y="190" width="24" height="56" rx="12"/>
+<circle class="fr" cx="530" cy="222" r="18"/><circle class="fr" cx="598" cy="222" r="18"/>
+</svg>
+<p class="name">dibs</p>
+<p class="tag">your crew, out of the group chat</p>
+</div>
+</body>
+</html>
