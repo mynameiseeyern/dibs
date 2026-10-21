@@ -40,7 +40,7 @@ for (const g of t.type.groups) {
 }
 
 const css = `/* Generated from tokens.json by scripts/build-tokens.mjs. Do not edit by hand. */
-/* Fonts (Bricolage Grotesque, Figtree, DM Mono) are loaded by the app with next/font. */
+/* Fonts (Bricolage Grotesque, Figtree, DM Mono) are bundled by the app via @fontsource. */
 
 :root {
 ${flat.join("\n")}
