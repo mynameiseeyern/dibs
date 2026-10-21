@@ -1,0 +1,275 @@
+/* Generated from tokens.json by scripts/build-tokens.mjs. Do not edit by hand. */
+/* Fonts (Bricolage Grotesque, Figtree, DM Mono) are loaded by the app with next/font. */
+
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+  --radius-icon: 24%;
+  --radius-full: 999px;
+  --size-tap: 44px;
+  --size-control-lg: 52px;
+  --size-control-md: 44px;
+  --size-control-sm: 36px;
+  --font-display: "Bricolage Grotesque", Figtree, system-ui, sans-serif;
+  --font-sans: Figtree, "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --bg-white-0: #ffffff;
+  --bg-weak-50: #f7f6f9;
+  --bg-soft-200: #eeecf2;
+  --bg-sub-300: #dcd8e3;
+  --bg-surface-800: #2a2630;
+  --bg-strong-950: #141216;
+  --text-strong-950: #141216;
+  --text-sub-600: #57525c;
+  --text-soft-400: #6b6570;
+  --text-disabled-300: #bdb8c3;
+  --text-white-0: #ffffff;
+  --stroke-strong-950: #141216;
+  --stroke-sub-300: #8f8997;
+  --stroke-soft-200: #e8e5ec;
+  --stroke-white-0: #ffffff;
+  --static-black: #141216;
+  --static-white: #ffffff;
+  --overlay: rgba(20, 18, 22, 0.40);
+  --primary-base: #6d4aff;
+  --primary-dark: #4a2fd6;
+  --primary-darker: #3420a3;
+  --primary-light: #ddd4ff;
+  --primary-lighter: #f1edff;
+  --accent-base: #c8f03c;
+  --accent-dark: #4a5e00;
+  --accent-light: #e4f8a0;
+  --accent-lighter: #f5fcd9;
+  --information-base: #2f80ed;
+  --information-dark: #14549e;
+  --information-light: #c9e0ff;
+  --information-lighter: #eef5ff;
+  --warning-base: #ff9f1c;
+  --warning-dark: #8a4b00;
+  --warning-light: #ffdcaa;
+  --warning-lighter: #fff4e3;
+  --error-base: #f04d61;
+  --error-dark: #a3112f;
+  --error-light: #ffc4cf;
+  --error-lighter: #ffeef1;
+  --success-base: #1fbf6a;
+  --success-dark: #0b6b3c;
+  --success-light: #b5f0cf;
+  --success-lighter: #e8fbf0;
+  --away-base: #ffd23f;
+  --away-dark: #7a5c00;
+  --away-light: #fff0b3;
+  --away-lighter: #fffae3;
+  --feature-base: #e0589b;
+  --feature-dark: #a1155c;
+  --feature-light: #ffd0e6;
+  --feature-lighter: #fff0f7;
+  --verified-base: #1cc8d9;
+  --verified-dark: #066b75;
+  --verified-light: #b6f1f6;
+  --verified-lighter: #e8fbfd;
+  --highlighted-base: #ff8a3d;
+  --highlighted-dark: #a3420b;
+  --highlighted-light: #ffd9bf;
+  --highlighted-lighter: #fff3ea;
+  --stable-base: #14b8a6;
+  --stable-dark: #0b6b61;
+  --stable-light: #b3efe7;
+  --stable-lighter: #e6faf7;
+  --faded-base: #8a8494;
+  --faded-dark: #3f3a47;
+  --faded-light: #e3e0e8;
+  --faded-lighter: #f3f2f6;
+  --focus-ring: #4a2fd6;
+  --shadow-xs: 0 1px 2px 0 rgba(20, 18, 22, 0.06);
+  --shadow-sm: 0 4px 12px -2px rgba(20, 18, 22, 0.10);
+  --shadow-md: 0 16px 32px -12px rgba(20, 18, 22, 0.20);
+  --shadow-pop: 0 4px 0 0 #141216;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg-white-0: #141216;
+    --bg-weak-50: #1b1820;
+    --bg-soft-200: #26222c;
+    --bg-sub-300: #3a3541;
+    --bg-surface-800: #e8e5ec;
+    --bg-strong-950: #ffffff;
+    --text-strong-950: #ffffff;
+    --text-sub-600: #c2bdc8;
+    --text-soft-400: #9a94a0;
+    --text-disabled-300: #5a5560;
+    --text-white-0: #141216;
+    --stroke-strong-950: #ffffff;
+    --stroke-sub-300: #6e6876;
+    --stroke-soft-200: #2c2832;
+    --stroke-white-0: #141216;
+    --static-black: #141216;
+    --static-white: #ffffff;
+    --overlay: rgba(0, 0, 0, 0.64);
+    --primary-base: #6d4aff;
+    --primary-dark: #b3a3ff;
+    --primary-darker: #d3c9ff;
+    --primary-light: rgba(109, 74, 255, 0.4);
+    --primary-lighter: rgba(109, 74, 255, 0.22);
+    --accent-base: #c8f03c;
+    --accent-dark: #d9f77a;
+    --accent-light: rgba(200, 240, 60, 0.34);
+    --accent-lighter: rgba(200, 240, 60, 0.16);
+    --information-base: #4a93f5;
+    --information-dark: #a6ccff;
+    --information-light: rgba(74, 147, 245, 0.28);
+    --information-lighter: rgba(74, 147, 245, 0.16);
+    --warning-base: #ffaa33;
+    --warning-dark: #ffcf8a;
+    --warning-light: rgba(255, 170, 51, 0.28);
+    --warning-lighter: rgba(255, 170, 51, 0.16);
+    --error-base: #ff5a75;
+    --error-dark: #ffa6b6;
+    --error-light: rgba(255, 90, 117, 0.28);
+    --error-lighter: rgba(255, 90, 117, 0.16);
+    --success-base: #2fd67c;
+    --success-dark: #8debb6;
+    --success-light: rgba(47, 214, 124, 0.28);
+    --success-lighter: rgba(47, 214, 124, 0.16);
+    --away-base: #ffd84f;
+    --away-dark: #ffe68f;
+    --away-light: rgba(255, 216, 79, 0.28);
+    --away-lighter: rgba(255, 216, 79, 0.16);
+    --feature-base: #f06aac;
+    --feature-dark: #ffb3d8;
+    --feature-light: rgba(240, 106, 172, 0.28);
+    --feature-lighter: rgba(240, 106, 172, 0.16);
+    --verified-base: #2fd3e3;
+    --verified-dark: #94ecf4;
+    --verified-light: rgba(47, 211, 227, 0.28);
+    --verified-lighter: rgba(47, 211, 227, 0.16);
+    --highlighted-base: #ff9a55;
+    --highlighted-dark: #ffc49c;
+    --highlighted-light: rgba(255, 154, 85, 0.28);
+    --highlighted-lighter: rgba(255, 154, 85, 0.16);
+    --stable-base: #22c9b6;
+    --stable-dark: #8de6dc;
+    --stable-light: rgba(34, 201, 182, 0.28);
+    --stable-lighter: rgba(34, 201, 182, 0.16);
+    --faded-base: #8a8494;
+    --faded-dark: #d6d2dc;
+    --faded-light: rgba(138, 132, 148, 0.28);
+    --faded-lighter: rgba(138, 132, 148, 0.16);
+    --focus-ring: #b3a3ff;
+    --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+    --shadow-sm: 0 4px 12px -2px rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 16px 32px -12px rgba(0, 0, 0, 0.6);
+    --shadow-pop: 0 4px 0 0 #000000;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg-white-0: #141216;
+  --bg-weak-50: #1b1820;
+  --bg-soft-200: #26222c;
+  --bg-sub-300: #3a3541;
+  --bg-surface-800: #e8e5ec;
+  --bg-strong-950: #ffffff;
+  --text-strong-950: #ffffff;
+  --text-sub-600: #c2bdc8;
+  --text-soft-400: #9a94a0;
+  --text-disabled-300: #5a5560;
+  --text-white-0: #141216;
+  --stroke-strong-950: #ffffff;
+  --stroke-sub-300: #6e6876;
+  --stroke-soft-200: #2c2832;
+  --stroke-white-0: #141216;
+  --static-black: #141216;
+  --static-white: #ffffff;
+  --overlay: rgba(0, 0, 0, 0.64);
+  --primary-base: #6d4aff;
+  --primary-dark: #b3a3ff;
+  --primary-darker: #d3c9ff;
+  --primary-light: rgba(109, 74, 255, 0.4);
+  --primary-lighter: rgba(109, 74, 255, 0.22);
+  --accent-base: #c8f03c;
+  --accent-dark: #d9f77a;
+  --accent-light: rgba(200, 240, 60, 0.34);
+  --accent-lighter: rgba(200, 240, 60, 0.16);
+  --information-base: #4a93f5;
+  --information-dark: #a6ccff;
+  --information-light: rgba(74, 147, 245, 0.28);
+  --information-lighter: rgba(74, 147, 245, 0.16);
+  --warning-base: #ffaa33;
+  --warning-dark: #ffcf8a;
+  --warning-light: rgba(255, 170, 51, 0.28);
+  --warning-lighter: rgba(255, 170, 51, 0.16);
+  --error-base: #ff5a75;
+  --error-dark: #ffa6b6;
+  --error-light: rgba(255, 90, 117, 0.28);
+  --error-lighter: rgba(255, 90, 117, 0.16);
+  --success-base: #2fd67c;
+  --success-dark: #8debb6;
+  --success-light: rgba(47, 214, 124, 0.28);
+  --success-lighter: rgba(47, 214, 124, 0.16);
+  --away-base: #ffd84f;
+  --away-dark: #ffe68f;
+  --away-light: rgba(255, 216, 79, 0.28);
+  --away-lighter: rgba(255, 216, 79, 0.16);
+  --feature-base: #f06aac;
+  --feature-dark: #ffb3d8;
+  --feature-light: rgba(240, 106, 172, 0.28);
+  --feature-lighter: rgba(240, 106, 172, 0.16);
+  --verified-base: #2fd3e3;
+  --verified-dark: #94ecf4;
+  --verified-light: rgba(47, 211, 227, 0.28);
+  --verified-lighter: rgba(47, 211, 227, 0.16);
+  --highlighted-base: #ff9a55;
+  --highlighted-dark: #ffc49c;
+  --highlighted-light: rgba(255, 154, 85, 0.28);
+  --highlighted-lighter: rgba(255, 154, 85, 0.16);
+  --stable-base: #22c9b6;
+  --stable-dark: #8de6dc;
+  --stable-light: rgba(34, 201, 182, 0.28);
+  --stable-lighter: rgba(34, 201, 182, 0.16);
+  --faded-base: #8a8494;
+  --faded-dark: #d6d2dc;
+  --faded-light: rgba(138, 132, 148, 0.28);
+  --faded-lighter: rgba(138, 132, 148, 0.16);
+  --focus-ring: #b3a3ff;
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 4px 12px -2px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 16px 32px -12px rgba(0, 0, 0, 0.6);
+  --shadow-pop: 0 4px 0 0 #000000;
+  color-scheme: dark;
+}
+
+.title-display { font-family: var(--font-display); font-size: 56px; line-height: 60px; font-weight: 800; letter-spacing: -0.025em; }
+.title-h1 { font-family: var(--font-display); font-size: 44px; line-height: 48px; font-weight: 800; letter-spacing: -0.02em; }
+.title-h2 { font-family: var(--font-display); font-size: 36px; line-height: 42px; font-weight: 800; letter-spacing: -0.015em; }
+.title-h3 { font-family: var(--font-display); font-size: 30px; line-height: 36px; font-weight: 700; letter-spacing: -0.01em; }
+.title-h4 { font-family: var(--font-display); font-size: 24px; line-height: 30px; font-weight: 700; letter-spacing: -0.01em; }
+.title-h5 { font-family: var(--font-display); font-size: 20px; line-height: 26px; font-weight: 700; letter-spacing: -0.005em; }
+.title-h6 { font-family: var(--font-display); font-size: 18px; line-height: 24px; font-weight: 700; letter-spacing: 0em; }
+.label-lg { font-family: var(--font-sans); font-size: 18px; line-height: 24px; font-weight: 600; letter-spacing: -0.01em; }
+.label-md { font-family: var(--font-sans); font-size: 16px; line-height: 22px; font-weight: 600; letter-spacing: -0.005em; }
+.label-sm { font-family: var(--font-sans); font-size: 14px; line-height: 20px; font-weight: 600; letter-spacing: 0em; }
+.label-xs { font-family: var(--font-sans); font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: 0.005em; }
+.paragraph-lg { font-family: var(--font-sans); font-size: 18px; line-height: 28px; font-weight: 400; letter-spacing: -0.005em; }
+.paragraph-md { font-family: var(--font-sans); font-size: 16px; line-height: 26px; font-weight: 400; letter-spacing: 0em; }
+.paragraph-sm { font-family: var(--font-sans); font-size: 14px; line-height: 22px; font-weight: 400; letter-spacing: 0em; }
+.paragraph-xs { font-family: var(--font-sans); font-size: 12px; line-height: 18px; font-weight: 400; letter-spacing: 0.01em; }
+.subheading-sm { font-family: var(--font-sans); font-size: 13px; line-height: 16px; font-weight: 700; letter-spacing: 0.08em; }
+.subheading-xs { font-family: var(--font-sans); font-size: 11px; line-height: 14px; font-weight: 700; letter-spacing: 0.08em; }
+.number-lg { font-family: var(--font-mono); font-size: 32px; line-height: 36px; font-weight: 500; letter-spacing: -0.02em; }
+.number-md { font-family: var(--font-mono); font-size: 16px; line-height: 22px; font-weight: 500; letter-spacing: 0em; }
+.code { font-family: var(--font-mono); font-size: 14px; line-height: 20px; font-weight: 400; letter-spacing: 0em; }

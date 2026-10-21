@@ -1,0 +1,19 @@
+{
+  "name": "@dibs/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./bills": "./src/bills/index.ts",
+    "./types": "./src/types.ts",
+    "./plans": "./src/plans.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "vitest": "3.2.4"
+  }
+}
