@@ -13,7 +13,8 @@ Build plan: https://claude.ai/artifact/2Lce9vh9ZvGunTKngL6sWX · Linear project 
 ## Design system
 
 The source of truth is the Dibs design system on claude.ai (https://claude.ai/artifact/77AdHKZGgDU4j19fqSsYdz).
-A copy lives in `packages/ui/design-system/`: read its `README.md` before building UI, and open `index.html` to see every component.
+In this repo: read `packages/ui/docs/brand-book.md` before building UI, and `packages/ui/docs/components/<Name>.md` for each component.
+Open `packages/ui/design-system/index.html` in a browser to see every component rendered. Token values come from `packages/ui/scripts/gen-tokens.py` (see `packages/ui/README.md`).
 
 - Use the `.db-` component classes from `packages/ui/src/components.css` and the CSS variables from `tokens.css`. No raw hex values in app code.
 - Violet `primary-base` is the brand; lime `accent-base` is the "calling dibs" moment, at most once per screen, always with black text.
@@ -21,7 +22,7 @@ A copy lives in `packages/ui/design-system/`: read its `README.md` before buildi
 - Phone first: 16px gutter, one column, main action pinned at the bottom as `db-btn--lg db-btn--block`. Tap targets at least 44px.
 - Icons: Remix Icon (`<i class="ri-… db-icon" aria-hidden="true">`). Never emoji as icons.
 - Copy: Australian spelling, sentence case, lowercase **dibs**, sounds like a mate in the group chat. Never pushy about money.
-- Logos are in `packages/ui/design-system/logos/`. `dibs-ai-member.svg` is only for Dibby.
+- Logos are in `packages/ui/assets/logos/`. `dibs-ai-member.svg` is only for Dibby.
 
 ## Rules that must not break
 
