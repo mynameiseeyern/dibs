@@ -4,11 +4,17 @@ import { countIn, RSVP_LABEL, shareText } from "@dibs/shared/plans";
 import type { PlanMember, Rsvp } from "@dibs/shared/types";
 import { Wordmark } from "@/components/Logo";
 import { Monogram, MonogramStack } from "@/components/Monogram";
+import { LiveRefresh } from "@/components/LiveRefresh";
+import { mapsLink } from "@/lib/places";
+import { closeIfDue } from "@/lib/plan-ops";
+import { store } from "@/lib/store";
 import { formatShort, formatWhen } from "@/lib/time";
 import { loadPlan } from "@/lib/viewer";
-import { joinPlan, removeMe, setRsvp } from "./actions";
+import { addOption, joinPlan, lockPlan, postMessage, removeMe, setRsvp, vote } from "./actions";
 import { JoinForm } from "./JoinForm";
 import { ShareButton } from "./ShareButton";
+import { Thread } from "./Thread";
+import { VoteList } from "./Vote";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -30,9 +36,14 @@ const groupOf = (m: PlanMember) => (m.waitlisted ? "waitlist" : m.rsvp ?? "none"
 
 export default async function PlanPage({ params }: Props) {
   const { slug } = await params;
-  const view = await loadPlan(slug);
+  let view = await loadPlan(slug);
   if (!view) notFound();
+  // Votes close themselves once the deadline passes.
+  if (await closeIfDue(view.plan)) view = (await loadPlan(slug))!;
   const { plan, members, me, isHost } = view;
+  const [options, votes, messages] = await Promise.all([store.listOptions(plan.id), store.listVotes(plan.id), store.listMessages(plan.id, 50)]);
+  const voteRows = options.map((o) => ({ ...o, votes: votes.filter((v) => v.option_id === o.id).length, mine: Boolean(me && votes.some((v) => v.option_id === o.id && v.member_id === me.id)) }));
+  const started = plan.starts_at ? Date.parse(plan.starts_at) < Date.now() : false;
 
   const site = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const url = `${site}/p/${plan.slug}?v=${plan.version}`;
@@ -44,6 +55,7 @@ export default async function PlanPage({ params }: Props) {
 
   return (
     <>
+      <LiveRefresh />
       <main className="page">
         <header className="topbar">
           <Wordmark />
@@ -80,7 +92,12 @@ export default async function PlanPage({ params }: Props) {
             )}
             {(plan.venue_name || plan.area) && (
               <li>
-                <i className="ri-map-pin-line db-icon" aria-hidden="true" /> {plan.venue_name ?? plan.area}
+                <i className="ri-map-pin-line db-icon" aria-hidden="true" />{" "}
+                {plan.venue_name ? (
+                  <a href={mapsLink(plan.venue_place_id, plan.venue_name)} target="_blank" rel="noreferrer">{plan.venue_name}</a>
+                ) : (
+                  plan.area
+                )}
               </li>
             )}
             {plan.status === "voting" && plan.vote_deadline && (
@@ -135,6 +152,37 @@ export default async function PlanPage({ params }: Props) {
               </div>
             )}
           </section>
+        )}
+
+        {plan.status === "wrapped" && (
+          <a className="db-card db-card--violet section" href={`/p/${slug}/bills`} style={{ textDecoration: "none" }}>
+            <strong className="title-h4" style={{ color: "inherit" }}>Square up</strong>
+            <span>{me?.attended ? "See what you owe, or add what you paid." : "Bills are for people who came."}</span>
+          </a>
+        )}
+        {me?.role === "organiser" && plan.status === "locked" && (
+          <a className="db-btn db-btn--secondary db-btn--block" href={`/p/${slug}/wrap`}>
+            <i className="ri-flag-line db-icon" aria-hidden="true" />{started ? "Wrap it up: who came?" : "After the night: wrap it up"}
+          </a>
+        )}
+
+        {(plan.status === "voting" || options.length > 0) && !cancelled && (
+          <section className="section" aria-labelledby="vote-h">
+            <div className="section__head">
+              <h2 id="vote-h" className="eyebrow">{plan.status === "voting" ? "What's the move?" : "The vote"}</h2>
+              {plan.status === "voting" && <span className="small muted">{new Set(votes.map((v) => v.member_id)).size} of {members.length} voted</span>}
+            </div>
+            <VoteList rows={voteRows} canVote={Boolean(me)} open={plan.status === "voting"} vote={vote.bind(null, slug)} add={addOption.bind(null, slug)} />
+            {isHost && plan.status === "voting" && options.length > 0 && (
+              <form action={lockPlan.bind(null, slug)}>
+                <button className="db-btn db-btn--ghost db-btn--sm"><i className="ri-lock-2-line db-icon" aria-hidden="true" />Lock it in now</button>
+              </form>
+            )}
+          </section>
+        )}
+
+        {!cancelled && (
+          <Thread messages={messages} members={members} meId={me?.id ?? null} canPost={Boolean(me?.user_id)} post={postMessage.bind(null, slug)} />
         )}
 
         <section className="section" aria-labelledby="who-h">

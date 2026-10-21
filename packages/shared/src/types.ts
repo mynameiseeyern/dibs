@@ -78,6 +78,9 @@ export interface Bill {
   currency: string;
   split_mode: SplitMode;
   seed: string;
+  /** PayID entered on the bill, for payers without a profile (guests). */
+  payid: string | null;
+  payid_name: string | null;
   roulette_loser_id: string | null;
   roulette_entrants: string[];
   created_at: string;

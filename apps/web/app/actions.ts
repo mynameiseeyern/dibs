@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import type { Vibe } from "@dibs/shared/types";
 import { currentOrganiser, demoSignIn, signOut, supabaseAuth } from "@/lib/auth";
 import { store, usingSupabase } from "@/lib/store";
+import { draftPlan } from "@/lib/dibby";
 import { localToIso } from "@/lib/time";
 
 export type FormState = { error?: string; sent?: string } | undefined;
@@ -81,5 +82,48 @@ export async function createPlan(_prev: FormState, form: FormData): Promise<Form
     vibe,
     plusOnes: form.get("plus_ones") === "on",
   });
+  redirect(`/p/${plan.slug}`);
+}
+
+/** "@dibby dinner friday in surry hills, cheap-ish": Dibby drafts the plan and the vote. */
+export async function createWithDibby(_prev: FormState, form: FormData): Promise<FormState> {
+  const me = await currentOrganiser();
+  if (!me) redirect("/login?next=/new");
+  const profile = await store.getProfile(me.id);
+  if (!profile) redirect("/onboarding?next=/new");
+  const ask = String(form.get("ask") ?? "").replace(/^\s*@dibby\s*/i, "").trim().slice(0, 500);
+  if (!ask) return { error: "Tell Dibby what you're after, like “dinner Friday in Surry Hills”." };
+  if (!process.env.ANTHROPIC_API_KEY) return { error: "Dibby isn't switched on yet. Fill in the form below for now." };
+
+  let draft;
+  try {
+    draft = await draftPlan(ask, "chill");
+  } catch (e) {
+    console.error("[dibby draft]", e);
+    return { error: "brb, Dibby's having a moment. Try again, or fill in the form below." };
+  }
+  const plan = await store.createPlan({
+    organiserUserId: me.id,
+    organiserName: `${profile.first_name} ${profile.last_name}`,
+    title: draft.title,
+    area: draft.area,
+    startsAt: draft.startsAtLocal ? localToIso(draft.startsAtLocal) : null,
+    vibe: draft.vibe,
+    plusOnes: false,
+  });
+  for (const v of draft.venues) {
+    await store.addOption({ planId: plan.id, label: v.name, placeId: v.placeId, note: v.address });
+  }
+  const members = await store.listMembers(plan.id);
+  const organiser = members.find((m) => m.user_id === me.id) ?? null;
+  await store.addMessage({ planId: plan.id, memberId: organiser?.id ?? null, kind: "text", body: `@dibby ${ask}`, mentionsDibby: true });
+  await store.addMessage({
+    planId: plan.id,
+    memberId: null,
+    kind: "system",
+    body: "Heads up: messages that tag @dibby are sent to an AI provider so Dibby can reply. Dibby only reads messages it's tagged in.",
+  });
+  const unchecked = draft.checked ? "" : " (I couldn't check these on Maps, so give them a once-over.)";
+  await store.addMessage({ planId: plan.id, memberId: null, kind: "dibby", body: `${draft.reply}${unchecked} Vote's open for 24 hours.` });
   redirect(`/p/${plan.slug}`);
 }

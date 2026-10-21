@@ -25,7 +25,7 @@ interface Tool {
 async function claude(system: string, messages: Turn[], tools: Tool[], toolChoice?: { type: "tool"; name: string }) {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) throw new Error("No ANTHROPIC_API_KEY");
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+  const res = await fetch(`${process.env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com"}/v1/messages`, {
     method: "POST",
     headers: { "content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
     body: JSON.stringify({ model: MODEL, max_tokens: 800, system, messages, tools, ...(toolChoice ? { tool_choice: toolChoice } : {}) }),

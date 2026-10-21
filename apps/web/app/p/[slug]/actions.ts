@@ -2,12 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { seededPick } from "@dibs/shared/bills";
 import { hasRoom } from "@dibs/shared/plans";
 import type { Rsvp } from "@dibs/shared/types";
 import { BRB, mentionsDibby, replyInThread } from "@/lib/dibby";
 import { clearGuestSession, createGuestSession } from "@/lib/guest";
 import { store } from "@/lib/store";
+import { closeVote } from "@/lib/plan-ops";
 import { loadPlan } from "@/lib/viewer";
 
 export type FormState = { error?: string } | undefined;
@@ -148,26 +148,7 @@ export async function addOption(slug: string, _prev: FormState, form: FormData):
 /** Host locks the plan to the winning option. A tie is settled by a seeded spin. */
 export async function lockPlan(slug: string): Promise<void> {
   const view = await loadPlan(slug);
-  if (!view?.isHost || view.plan.status !== "voting") return;
-  const [options, votes] = await Promise.all([store.listOptions(view.plan.id), store.listVotes(view.plan.id)]);
-  if (options.length === 0) return;
-  const counts = options.map((o) => ({ o, n: votes.filter((v) => v.option_id === o.id).length }));
-  const top = Math.max(...counts.map((c) => c.n));
-  const tied = counts.filter((c) => c.n === top).map((c) => c.o);
-  let winner = tied[0]!;
-  let note = `Locked in: ${winner.label}`;
-  if (tied.length > 1) {
-    const pickId = seededPick(tied.map((t) => t.id), `${view.plan.id}:tie`);
-    winner = tied.find((t) => t.id === pickId)!;
-    note = `It was a tie, so Dibby spun for it: ${winner.label}`;
-  }
-  await store.updatePlan(view.plan.id, {
-    status: "locked",
-    venue_name: winner.label,
-    venue_place_id: winner.place_id,
-    version: view.plan.version + 1,
-    updated_note: note,
-  });
-  await store.addMessage({ planId: view.plan.id, memberId: null, kind: "dibby", body: `${note}. See you there.` });
+  if (!view?.isHost) return;
+  await closeVote(view.plan, "host");
   revalidatePath(`/p/${slug}`);
 }
