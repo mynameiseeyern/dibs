@@ -69,6 +69,8 @@ const TabMenuHorizontalList = React.forwardRef<
         ref={mergeRefs(forwardedRef, listRef)}
         className={cn(
           'group/tab-list relative flex items-center gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none]',
+          // Radix can briefly focus the list itself (inline outline:none); an inset ring survives the scroll clip.
+          'rounded-md focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus-ring',
           className,
         )}
         {...rest}

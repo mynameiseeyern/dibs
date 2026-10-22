@@ -32,6 +32,8 @@ const SegmentedControlList = React.forwardRef<
       ref={mergeRefs(forwardedRef, listRef)}
       className={cn(
         'relative isolate grid w-full auto-cols-fr grid-flow-col gap-1 rounded-md bg-bg-soft-200 p-1',
+        // Radix can briefly focus the list itself and sets an inline outline:none, so show a ring instead.
+        'focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-white-0',
         className,
       )}
       {...rest}
