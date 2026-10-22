@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { countIn, RSVP_LABEL, shareText } from "@dibs/shared/plans";
+import { formatAud } from "@dibs/shared/bills";
 import type { PlanMember, Rsvp } from "@dibs/shared/types";
 import { Wordmark } from "@/components/Logo";
 import { AccountButton } from "@/components/AccountButton";
@@ -58,7 +59,28 @@ export default async function PlanPage({ params }: Props) {
   const when = formatWhen(plan.starts_at);
   const cancelled = plan.status === "cancelled";
   const full = inCount >= plan.capacity;
-  const status = planStatus(plan);
+  const wrapped = plan.status === "wrapped";
+
+  // After the night: where the money's at, and what the crew said.
+  const [bills, shares, recap] = wrapped ? await Promise.all([store.listBills(plan.id), store.listShares(plan.id), store.listRecap(plan.id)]) : [[], [], []];
+  const payerOf = new Map(bills.map((b) => [b.id, b.payer_member_id]));
+  const owed = shares.filter((x) => x.amount_cents > 0 && x.member_id !== payerOf.get(x.bill_id));
+  const open = owed.filter((x) => x.status !== "confirmed");
+  const unspun = bills.some((b) => b.split_mode === "roulette" && !b.roulette_loser_id);
+  const allSquare = bills.length > 0 && open.length === 0 && !unspun;
+  const iOwe = me ? open.filter((x) => x.member_id === me.id).reduce((n, x) => n + x.amount_cents, 0) : 0;
+  const owedToMe = me ? open.filter((x) => payerOf.get(x.bill_id) === me.id).reduce((n, x) => n + x.amount_cents, 0) : 0;
+  const rated = recap.filter((a) => a.stars);
+  const avgStars = rated.length ? rated.reduce((n, a) => n + (a.stars ?? 0), 0) / rated.length : null;
+  const mvpVotes = new Map<string, number>();
+  for (const a of recap) if (a.mvp_member_id) mvpVotes.set(a.mvp_member_id, (mvpVotes.get(a.mvp_member_id) ?? 0) + 1);
+  const mvpId = [...mvpVotes.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+  const firstName = (id: string | undefined) => members.find((m) => m.id === id)?.display_name.split(" ")[0];
+  const moment = recap.find((a) => a.best_moment)?.best_moment;
+  const iAnswered = Boolean(me && recap.some((a) => a.member_id === me.id));
+
+  const baseStatus = planStatus(plan);
+  const status = wrapped && allSquare ? { ...baseStatus, label: "Wrapped · all square", tone: "success", icon: "ri-check-double-line" } : baseStatus;
   const voters = new Set(votes.map((v) => v.member_id)).size;
 
   return (
@@ -132,19 +154,57 @@ export default async function PlanPage({ params }: Props) {
           </section>
         )}
 
-        {plan.status === "wrapped" && (
+        {wrapped && me?.attended && (
           <section className="wrap-links" aria-label="After the night">
+            {/* Money first while it's open; once everyone's square, the night comes first and bills become history. */}
+            {!allSquare && (
             <a className="db-card db-card--violet section link-card" href={`/p/${slug}/bills`}>
               <strong className="title-h4">Square up</strong>
-              <span>{me?.attended ? "See what you owe, or add what you paid." : "Bills are for people who came."}</span>
+              <span>
+                {iOwe > 0
+                  ? `You owe ${formatAud(iOwe)}.`
+                  : owedToMe > 0
+                    ? `${formatAud(owedToMe)} still to come back to you.`
+                    : bills.length === 0
+                      ? "Paid for something? Add it and dibs does the maths."
+                      : `${owed.length - open.length} of ${owed.length} settled.`}
+              </span>
             </a>
-            {me?.attended && (
-              <a className="db-card section link-card" href={`/p/${slug}/recap`}>
-                <strong className="title-h4">The recap</strong>
-                <span className="muted">Rate the night, best moment, MVP.</span>
+            )}
+            <a className={`db-card section link-card recap-teaser${!iAnswered ? " recap-teaser--ask" : ""}`} href={`/p/${slug}/recap`}>
+              <span className="subheading-sm eyebrow">The recap</span>
+              {recap.length === 0 ? (
+                <strong className="title-h4">How was it? Rate the night.</strong>
+              ) : (
+                <>
+                  <div className="recap-teaser__stats">
+                    {avgStars !== null && (
+                      <span className="title-h4">
+                        {avgStars.toFixed(1)}
+                        <i className="ri-star-fill db-icon" aria-hidden="true" />
+                      </span>
+                    )}
+                    {mvpId && <span className="label-md">MVP: {firstName(mvpId)}</span>}
+                  </div>
+                  {moment && <q className="paragraph-sm recap-teaser__moment">{moment}</q>}
+                </>
+              )}
+              <span className="label-sm recap-teaser__cta">
+                {iAnswered ? "See what everyone said" : recap.length ? "Add yours" : "Stars, best moment, MVP"}
+                <i className="ri-arrow-right-line db-icon" aria-hidden="true" />
+              </span>
+            </a>
+            {allSquare && (
+              <a className="history-link" href={`/p/${slug}/bills`}>
+                <i className="ri-check-double-line db-icon" aria-hidden="true" />
+                <span className="label-sm">Bills · everyone&rsquo;s square</span>
+                <span className="paragraph-sm muted">See history</span>
               </a>
             )}
           </section>
+        )}
+        {wrapped && me && !me.attended && (
+          <p className="paragraph-sm muted">The bills and recap are just for people who came. Catch you at the next one.</p>
         )}
 
         {me && !cancelled && plan.status !== "wrapped" && (
@@ -181,7 +241,7 @@ export default async function PlanPage({ params }: Props) {
         {!cancelled && (
           <PlanTabs
             storageKey={`dibs:tab:${plan.id}`}
-            initial={plan.status === "voting" ? "vote" : "who"}
+            initial={plan.status === "voting" ? "vote" : wrapped ? "chat" : "who"}
             tabs={[
               ...(plan.status === "voting" || options.length > 0
                 ? [
@@ -220,7 +280,7 @@ export default async function PlanPage({ params }: Props) {
               },
               {
                 id: "who",
-                label: "Who's in",
+                label: wrapped ? "Who came" : "Who's in",
                 count: inCount || undefined,
                 panel: (
                   <>
@@ -273,7 +333,7 @@ export default async function PlanPage({ params }: Props) {
         )}
       </main>
 
-      {!cancelled && isHost && (
+      {!cancelled && !wrapped && isHost && (
         <div className="dock">
           <div className="dock__inner">
             <ShareButton
