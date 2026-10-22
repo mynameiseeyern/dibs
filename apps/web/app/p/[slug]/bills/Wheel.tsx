@@ -49,7 +49,8 @@ export function Wheel({
 
   return (
     <div className={`wheel${mode === "spin" ? " wheel--moving" : ""}`} role="img" aria-label={label}>
-      <div className="wheel__pointer" aria-hidden="true" />
+      {/* The clay rim, hub and pointer sit still; the wedges spin underneath. */}
+      <img className="wheel__frame" src="/crew/wheel-frame.png" alt="" aria-hidden="true" draggable={false} />
       <svg viewBox="0 0 260 260" style={{ transform: `rotate(${rot}deg)` }} aria-hidden="true">
         {names.length < 2 ? (
           <circle cx="130" cy="130" r={r} fill="var(--bg-soft-200)" stroke="var(--stroke-strong-950)" strokeWidth="2" />
@@ -69,8 +70,6 @@ export function Wheel({
             );
           })
         )}
-        <circle cx="130" cy="130" r="22" fill="var(--bg-strong-950)" />
-        <circle cx="130" cy="130" r="8" fill="var(--accent-base)" />
       </svg>
     </div>
   );

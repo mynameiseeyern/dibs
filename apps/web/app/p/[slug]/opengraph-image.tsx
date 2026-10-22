@@ -11,7 +11,7 @@ export const alt = "dibs plan";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-const FILL: Record<string, string> = { violet: "#DCD3FF", lime: "#C8F03C", sun: "#FFE7A8", mint: "#BDF2D5", tangerine: "#FFD3BA" };
+const FILL: Record<string, string> = { violet: "#DCD3FF", lime: "#C8F03C", sun: "#FFE7A8", mint: "#BDF2D5", tangerine: "#FFD1BD", sky: "#C9E0FF", coral: "#FFC4CF", rose: "#FFD0E6", aqua: "#BFF0F5", ivory: "#F3EEE4" };
 const font = (f: string) => readFile(join(process.cwd(), "assets/fonts", f));
 
 export default async function Image({ params }: { params: Promise<{ slug: string }> }) {

@@ -339,3 +339,11 @@ create trigger one_vote_per_plan before insert on votes for each row execute fun
 alter table guests add column if not exists email text;
 alter table guests add column if not exists email_requested_at timestamptz;
 create index if not exists guests_email_idx on guests (lower(email)) where email is not null;
+
+-- 0004_more_colours.sql
+-- Day 3: five more crew colours, to match the clay crew art.
+alter type monogram_colour add value if not exists 'sky';
+alter type monogram_colour add value if not exists 'coral';
+alter type monogram_colour add value if not exists 'rose';
+alter type monogram_colour add value if not exists 'aqua';
+alter type monogram_colour add value if not exists 'ivory';
