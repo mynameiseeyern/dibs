@@ -3,47 +3,52 @@
 import { useActionState, useState } from "react";
 import { createPlan } from "../actions";
 import { Field, FormError } from "@/components/Field";
+import { DibbyMark } from "@/components/Logo";
 import { VibePick } from "@/components/VibePick";
 import * as Button from "@/components/ui/button";
+import * as Input from "@/components/ui/input";
 import * as Label from "@/components/ui/label";
 import * as Switch from "@/components/ui/switch";
 import * as SegmentedControl from "@/components/ui/segmented-control";
 import { PlacePicker, type PickedPlace } from "@/components/PlacePicker";
 import { PlaceCard } from "@/components/PlaceCard";
+import { SearchChips, WhenChips } from "./chips";
 
+type Where = "place" | "vote";
+type Who = "dibby" | "us";
+
+/**
+ * One form for every plan. Name and when are shared; "where" is either a place from the map
+ * or a vote, and a vote is filled by Dibby (three real spots) or by the crew.
+ */
 export function NewPlanForm() {
   const [state, action, pending] = useActionState(createPlan, undefined);
-  const [where, setWhere] = useState<"vote" | "place">("vote");
+  const [where, setWhere] = useState<Where>("vote");
+  const [who, setWho] = useState<Who>("dibby");
   const [place, setPlace] = useState<PickedPlace | null>(null);
   const [picking, setPicking] = useState(false);
+  const mode = where === "place" ? "place" : who === "dibby" ? "dibby" : "vote";
+
   return (
     <form action={action} className="form">
-      <Field label="Name it" name="title" placeholder="Friday dinner" required maxLength={80} autoComplete="off" />
+      <input type="hidden" name="where" value={mode} />
+      <Field label="Name it" name="title" placeholder="Friday dinner" maxLength={80} autoComplete="off" hint={mode === "dibby" ? "Leave it blank and Dibby names it." : undefined} />
+
+      <WhenChips />
 
       <div className="flex flex-col gap-2">
         <Label.Root asChild>
-          <span id="where-l">Got a place?</span>
+          <span id="where-l">Where</span>
         </Label.Root>
-        <input type="hidden" name="where" value={where} />
-        <SegmentedControl.Root value={where} onValueChange={(v) => setWhere(v as typeof where)}>
+        <SegmentedControl.Root value={where} onValueChange={(v) => setWhere(v as Where)}>
           <SegmentedControl.List aria-labelledby="where-l">
-            <SegmentedControl.Trigger value="vote">Put it to a vote</SegmentedControl.Trigger>
-            <SegmentedControl.Trigger value="place">I&rsquo;ve got a place</SegmentedControl.Trigger>
+            <SegmentedControl.Trigger value="vote">Vote on it</SegmentedControl.Trigger>
+            <SegmentedControl.Trigger value="place">Pick a place</SegmentedControl.Trigger>
           </SegmentedControl.List>
         </SegmentedControl.Root>
       </div>
 
-      {where === "vote" ? (
-        <Field
-          label="Where-ish"
-          name="area"
-          placeholder="Surry Hills"
-          icon="ri-map-pin-line"
-          maxLength={80}
-          autoComplete="off"
-          hint="Everyone adds places to the vote from the map."
-        />
-      ) : (
+      {where === "place" ? (
         <div className="flex flex-col gap-2">
           <input type="hidden" name="venue_place_id" value={place?.placeId ?? ""} />
           {place ? (
@@ -56,8 +61,38 @@ export function NewPlanForm() {
           )}
           <PlacePicker open={picking} onOpenChange={setPicking} title="Where's it at?" cta="Use" onPick={setPlace} />
         </div>
+      ) : (
+        <div className="db-card section">
+          <div className="flex flex-col gap-2">
+            <Label.Root asChild>
+              <span id="who-l">Who adds the options?</span>
+            </Label.Root>
+            <SegmentedControl.Root value={who} onValueChange={(v) => setWho(v as Who)}>
+              <SegmentedControl.List aria-labelledby="who-l">
+                <SegmentedControl.Trigger value="dibby">Dibby suggests 3</SegmentedControl.Trigger>
+                <SegmentedControl.Trigger value="us">We&rsquo;ll add our own</SegmentedControl.Trigger>
+              </SegmentedControl.List>
+            </SegmentedControl.Root>
+          </div>
+          {who === "dibby" ? (
+            <>
+              <div className="db-row">
+                <DibbyMark size={28} />
+                <label htmlFor="ask" className="label-md">What are you after?</label>
+              </div>
+              <Input.Root>
+                <Input.Wrapper>
+                  <Input.Input id="ask" name="ask" placeholder="Dumplings in Haymarket, bowling, bottomless brunch…" maxLength={500} autoComplete="off" />
+                </Input.Wrapper>
+              </Input.Root>
+              <SearchChips />
+              <p className="paragraph-xs muted">Dibby picks three real spots to vote on. Anyone can add more from the map. What you type goes to an AI provider.</p>
+            </>
+          ) : (
+            <Field label="Where-ish" name="area" placeholder="Surry Hills" icon="ri-map-pin-line" maxLength={80} autoComplete="off" hint="Everyone adds places to the vote from the map." />
+          )}
+        </div>
       )}
-      <Field label="When" name="starts_at" type="datetime-local" hint="Sydney and Melbourne time. Leave it blank to sort it out later." />
 
       <fieldset className="m-0 min-w-0 border-0 p-0">
         <Label.Root asChild className="mb-2">
@@ -72,11 +107,16 @@ export function NewPlanForm() {
       </label>
 
       <FormError error={state?.error} />
+      {pending && mode === "dibby" && (
+        <p className="paragraph-sm muted typing" aria-live="polite">
+          Dibby&rsquo;s on it<span className="dots" aria-hidden="true"><i /><i /><i /></span>
+        </p>
+      )}
 
       <div className="dock">
         <div className="dock__inner">
           <Button.Root variant="dibs" size="large" block disabled={pending || (where === "place" && !place)}>
-            {pending ? "Making it…" : "Make the plan"}
+            {pending ? (mode === "dibby" ? "Drafting…" : "Making it…") : "Make the plan"}
           </Button.Root>
         </div>
       </div>

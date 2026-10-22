@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { Wordmark } from "@/components/Logo";
 import { AccountButton } from "@/components/AccountButton";
 import { whoIsHere } from "@/lib/viewer";
-import { AskDibby } from "./AskDibby";
 import { NewPlanForm } from "./NewPlanForm";
 
 export const metadata = { title: "New plan" };
@@ -18,8 +17,6 @@ export default async function NewPlan() {
         <AccountButton here={here} />
       </header>
       <h1 className="title-h3">What's the plan?</h1>
-      <AskDibby />
-      <p className="subheading-sm eyebrow">Or set it up yourself</p>
       <NewPlanForm />
     </main>
   );

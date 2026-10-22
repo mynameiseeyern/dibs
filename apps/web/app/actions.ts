@@ -8,6 +8,7 @@ import { clearGuestSession, currentGuest } from "@/lib/guest";
 import { store, usingSupabase } from "@/lib/store";
 import { draftPlan, type DraftPicks } from "@/lib/dibby";
 import { localToIso } from "@/lib/time";
+import { resolveStart } from "@dibs/shared/when";
 import { siteUrl } from "@/lib/site";
 import { BETA_LIST } from "@dibs/email";
 import { getPlace } from "@/lib/places";
@@ -134,35 +135,80 @@ export async function saveProfile(_prev: FormState, form: FormData): Promise<For
   redirect(safeNext(String(form.get("next") ?? "/new")));
 }
 
+/**
+ * One form for every new plan. Name, when (day/time chips, fixed facts) and vibe are shared;
+ * "where" is a place picked on the map, a vote the crew fills, or a vote Dibby seeds with three
+ * real spots.
+ */
 export async function createPlan(_prev: FormState, form: FormData): Promise<FormState> {
   const me = await currentOrganiser();
   if (!me) redirect("/login?next=/new");
   const profile = await store.getProfile(me.id);
   if (!profile) redirect("/onboarding?next=/new");
 
-  const title = clean(form.get("title"), 80);
-  if (!title) return { error: "Give it a name, like “Friday dinner”." };
-  const whenRaw = clean(form.get("starts_at"), 16);
-  const startsAt = whenRaw ? localToIso(whenRaw) : null;
-  if (whenRaw && !startsAt) return { error: "That date and time doesn't look right." };
+  const where = String(form.get("where") ?? "vote");
+  const picks = readPicks(form);
   const vibe = (["chill", "extra", "straight"].includes(String(form.get("vibe"))) ? form.get("vibe") : "chill") as Vibe;
+  const plusOnes = form.get("plus_ones") === "on";
+  const title = clean(form.get("title"), 80);
+  const startLocal = resolveStart(null, picks);
+  const startsAt = startLocal ? localToIso(startLocal) : null;
+  const organiserName = `${profile.first_name} ${profile.last_name}`;
 
-  // "I've got a place": a real business from the map, and the plan starts locked to it.
+  // Dibby seeds the vote: name and area can come from what you're after, if you left them blank.
+  if (where === "dibby") {
+    const ask = String(form.get("ask") ?? "").replace(/^\s*@dibby\s*/i, "").trim().slice(0, 500);
+    if (!ask && !picks.spend) return { error: "Tell Dibby what you're after, like “dumplings” or “bowling”." };
+    if (!process.env.ANTHROPIC_API_KEY) return { error: "Dibby isn't switched on yet. Pick a place, or vote on it and add your own." };
+    let draft;
+    try {
+      draft = await draftPlan([title, ask].filter(Boolean).join(": "), vibe, picks);
+    } catch (e) {
+      console.error("[dibby draft]", e);
+      return { error: "brb, Dibby's having a moment. Try again, or add your own places." };
+    }
+    const plan = await store.createPlan({
+      organiserUserId: me.id,
+      organiserName,
+      title: title || draft.title,
+      area: clean(form.get("area"), 80) || draft.area,
+      startsAt: startsAt ?? (draft.startsAtLocal ? localToIso(draft.startsAtLocal) : null),
+      vibe,
+      plusOnes,
+    });
+    for (const v of draft.venues) await store.addOption({ planId: plan.id, label: v.name, placeId: v.placeId, note: v.address });
+    const members = await store.listMembers(plan.id);
+    const organiser = members.find((m) => m.user_id === me.id) ?? null;
+    await store.addMessage({ planId: plan.id, memberId: organiser?.id ?? null, kind: "text", body: `@dibby ${[ask, picksLabel(picks)].filter(Boolean).join(" · ")}`, mentionsDibby: true });
+    await store.addMessage({
+      planId: plan.id,
+      memberId: null,
+      kind: "system",
+      body: "Heads up: messages that tag @dibby are sent to an AI provider so Dibby can reply. Dibby only reads messages it's tagged in.",
+    });
+    const tail = draft.venues.length ? "Vote's open for 24 hours." : "Couldn't find spots for that on Maps, so add a few from the map and the vote opens.";
+    await store.addMessage({ planId: plan.id, memberId: null, kind: "dibby", body: `${draft.reply} ${tail}` });
+    redirect(`/p/${plan.slug}`);
+  }
+
+  if (!title) return { error: "Give it a name, like “Friday dinner”." };
+
+  // "Pick a place": a real business from the map, and the plan starts locked to it.
   let venue: { placeId: string; name: string } | null = null;
-  if (form.get("where") === "place") {
+  if (where === "place") {
     const place = await getPlace(String(form.get("venue_place_id") ?? ""));
-    if (!place) return { error: "Pick the place on the map, or put it to a vote." };
+    if (!place) return { error: "Pick the place on the map, or vote on it." };
     venue = { placeId: place.placeId, name: place.name };
   }
 
   const plan = await store.createPlan({
     organiserUserId: me.id,
-    organiserName: `${profile.first_name} ${profile.last_name}`,
+    organiserName,
     title,
     area: venue ? null : clean(form.get("area"), 80) || null,
     startsAt,
     vibe,
-    plusOnes: form.get("plus_ones") === "on",
+    plusOnes,
     venue,
   });
   redirect(`/p/${plan.slug}`);
@@ -192,46 +238,3 @@ function picksLabel(p: DraftPicks): string {
   return [day, time, p.spend ? "$".repeat(p.spend) : null, p.near ? "near me" : null].filter(Boolean).join(" · ");
 }
 
-/** "@dibby dinner friday in surry hills, cheap-ish": Dibby drafts the plan and the vote. */
-export async function createWithDibby(_prev: FormState, form: FormData): Promise<FormState> {
-  const me = await currentOrganiser();
-  if (!me) redirect("/login?next=/new");
-  const profile = await store.getProfile(me.id);
-  if (!profile) redirect("/onboarding?next=/new");
-  const ask = String(form.get("ask") ?? "").replace(/^\s*@dibby\s*/i, "").trim().slice(0, 500);
-  const picks = readPicks(form);
-  if (!ask && !picks.date && !picks.time && !picks.spend) return { error: "Tell Dibby what you're after, like “dumplings”, or tap a day and a time." };
-  if (!process.env.ANTHROPIC_API_KEY) return { error: "Dibby isn't switched on yet. Fill in the form below for now." };
-
-  let draft;
-  try {
-    draft = await draftPlan(ask, (["chill", "extra", "straight"].includes(String(form.get("vibe"))) ? form.get("vibe") : "chill") as Vibe, picks);
-  } catch (e) {
-    console.error("[dibby draft]", e);
-    return { error: "brb, Dibby's having a moment. Try again, or fill in the form below." };
-  }
-  const plan = await store.createPlan({
-    organiserUserId: me.id,
-    organiserName: `${profile.first_name} ${profile.last_name}`,
-    title: draft.title,
-    area: draft.area,
-    startsAt: draft.startsAtLocal ? localToIso(draft.startsAtLocal) : null,
-    vibe: draft.vibe,
-    plusOnes: false,
-  });
-  for (const v of draft.venues) {
-    await store.addOption({ planId: plan.id, label: v.name, placeId: v.placeId, note: v.address });
-  }
-  const members = await store.listMembers(plan.id);
-  const organiser = members.find((m) => m.user_id === me.id) ?? null;
-  await store.addMessage({ planId: plan.id, memberId: organiser?.id ?? null, kind: "text", body: `@dibby ${[ask, picksLabel(picks)].filter(Boolean).join(" · ")}`, mentionsDibby: true });
-  await store.addMessage({
-    planId: plan.id,
-    memberId: null,
-    kind: "system",
-    body: "Heads up: messages that tag @dibby are sent to an AI provider so Dibby can reply. Dibby only reads messages it's tagged in.",
-  });
-  const tail = draft.venues.length ? "Vote's open for 24 hours." : "Couldn't find spots for that on Maps, so add a few from the map and the vote opens.";
-  await store.addMessage({ planId: plan.id, memberId: null, kind: "dibby", body: `${draft.reply} ${tail}` });
-  redirect(`/p/${plan.slug}`);
-}
