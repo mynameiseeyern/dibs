@@ -46,14 +46,18 @@ const pop: Play = async (s, p, colour, name) => {
 
 /** Locked in: a flag plants in the ground with a thunk and a puff of confetti. */
 const lock: Play = async (s, p) => {
-  const art = await prop("flag", 3.2);
+  // The frame shows about four units, centred a little below the middle: a 2.8-unit flag planted
+  // at BASE sits near the bottom edge with air above, instead of clipping at the top and floating.
+  const BASE = -1.1;
+  const art = await prop("flag", 2.8);
   if (art) {
     const g = new THREE.Group();
     g.add(art);
     g.position.y = 4;
     s.scene.add(g);
-    const ground = new THREE.Mesh(new THREE.CircleGeometry(1.0, 40), new THREE.MeshBasicMaterial({ color: p.ink, transparent: true, opacity: 0.12 }));
+    const ground = new THREE.Mesh(new THREE.CircleGeometry(0.8, 40), new THREE.MeshBasicMaterial({ color: p.ink, transparent: true, opacity: 0.12 }));
     ground.rotation.x = -Math.PI / 2;
+    ground.position.y = BASE;
     s.scene.add(ground);
     const c = confetti(36, p);
     c.group.visible = false;
@@ -61,14 +65,14 @@ const lock: Play = async (s, p) => {
     let landed = false;
     return (t) => {
       const drop = easeOutCubic(clamp01(t / 0.45));
-      g.position.y = 4 * (1 - drop);
+      g.position.y = BASE + 4 * (1 - drop);
       if (t >= 0.45 && !landed) {
         landed = true;
         c.group.visible = true;
       }
       if (landed) {
         const u = t - 0.45;
-        g.position.y = -Math.sin(Math.min(u, 0.3) * Math.PI / 0.3) * 0.08;
+        g.position.y = BASE - Math.sin(Math.min(u, 0.3) * Math.PI / 0.3) * 0.08;
         g.rotation.z = Math.sin(u * 7) * 0.08 * Math.max(0, 1.5 - u);
         c.update(u);
       }
