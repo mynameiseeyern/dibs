@@ -17,6 +17,7 @@ import { Monogram, MonogramStack } from "@/components/Monogram";
 import { LiveRefresh } from "@/components/LiveRefresh";
 import { mapsLink } from "@/lib/places";
 import { closeIfDue } from "@/lib/plan-ops";
+import { nudgeIfDue } from "@/lib/nudges";
 import { store } from "@/lib/store";
 import { formatShort, formatWhen } from "@/lib/time";
 import { loadPlan } from "@/lib/viewer";
@@ -52,7 +53,9 @@ export default async function PlanPage({ params }: Props) {
   // Votes close themselves once the deadline passes.
   if (await closeIfDue(view.plan)) view = (await loadPlan(slug))!;
   const { plan, members, me, isHost } = view;
-  const [options, votes, messages] = await Promise.all([store.listOptions(plan.id), store.listVotes(plan.id), store.listMessages(plan.id, 50)]);
+  const [options, votes, firstMessages] = await Promise.all([store.listOptions(plan.id), store.listVotes(plan.id), store.listMessages(plan.id, 50)]);
+  // Dibby's automatic nudges are checked on page load (we're on Vercel Hobby: no frequent cron).
+  const messages = (await nudgeIfDue(plan, members, options, votes)) ? await store.listMessages(plan.id, 50) : firstMessages;
   const voteRows = options.map((o) => ({ ...o, votes: votes.filter((v) => v.option_id === o.id).length, mine: Boolean(me && votes.some((v) => v.option_id === o.id && v.member_id === me.id)) }));
   const started = plan.starts_at ? Date.parse(plan.starts_at) < Date.now() : false;
 
