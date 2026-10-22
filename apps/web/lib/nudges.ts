@@ -144,7 +144,7 @@ function* dueNudges(plan: Plan, members: PlanMember[], options: PlanOption[], vo
 
   // The maybes, in the last two days.
   if (ok("maybe") && untilStart !== null && untilStart <= MAYBE_FROM_MS) {
-    const maybes = members.filter((m) => m.rsvp === "maybe" && !m.waitlisted);
+    const maybes = members.filter((m) => m.role !== "organiser" && m.rsvp === "maybe" && !m.waitlisted);
     if (maybes.length > 0) yield { kind: "maybe", key: plan.starts_at!, template: { k: "maybe", title: plan.title, names: maybes.map(firstName) } };
   }
 
