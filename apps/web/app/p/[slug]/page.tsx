@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { countIn, RSVP_LABEL, shareText } from "@dibs/shared/plans";
+import { countIn, shareText } from "@dibs/shared/plans";
 import { formatAud } from "@dibs/shared/bills";
 import type { PlanMember, Rsvp } from "@dibs/shared/types";
 import { Wordmark } from "@/components/Logo";
@@ -8,6 +8,7 @@ import { AccountButton } from "@/components/AccountButton";
 import { Suspense } from "react";
 import { Weather } from "./Weather";
 import { PlanTabs } from "./PlanTabs";
+import { RsvpPicker } from "./RsvpPicker";
 import { Once } from "@/components/moments/Once";
 import { planStatus } from "@/lib/status";
 import { Monogram, MonogramStack } from "@/components/Monogram";
@@ -216,23 +217,13 @@ export default async function PlanPage({ params }: Props) {
             {plan.status === "locked" && (
               <Once id={`locked:${plan.id}`} kind="lock" size={150} label={`Locked in: ${plan.venue_name ?? "the plan"}`} />
             )}
-            <h2 id="rsvp-h" className="label-md">
-              {me.waitlisted ? "You're on the waitlist" : me.rsvp === "in" ? "You're in. Nice." : me.rsvp === "maybe" ? "You're a maybe" : me.rsvp === "out" ? "You can't make it" : "Are you in?"}
-            </h2>
-            <div className="rsvp" role="group" aria-label="Are you in?">
-              {(["in", "maybe", "out"] as const).map((r) => (
-                <form key={r} action={setRsvp.bind(null, slug, r)}>
-                  {r === "in" && plan.plus_ones && <input type="hidden" name="plus_one" value={me.plus_one ? "on" : ""} />}
-                  <button
-                    className={`db-btn ${me.rsvp === r ? (r === "in" ? "db-btn--dibs" : "db-btn--primary") : "db-btn--secondary"}`}
-                    aria-pressed={me.rsvp === r}
-                  >
-                    {RSVP_LABEL[r]}
-                  </button>
-                </form>
-              ))}
-            </div>
-            {me.waitlisted && <p className="paragraph-sm muted">It's full. The host will let you know if a spot opens up.</p>}
+            <RsvpPicker
+              rsvp={me.rsvp ?? null}
+              waitlisted={me.waitlisted}
+              plusOne={me.plus_one}
+              plusOnes={plan.plus_ones}
+              setRsvp={setRsvp.bind(null, slug)}
+            />
             {me.rsvp === "in" && !me.waitlisted && me.role === "guest" && (
               <p className="paragraph-sm muted">Get the dibs app to see all your plans in one place. Coming soon to the App Store.</p>
             )}
