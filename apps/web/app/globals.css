@@ -149,3 +149,16 @@ a { color: var(--primary-dark); }
 .recap-stat__big { font: 800 30px/36px var(--font-display); display: inline-flex; align-items: center; gap: 6px; overflow-wrap: anywhere; }
 .recap-stat__big i { font-size: 24px; color: var(--accent-dark); }
 .wrap-links { display: grid; gap: var(--space-3); }
+
+/* ---------- Home ---------- */
+.balance { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--space-3); }
+.balance__item { display: flex; flex-direction: column; gap: var(--space-1); }
+.balance__amount { font: 500 26px/32px var(--font-mono); letter-spacing: -0.02em; }
+.plan-row { text-decoration: none; color: inherit; }
+.plan-row__top { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.plan-row__nudge { display: flex; align-items: center; gap: var(--space-2); margin: 0; padding-top: var(--space-3); border-top: 1px solid var(--stroke-soft-200); font: 600 14px/20px var(--font-sans); color: var(--primary-dark); }
+.plan-row--quiet { box-shadow: none; }
+.plan-row--quiet .db-plan__title { font-size: 20px; line-height: 26px; }
+
+/* Overlapping faces: enough overlap to read as a group, not so much the initials get cut. */
+.db-avatar-group .db-avatar--sm + .db-avatar--sm { margin-left: -6px; }
