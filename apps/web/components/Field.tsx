@@ -1,26 +1,25 @@
 import type { InputHTMLAttributes } from "react";
+import * as Label from "@/components/ui/label";
+import * as Input from "@/components/ui/input";
+import * as Hint from "@/components/ui/hint";
 
 export function Field({
   label,
   hint,
   icon,
   ...input
-}: InputHTMLAttributes<HTMLInputElement> & { label: string; hint?: string; icon?: string; name: string }) {
+}: Omit<InputHTMLAttributes<HTMLInputElement>, "size"> & { label: string; hint?: string; icon?: string; name: string }) {
   const id = input.id ?? input.name;
   return (
-    <div className="db-field">
-      <label className="db-label" htmlFor={id}>
-        {label}
-      </label>
-      <div className="db-input">
-        {icon && <i className={`${icon} db-icon`} aria-hidden="true" />}
-        <input id={id} aria-describedby={hint ? `${id}-hint` : undefined} {...input} />
-      </div>
-      {hint && (
-        <p id={`${id}-hint`} className="db-hint">
-          {hint}
-        </p>
-      )}
+    <div className="flex flex-col gap-2">
+      <Label.Root htmlFor={id}>{label}</Label.Root>
+      <Input.Root>
+        <Input.Wrapper>
+          {icon && <Input.Icon as="i" className={icon} aria-hidden="true" />}
+          <Input.Input id={id} aria-describedby={hint ? `${id}-hint` : undefined} {...input} />
+        </Input.Wrapper>
+      </Input.Root>
+      {hint && <Hint.Root id={`${id}-hint`}>{hint}</Hint.Root>}
     </div>
   );
 }
@@ -28,8 +27,8 @@ export function Field({
 export function FormError({ error }: { error?: string }) {
   if (!error) return null;
   return (
-    <p className="db-hint db-hint--error" role="alert">
-      <i className="ri-error-warning-fill" aria-hidden="true" /> {error}
-    </p>
+    <Hint.Root hasError role="alert">
+      <Hint.Icon as="i" className="ri-error-warning-fill" aria-hidden="true" /> {error}
+    </Hint.Root>
   );
 }

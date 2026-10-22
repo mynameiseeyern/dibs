@@ -1,13 +1,16 @@
 import type { Here } from "@/lib/viewer";
 import { Monogram } from "./Monogram";
+import * as Button from "@/components/ui/button";
 
 /** Top-bar "you" button: your initials, through to who you are on this browser and switching. */
 export function AccountButton({ here }: { here: Here }) {
   if (!here.name) {
     return (
-      <a className="db-btn db-btn--ghost db-btn--sm" href="/login?next=/home">
-        Sign in
-      </a>
+      <Button.Root asChild mode="ghost" size="small">
+        <a href="/login?next=/home">
+          Sign in
+        </a>
+      </Button.Root>
     );
   }
   return (

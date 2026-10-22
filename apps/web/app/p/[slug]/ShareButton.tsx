@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import * as Button from "@/components/ui/button";
+import { toast } from "@/components/ui/toast";
 
 /** Opens the share sheet (WhatsApp on most phones); falls back to a WhatsApp link, then copy. */
 export function ShareButton({
@@ -17,8 +18,6 @@ export function ShareButton({
   /** Secondary style, for share moments that aren't the screen's main action. */
   quiet?: boolean;
 }) {
-  const [copied, setCopied] = useState(false);
-
   async function share() {
     if (navigator.share) {
       try {
@@ -33,14 +32,20 @@ export function ShareButton({
       return;
     }
     await navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    toast.success("Link copied", { description: "Paste it in the group chat." });
   }
 
   return (
-    <button type="button" className={quiet ? "db-btn db-btn--secondary db-btn--block" : "db-btn db-btn--dibs db-btn--lg db-btn--block"} onClick={share}>
+    <Button.Root
+      type="button"
+      variant={quiet ? "neutral" : "dibs"}
+      mode={quiet ? "lighter" : "filled"}
+      size={quiet ? "medium" : "large"}
+      block
+      onClick={share}
+    >
       <i className="ri-whatsapp-line db-icon" aria-hidden="true" />
-      {copied ? "Link copied" : label}
-    </button>
+      {label}
+    </Button.Root>
   );
 }

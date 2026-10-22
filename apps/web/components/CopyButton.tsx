@@ -1,13 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import * as Button from "@/components/ui/button";
 
 export function CopyButton({ value, label }: { value: string; label: string }) {
   const [done, setDone] = useState(false);
   return (
-    <button
+    <Button.Root
       type="button"
-      className="db-btn db-btn--secondary db-btn--sm"
+      variant="neutral"
+      mode="lighter"
+      size="small"
       aria-label={`Copy ${label}`}
       onClick={async () => {
         try {
@@ -21,6 +24,6 @@ export function CopyButton({ value, label }: { value: string; label: string }) {
     >
       <i className={`${done ? "ri-check-line" : "ri-file-copy-line"} db-icon`} aria-hidden="true" />
       {done ? "Copied" : "Copy"}
-    </button>
+    </Button.Root>
   );
 }

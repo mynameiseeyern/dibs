@@ -3,8 +3,14 @@
 import { useActionState, useState } from "react";
 import { FormError } from "@/components/Field";
 import type { FormState } from "./actions";
+import * as Button from "@/components/ui/button";
+import * as Label from "@/components/ui/label";
+import * as Hint from "@/components/ui/hint";
+import * as Input from "@/components/ui/input";
+import * as Avatar from "@/components/ui/avatar";
+import type { MonogramColour } from "@dibs/shared/types";
 
-type Person = { id: string; first: string; initials: string; colour: string };
+type Person = { id: string; first: string; initials: string; colour: MonogramColour };
 
 export function RecapForm({
   action,
@@ -31,22 +37,26 @@ export function RecapForm({
         ))}
       </fieldset>
 
-      <div className="db-field">
-        <label className="db-label" htmlFor="best_moment">Best moment</label>
-        <div className="db-input">
-          <input id="best_moment" name="best_moment" defaultValue={initial.best ?? ""} maxLength={280} placeholder="Tom losing roulette on his birthday week" autoComplete="off" />
-        </div>
+      <div className="flex flex-col gap-2">
+        <Label.Root htmlFor="best_moment">Best moment</Label.Root>
+        <Input.Root>
+          <Input.Wrapper>
+            <Input.Input id="best_moment" name="best_moment" defaultValue={initial.best ?? ""} maxLength={280} placeholder="Tom losing roulette on his birthday week" autoComplete="off" />
+          </Input.Wrapper>
+        </Input.Root>
       </div>
 
       {people.length > 0 && (
-        <fieldset className="db-field">
-          <legend className="db-label">MVP</legend>
+        <fieldset className="m-0 min-w-0 border-0 p-0">
+          <Label.Root asChild className="mb-2">
+            <legend>MVP</legend>
+          </Label.Root>
           <div className="mvp">
             {people.map((p) => (
               <label key={p.id} className="mvp__pick">
                 <input type="radio" name="mvp" value={p.id} defaultChecked={initial.mvp === p.id} />
                 <span>
-                  <span className={`db-avatar db-avatar--${p.colour}`} aria-hidden="true">{p.initials}</span>
+                  <Avatar.Root color={p.colour} aria-hidden="true">{p.initials}</Avatar.Root>
                   {p.first}
                 </span>
               </label>
@@ -57,11 +67,11 @@ export function RecapForm({
 
       <FormError error={state?.error} />
       {state?.saved && (
-        <p className="db-hint" role="status"><i className="ri-check-line" aria-hidden="true" /> Saved to the diary.</p>
+        <Hint.Root role="status"><Hint.Icon as="i" className="ri-check-line" aria-hidden="true" /> Saved to the diary.</Hint.Root>
       )}
-      <button className="db-btn db-btn--primary db-btn--lg db-btn--block" disabled={pending}>
+      <Button.Root size="large" block disabled={pending}>
         {pending ? "Saving…" : initial.stars || initial.best || initial.mvp ? "Update my answers" : "Save to the diary"}
-      </button>
+      </Button.Root>
     </form>
   );
 }

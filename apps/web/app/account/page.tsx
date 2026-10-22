@@ -7,6 +7,7 @@ import { formatAud, rouletteTally } from "@dibs/shared/bills";
 import { forgetDeviceAction, signOutAction, switchAccountAction } from "../actions";
 import { KeepPlansForm } from "./KeepPlansForm";
 import { BetaUpdatesToggle } from "./BetaUpdatesToggle";
+import * as Button from "@/components/ui/button";
 
 export const metadata = { title: "You" };
 export const dynamic = "force-dynamic";
@@ -40,9 +41,11 @@ export default async function Account() {
         <section className="section">
           <h1 className="title-h3">You&rsquo;re not signed in</h1>
           <p className="muted">Sign in to see your plans, or open a plan link from the group chat.</p>
-          <a className="db-btn db-btn--primary db-btn--lg db-btn--block" href="/login?next=/home">
-            Sign in
-          </a>
+          <Button.Root asChild size="large" block>
+            <a href="/login?next=/home">
+              Sign in
+            </a>
+          </Button.Root>
         </section>
       ) : (
         <section className="db-card section account-who">
@@ -87,30 +90,34 @@ export default async function Account() {
 
       {name && (
         <section className="section">
-          <a className="db-btn db-btn--secondary db-btn--block" href="/home">
-            <i className="ri-calendar-event-line db-icon" aria-hidden="true" />
-            Your plans
-          </a>
+          <Button.Root asChild variant="neutral" mode="lighter" block>
+            <a href="/home">
+              <i className="ri-calendar-event-line db-icon" aria-hidden="true" />
+              Your plans
+            </a>
+          </Button.Root>
           {organiser ? (
             <>
               <form action={switchAccountAction}>
-                <button className="db-btn db-btn--secondary db-btn--block">
+                <Button.Root variant="neutral" mode="lighter" block>
                   <i className="ri-user-shared-line db-icon" aria-hidden="true" />
                   Switch account
-                </button>
+                </Button.Root>
               </form>
               <form action={signOutAction}>
-                <button className="db-btn db-btn--ghost db-btn--block">Sign out</button>
+                <Button.Root mode="ghost" block>Sign out</Button.Root>
               </form>
             </>
           ) : (
             <>
-              <a className="db-btn db-btn--secondary db-btn--block" href="/login?next=/home">
-                <i className="ri-login-box-line db-icon" aria-hidden="true" />
-                I have an account
-              </a>
+              <Button.Root asChild variant="neutral" mode="lighter" block>
+                <a href="/login?next=/home">
+                  <i className="ri-login-box-line db-icon" aria-hidden="true" />
+                  I have an account
+                </a>
+              </Button.Root>
               <form action={forgetDeviceAction}>
-                <button className="db-btn db-btn--ghost db-btn--block">Not {name.split(" ")[0]}? Forget me on this browser</button>
+                <Button.Root mode="ghost" block>Not {name.split(" ")[0]}? Forget me on this browser</Button.Root>
               </form>
             </>
           )}

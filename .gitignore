@@ -9,3 +9,6 @@ coverage
 
 # Email previews from `pnpm release-notes preview`
 release-notes/.preview/
+
+# Written by `next dev` on every run
+apps/web/AGENTS.md

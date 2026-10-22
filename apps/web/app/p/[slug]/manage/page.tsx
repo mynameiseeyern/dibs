@@ -4,6 +4,7 @@ import { loadPlan } from "@/lib/viewer";
 import { cancelPlan, setDibbyVolume, setVibe, updateDetails } from "./actions";
 import { VibePick } from "@/components/VibePick";
 import { ManageForm } from "./ManageForm";
+import * as Button from "@/components/ui/button";
 
 export const metadata = { title: "Edit plan" };
 
@@ -42,9 +43,11 @@ export default async function Manage({ params }: { params: Promise<{ slug: strin
   return (
     <main className="page">
       <header className="topbar">
-        <a className="db-btn db-btn--secondary db-btn--icon" href={`/p/${slug}`} aria-label="Back to the plan">
-          <i className="ri-arrow-left-line db-icon" aria-hidden="true" />
-        </a>
+        <Button.Root asChild variant="neutral" mode="lighter" iconOnly>
+          <a href={`/p/${slug}`} aria-label="Back to the plan">
+            <i className="ri-arrow-left-line db-icon" aria-hidden="true" />
+          </a>
+        </Button.Root>
       </header>
       <div className="section">
         <span className="subheading-sm eyebrow">{plan.title}</span>
@@ -67,9 +70,14 @@ export default async function Manage({ params }: { params: Promise<{ slug: strin
         <div className="rsvp" role="group" aria-label="How chatty is Dibby?">
           {(["quiet", "normal", "loud"] as const).map((v) => (
             <form key={v} action={setDibbyVolume.bind(null, slug, v)}>
-              <button className={`db-btn ${plan.dibby_volume === v ? "db-btn--primary" : "db-btn--secondary"}`} aria-pressed={plan.dibby_volume === v}>
+              <Button.Root
+                variant={plan.dibby_volume === v ? "primary" : "neutral"}
+                mode={plan.dibby_volume === v ? "filled" : "lighter"}
+                className="px-2"
+                aria-pressed={plan.dibby_volume === v}
+              >
                 {VOLUME_LABEL[v]}
-              </button>
+              </Button.Root>
             </form>
           ))}
         </div>

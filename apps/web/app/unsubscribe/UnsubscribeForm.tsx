@@ -2,6 +2,8 @@
 
 import { useActionState } from "react";
 import { resubscribeWithToken, unsubscribeWithToken, type ListState } from "../email-actions";
+import * as Button from "@/components/ui/button";
+import * as Hint from "@/components/ui/hint";
 
 export function UnsubscribeForm({ token, email, subscribed }: { token: string; email: string; subscribed: boolean }) {
   const [left, leave, leaving] = useActionState<ListState, FormData>(unsubscribeWithToken, undefined);
@@ -17,11 +19,11 @@ export function UnsubscribeForm({ token, email, subscribed }: { token: string; e
         </p>
         <form action={rejoin}>
           <input type="hidden" name="t" value={token} />
-          <button className="db-btn db-btn--ghost db-btn--block" disabled={rejoining}>
+          <Button.Root mode="ghost" block disabled={rejoining}>
             {rejoining ? "Saving…" : "Changed your mind? Keep getting them"}
-          </button>
+          </Button.Root>
         </form>
-        {back?.error && <p className="db-hint db-hint--error" role="alert">{back.error}</p>}
+        {back?.error && <Hint.Root hasError role="alert">{back.error}</Hint.Root>}
       </section>
     );
   }
@@ -37,12 +39,12 @@ export function UnsubscribeForm({ token, email, subscribed }: { token: string; e
       {!back?.subscribed && (
         <form action={leave}>
           <input type="hidden" name="t" value={token} />
-          <button className="db-btn db-btn--primary db-btn--lg db-btn--block" disabled={leaving}>
+          <Button.Root size="large" block disabled={leaving}>
             {leaving ? "Saving…" : "Unsubscribe"}
-          </button>
+          </Button.Root>
         </form>
       )}
-      {left?.error && <p className="db-hint db-hint--error" role="alert">{left.error}</p>}
+      {left?.error && <Hint.Root hasError role="alert">{left.error}</Hint.Root>}
     </section>
   );
 }

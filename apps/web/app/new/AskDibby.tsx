@@ -5,6 +5,9 @@ import { DibbyMark } from "@/components/Logo";
 import { FormError } from "@/components/Field";
 import { createWithDibby } from "../actions";
 import { VibePick } from "@/components/VibePick";
+import * as Button from "@/components/ui/button";
+import * as Input from "@/components/ui/input";
+import * as Label from "@/components/ui/label";
 
 export function AskDibby() {
   const [state, action, pending] = useActionState(createWithDibby, undefined);
@@ -14,12 +17,16 @@ export function AskDibby() {
         <DibbyMark size={36} />
         <h2 id="ask-h" className="title-h4">Ask Dibby</h2>
       </div>
-      <div className="db-input">
-        <label htmlFor="ask" className="sr-only">What are you after?</label>
-        <input id="ask" name="ask" placeholder="dinner Friday in Surry Hills, cheap-ish" maxLength={500} autoComplete="off" />
-      </div>
-      <fieldset className="db-field">
-        <legend className="db-label">Vibe</legend>
+      <label htmlFor="ask" className="sr-only">What are you after?</label>
+      <Input.Root>
+        <Input.Wrapper>
+          <Input.Input id="ask" name="ask" placeholder="dinner Friday in Surry Hills, cheap-ish" maxLength={500} autoComplete="off" />
+        </Input.Wrapper>
+      </Input.Root>
+      <fieldset className="m-0 min-w-0 border-0 p-0">
+        <Label.Root asChild className="mb-2">
+          <legend>Vibe</legend>
+        </Label.Root>
         <VibePick />
       </fieldset>
       {pending ? (
@@ -30,10 +37,10 @@ export function AskDibby() {
         <p className="paragraph-sm muted">Dibby picks three spots and opens a vote. What you type here goes to an AI provider.</p>
       )}
       <FormError error={state?.error} />
-      <button className="db-btn db-btn--primary db-btn--block" disabled={pending}>
+      <Button.Root block disabled={pending}>
         <i className="ri-sparkling-line db-icon" aria-hidden="true" />
         {pending ? "Drafting…" : "Draft it"}
-      </button>
+      </Button.Root>
     </form>
   );
 }

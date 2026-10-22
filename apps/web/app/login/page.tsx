@@ -3,6 +3,7 @@ import { Wordmark } from "@/components/Logo";
 import { currentOrganiser } from "@/lib/auth";
 import { usingSupabase } from "@/lib/store";
 import { LoginForm } from "./LoginForm";
+import * as Alert from "@/components/ui/alert";
 
 export const metadata = { title: "Sign in" };
 
@@ -25,13 +26,13 @@ export default async function Login({ searchParams }: { searchParams: Promise<{ 
         {usingSupabase ? "We'll email you a link, no password. Your plans come with you to any device." : "Demo mode: Supabase isn't set up yet, so you'll go straight in."}
       </p>
       {problem && (
-        <div className="db-alert db-alert--warning" role="alert">
-          <i className="ri-error-warning-fill db-icon" aria-hidden="true" />
+        <Alert.Root status="warning" role="alert">
+          <Alert.Icon as="i" className="ri-error-warning-fill" aria-hidden="true" />
           <div>
             <strong>Let&rsquo;s try that again</strong>
             {problem}
           </div>
-        </div>
+        </Alert.Root>
       )}
       <LoginForm next={next} demo={!usingSupabase} />
     </main>
