@@ -163,6 +163,13 @@ tokens = {
     {"name": "size-control-lg", "value": "52px", "usage": "Large buttons: the one main action at the bottom of a phone screen."},
     {"name": "size-control-md", "value": "44px", "usage": "Default buttons and inputs."},
     {"name": "size-control-sm", "value": "36px", "usage": "Compact buttons inside cards on desktop; pad the hit area to size-tap on touch."}]},
+  "motion": {"note": "Animate only to show cause and effect or to reward a moment. Nothing loops in the background. Under prefers-reduced-motion, 3D moments become a still and a fade.", "tokens": [
+    {"name": "motion-fast", "value": "150ms", "usage": "Hover, press, toggles."},
+    {"name": "motion-base", "value": "250ms", "usage": "Most transitions: cards appearing, values changing, tabs."},
+    {"name": "motion-expressive", "value": "500ms", "usage": "Signature pops and reveals."},
+    {"name": "ease-standard", "value": "cubic-bezier(0.2, 0, 0, 1)", "usage": "Default easing."},
+    {"name": "ease-spring", "value": "cubic-bezier(0.34, 1.56, 0.64, 1)", "usage": "Pop-ups: a figure springing up, like calling dibs. Overshoots a touch."},
+    {"name": "ease-exit", "value": "cubic-bezier(0.4, 0, 1, 1)", "usage": "Things leaving: delete, cancel, dismiss."}]},
   "shadow": {"tokens": [
     {"name": "shadow-xs", "value": {"light": "0 1px 2px 0 rgba(20, 18, 22, 0.06)", "dark": "0 1px 2px 0 rgba(0, 0, 0, 0.4)"}, "usage": "Inputs and resting buttons."},
     {"name": "shadow-sm", "value": {"light": "0 4px 12px -2px rgba(20, 18, 22, 0.10)", "dark": "0 4px 12px -2px rgba(0, 0, 0, 0.5)"}, "usage": "Cards that float over the cream page."},

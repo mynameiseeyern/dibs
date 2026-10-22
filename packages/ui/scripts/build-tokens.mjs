@@ -22,7 +22,7 @@ for (const tok of t.shadow.tokens) {
   light.push(`  --${tok.name}: ${tok.value.light};`);
   dark.push(`  --${tok.name}: ${tok.value.dark};`);
 }
-for (const group of ["spacing", "radius", "size"]) {
+for (const group of ["spacing", "radius", "size", "motion"]) {
   for (const tok of t[group].tokens) flat.push(`  --${tok.name}: ${tok.value};`);
 }
 for (const [k, v] of Object.entries(t.type.families)) flat.push(`  --font-${k}: ${v};`);

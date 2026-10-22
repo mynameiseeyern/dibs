@@ -8,6 +8,7 @@ import { AccountButton } from "@/components/AccountButton";
 import { Suspense } from "react";
 import { Weather } from "./Weather";
 import { PlanTabs } from "./PlanTabs";
+import { Once } from "@/components/moments/Once";
 import { planStatus } from "@/lib/status";
 import { Monogram, MonogramStack } from "@/components/Monogram";
 import { LiveRefresh } from "@/components/LiveRefresh";
@@ -209,6 +210,12 @@ export default async function PlanPage({ params }: Props) {
 
         {me && !cancelled && plan.status !== "wrapped" && (
           <section className="db-card section" aria-labelledby="rsvp-h">
+            {me.rsvp === "in" && !me.waitlisted && (
+              <Once id={`in:${plan.id}:${me.id}`} kind="pop" size={140} colour={me.colour} label="You popped up. You're in." />
+            )}
+            {plan.status === "locked" && (
+              <Once id={`locked:${plan.id}`} kind="lock" size={150} label={`Locked in: ${plan.venue_name ?? "the plan"}`} />
+            )}
             <h2 id="rsvp-h" className="label-md">
               {me.waitlisted ? "You're on the waitlist" : me.rsvp === "in" ? "You're in. Nice." : me.rsvp === "maybe" ? "You're a maybe" : me.rsvp === "out" ? "You can't make it" : "Are you in?"}
             </h2>

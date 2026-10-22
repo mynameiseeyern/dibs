@@ -10,6 +10,7 @@ import { addBill, confirmPaid, saysPaid, spin, toggleSpin } from "./actions";
 import { AddBill } from "./AddBill";
 import { Wheel } from "./Wheel";
 import { RouletteResult } from "./RouletteResult";
+import { Once } from "@/components/moments/Once";
 
 export const metadata = { title: "Square up" };
 export const dynamic = "force-dynamic";
@@ -117,6 +118,7 @@ export default async function Bills({ params, searchParams }: Props) {
 
         {owedShares.length > 0 && settled === owedShares.length && (
           <section className="moment">
+            <Once id={`square:${plan.id}`} kind="square" size={220} label="Everyone's square. The crew celebrates." />
             <span className="db-badge db-badge--success"><i className="ri-checkbox-circle-fill db-icon" aria-hidden="true" />All squared up</span>
             <p className="muted">Everyone&rsquo;s paid back. Nice work, crew.</p>
             <a className="db-btn db-btn--secondary" href={`/p/${slug}/recap`}><i className="ri-star-smile-line db-icon" aria-hidden="true" />On to the recap</a>
@@ -128,7 +130,10 @@ export default async function Bills({ params, searchParams }: Props) {
             <span className="db-plan__eyebrow">{bill.title}</span>
             <h2 className="title-h4">You owe {first(bill.payer_member_id)} <span className="money">{formatAud(share.amount_cents)}</span></h2>
             {share.status === "says_paid" ? (
-              <div className="db-alert db-alert--success" role="status"><i className="ri-time-line db-icon" aria-hidden="true" /><div><strong>Marked as paid</strong>Waiting on {first(bill.payer_member_id)} to confirm.</div></div>
+              <>
+                <Once id={`paid:${bill.id}:${me.id}`} kind="paid" size={120} label="Paid" />
+                <div className="db-alert db-alert--success" role="status"><i className="ri-time-line db-icon" aria-hidden="true" /><div><strong>Marked as paid</strong>Waiting on {first(bill.payer_member_id)} to confirm.</div></div>
+              </>
             ) : pay ? (
               <>
                 <div className="payid">

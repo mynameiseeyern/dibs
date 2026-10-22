@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import type { PlanOption } from "@dibs/shared/types";
 import type { FormState } from "./actions";
+import { Fresh } from "@/components/moments/Fresh";
 
 export interface VoteRow extends PlanOption {
   votes: number;
@@ -27,7 +28,7 @@ export function VoteList({
   const [state, addAction, adding] = useActionState(add, undefined);
 
   return (
-    <div className="db-stack">
+    <Fresh>
       {rows.length === 0 && <p className="paragraph-sm muted">No options yet. Add one, or ask Dibby.</p>}
       {rows.map((r) => {
         const share = total ? Math.round((r.votes / total) * 100) : 0;
@@ -37,6 +38,7 @@ export function VoteList({
             key={r.id}
             type="button"
             className={`db-vote${winning ? " db-vote--winning" : ""}`}
+            data-fresh-id={r.id}
             aria-pressed={r.mine}
             disabled={!canVote || !open}
             onClick={() => vote(r.id)}
@@ -73,6 +75,6 @@ export function VoteList({
           {state.error}
         </p>
       )}
-    </div>
+    </Fresh>
   );
 }
