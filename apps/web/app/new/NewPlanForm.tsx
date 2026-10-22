@@ -51,8 +51,8 @@ export function NewPlanForm() {
         </Label.Root>
         <SegmentedControl.Root value={where} onValueChange={(v) => setWhere(v as Where)}>
           <SegmentedControl.List aria-labelledby="where-l">
-            <SegmentedControl.Trigger value="vote">Vote on it</SegmentedControl.Trigger>
-            <SegmentedControl.Trigger value="place">Pick a place</SegmentedControl.Trigger>
+            <SegmentedControl.Trigger value="place">Already decided</SegmentedControl.Trigger>
+            <SegmentedControl.Trigger value="vote">Feeling democratic?</SegmentedControl.Trigger>
           </SegmentedControl.List>
         </SegmentedControl.Root>
       </div>
