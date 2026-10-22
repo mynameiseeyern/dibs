@@ -85,7 +85,53 @@ export function stage(canvas: HTMLCanvasElement, size: number): Stage {
   };
 }
 
-/** A Dibs crew figure: round head on a pill body, like the logo's dots. */
+const CREW = ["violet", "lime", "sun", "mint", "tangerine"] as const;
+export type CrewName = (typeof CREW)[number];
+const textures = new Map<string, Promise<THREE.Texture | null>>();
+
+/** The Higgsfield-made crew art in /public/crew, if it's been added. Null when it hasn't. */
+export function crewTexture(name: string): Promise<THREE.Texture | null> {
+  if (!CREW.includes(name as CrewName)) return Promise.resolve(null);
+  if (!textures.has(name)) {
+    textures.set(
+      name,
+      new Promise((resolve) => {
+        new THREE.TextureLoader().load(
+          `/crew/${name}.png`,
+          (t) => {
+            t.colorSpace = THREE.SRGBColorSpace;
+            resolve(t);
+          },
+          undefined,
+          () => resolve(null)
+        );
+      })
+    );
+  }
+  return textures.get(name)!;
+}
+
+/**
+ * A crew member. With the art in place it's a billboard that always faces the camera,
+ * sized like the capsule figure (2.1 tall, feet at y=0); otherwise the built-in figure.
+ */
+export async function crew(name: string, fallback: THREE.Color, p: Palette): Promise<THREE.Group> {
+  const tex = await crewTexture(name);
+  if (!tex) return figure(fallback, p);
+  const g = new THREE.Group();
+  const h = 2.1;
+  const w = h * ((tex.image as { width: number }).width / (tex.image as { height: number }).height);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: 0.02 }));
+  m.position.y = h / 2;
+  g.add(m);
+  const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.45, 32), new THREE.MeshBasicMaterial({ color: p.ink, transparent: true, opacity: 0.12 }));
+  shadow.rotation.x = -Math.PI / 2;
+  shadow.position.y = 0.01;
+  g.add(shadow);
+  return g;
+}
+
+/** The built-in crew figure: round head on a pill body, like the logo's dots. */
 export function figure(color: THREE.Color, p: Palette): THREE.Group {
   const g = new THREE.Group();
   const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.42, 0.7, 6, 16), matte(color));

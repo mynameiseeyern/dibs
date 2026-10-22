@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { clamp01, confetti, easeOutBack, easeOutCubic, figure, matte, palette, stage, type Stage } from "./scene";
+import { clamp01, confetti, crew, easeOutBack, easeOutCubic, matte, palette, stage, type Stage } from "./scene";
 
 export type MomentKind = "pop" | "lock" | "square" | "paid";
 
@@ -9,8 +9,7 @@ export function play(kind: MomentKind, canvas: HTMLCanvasElement, size: number, 
   const p = palette(el);
   const s = stage(canvas, size);
   const done = new Promise<void>((resolve) => {
-    const tick = PLAYS[kind](s, p, colour ? crewColour(colour, el) : p.lime);
-    s.run(tick, resolve);
+    PLAYS[kind](s, p, colour ? crewColour(colour, el) : p.lime, colour ?? "lime").then((tick) => s.run(tick, resolve));
   });
   return { done, dispose: () => s.dispose() };
 }
@@ -22,11 +21,11 @@ function crewColour(name: string, el: HTMLElement): THREE.Color {
   return new THREE.Color(v || "#c8f03c");
 }
 
-type Play = (s: Stage, p: ReturnType<typeof palette>, colour: THREE.Color) => (t: number) => boolean;
+type Play = (s: Stage, p: ReturnType<typeof palette>, colour: THREE.Color, name: string) => Promise<(t: number) => boolean>;
 
 /** Calling dibs: a crew figure springs up from the ground and does a little hop. */
-const pop: Play = (s, p, colour) => {
-  const f = figure(colour, p);
+const pop: Play = async (s, p, colour, name) => {
+  const f = await crew(name, colour, p);
   f.scale.setScalar(0.001);
   s.scene.add(f);
   const ring = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.5, 32), new THREE.MeshBasicMaterial({ color: p.lime, transparent: true, side: THREE.DoubleSide }));
@@ -37,7 +36,7 @@ const pop: Play = (s, p, colour) => {
     const up = easeOutBack(clamp01(t / 0.5));
     f.scale.set(up, up, up);
     f.position.y = t > 0.5 ? Math.abs(Math.sin((t - 0.5) * 9)) * 0.35 * Math.max(0, 1.1 - t) : 0;
-    f.rotation.y = Math.sin(t * 3) * 0.25 * clamp01(1.6 - t);
+    f.rotation.z = Math.sin(t * 3) * 0.12 * clamp01(1.6 - t);
     const r = clamp01((t - 0.3) / 0.6);
     ring.scale.setScalar(1 + r * 3);
     (ring.material as THREE.MeshBasicMaterial).opacity = 0.7 * (1 - r);
@@ -46,7 +45,7 @@ const pop: Play = (s, p, colour) => {
 };
 
 /** Locked in: a flag plants in the ground with a thunk and a puff of confetti. */
-const lock: Play = (s, p) => {
+const lock: Play = async (s, p) => {
   const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 2.6, 12), matte(p.ink));
   pole.position.y = 1.3;
   const flag = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.8, 0.04), matte(p.violet));
@@ -82,11 +81,10 @@ const lock: Play = (s, p) => {
 };
 
 /** Everyone's square: the crew pops up together and confetti rains. */
-const square: Play = (s, p) => {
+const square: Play = async (s, p) => {
   const el = s.renderer.domElement.parentElement ?? s.renderer.domElement;
-  const cols = ["lime", "violet", "sun", "mint", "tangerine"].map((c) => crewColour(c, el));
-  const figs = cols.map((c, i) => {
-    const f = figure(c, p);
+  const names = ["lime", "violet", "sun", "mint", "tangerine"];
+  const figs = (await Promise.all(names.map((n) => crew(n, crewColour(n, el), p)))).map((f, i) => {
     f.position.x = (i - 2) * 1.05;
     f.position.z = i % 2 ? -0.4 : 0.2;
     f.scale.setScalar(0.001);
@@ -102,7 +100,7 @@ const square: Play = (s, p) => {
       const u = easeOutBack(clamp01((t - i * 0.08) / 0.5));
       f.scale.set(u, u, u);
       f.position.y = Math.max(0, Math.sin(t * 6 + i)) * 0.3 * clamp01(2.2 - t);
-      f.rotation.y = Math.sin(t * 2 + i) * 0.2 * clamp01(2.6 - t);
+      f.rotation.z = Math.sin(t * 2 + i) * 0.1 * clamp01(2.6 - t);
     });
     c.update(t - 0.3);
     return t < 2.8;
@@ -110,7 +108,7 @@ const square: Play = (s, p) => {
 };
 
 /** Paid: a coin flips up and drops into a lime tick. Short and sweet. */
-const paid: Play = (s, p) => {
+const paid: Play = async (s, p) => {
   const coin = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.1, 32), matte(p.lime));
   coin.rotation.x = Math.PI / 2;
   coin.position.y = 0.8;
