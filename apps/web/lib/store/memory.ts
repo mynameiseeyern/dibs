@@ -213,6 +213,9 @@ export const memoryStore: Store = {
   async listVotes(planId) {
     return db.votes.filter((v) => db.options.get(v.option_id)?.plan_id === planId);
   },
+  async removeVote(planId, memberId) {
+    db.votes = db.votes.filter((v) => !(v.member_id === memberId && db.options.get(v.option_id)?.plan_id === planId));
+  },
   async castVote(planId, optionId, memberId) {
     db.votes = db.votes.filter((v) => !(v.member_id === memberId && db.options.get(v.option_id)?.plan_id === planId));
     db.votes.push({ option_id: optionId, member_id: memberId });

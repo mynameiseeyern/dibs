@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { countIn, shareText } from "@dibs/shared/plans";
+import { countIn, planAccess, READ_ONLY_NOTE, shareText } from "@dibs/shared/plans";
 import { formatAud } from "@dibs/shared/bills";
 import type { PlanMember, Rsvp } from "@dibs/shared/types";
 import { Wordmark } from "@/components/Logo";
@@ -30,6 +30,7 @@ import { VoteList } from "./Vote";
 import { siteUrl } from "@/lib/site";
 import * as Button from "@/components/ui/button";
 import * as Badge from "@/components/ui/badge";
+import * as Alert from "@/components/ui/alert";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -56,6 +57,9 @@ export default async function PlanPage({ params }: Props) {
   // Votes close themselves once the deadline passes.
   if (await closeIfDue(view.plan)) view = (await loadPlan(slug))!;
   const { plan, members, me, isHost } = view;
+  // Going (or hosting): take part. Maybe, not replied, waitlisted: read along. Can't go: hidden.
+  const access = me ? planAccess(me) : null;
+  const readOnly = access?.level === "read" ? READ_ONLY_NOTE[access.why] : null;
   const [options, votes, firstMessages] = await Promise.all([store.listOptions(plan.id), store.listVotes(plan.id), store.listMessages(plan.id, 50)]);
   // Dibby's automatic nudges are checked on page load (we're on Vercel Hobby: no frequent cron).
   const messages = (await nudgeIfDue(plan, members, options, votes)) ? await store.listMessages(plan.id, 50) : firstMessages;
@@ -269,115 +273,134 @@ export default async function PlanPage({ params }: Props) {
           </section>
         )}
 
-        {!cancelled && (
-          <PlanTabs
-            storageKey={`dibs:tab:${plan.id}`}
-            initial={plan.status === "voting" ? "vote" : wrapped ? "chat" : "who"}
-            tabs={[
-              ...(plan.status === "voting" || options.length > 0
-                ? [
-                    {
-                      id: "vote",
-                      label: plan.status === "voting" ? "Vote" : "The vote",
-                      panel: (
-                        <>
-                          <div className="section__head">
-                            <h2 className="sr-only">{plan.status === "voting" ? "What's the move?" : "The vote"}</h2>
-                            <span className="paragraph-sm muted">
-                              {plan.status === "voting"
-                                ? `${voters} of ${members.length} voted · closes ${formatShort(plan.vote_deadline)}`
-                                : `Locked in: ${plan.venue_name ?? "the winner"}`}
-                            </span>
-                          </div>
-                          <VoteList
-                            rows={voteRows}
-                            canVote={Boolean(me)}
-                            open={plan.status === "voting"}
-                            vote={vote.bind(null, slug)}
-                            add={addOption.bind(null, slug)}
-                            remove={me ? removeOption.bind(null, slug) : undefined}
-                            canRemoveAll={isHost}
-                            meId={me?.id ?? null}
-                            area={plan.area}
-                          />
-                          {isHost && plan.status === "voting" && options.length > 0 && (
-                            <form action={lockPlan.bind(null, slug)}>
-                              <Button.Root mode="ghost" size="small">
-                                <i className="ri-lock-2-line db-icon" aria-hidden="true" />
-                                Lock it in now
-                              </Button.Root>
-                            </form>
+        {!cancelled && access?.level === "hidden" && (
+          <section className="db-card section" aria-labelledby="hidden-h">
+            <h2 id="hidden-h" className="title-h5">You said you can&rsquo;t make it</h2>
+            <p className="paragraph-sm muted">
+              So the vote, chat and who&rsquo;s in are hidden. Changed your mind? Tap I&rsquo;m in or Maybe above.
+            </p>
+          </section>
+        )}
+
+        {!cancelled && access?.level !== "hidden" && (
+          <>
+            {readOnly && (
+              <Alert.Root status="information">
+                <Alert.Icon as="i" className="ri-eye-line" aria-hidden="true" />
+                <div>{readOnly}</div>
+              </Alert.Root>
+            )}
+            <PlanTabs
+              storageKey={`dibs:tab:${plan.id}`}
+              initial={plan.status === "voting" ? "vote" : wrapped ? "chat" : "who"}
+              tabs={[
+                ...(plan.status === "voting" || options.length > 0
+                  ? [
+                      {
+                        id: "vote",
+                        label: plan.status === "voting" ? "Vote" : "The vote",
+                        panel: (
+                          <>
+                            <div className="section__head">
+                              <h2 className="sr-only">{plan.status === "voting" ? "What's the move?" : "The vote"}</h2>
+                              <span className="paragraph-sm muted">
+                                {plan.status === "voting"
+                                  ? `${voters} of ${members.length} voted · closes ${formatShort(plan.vote_deadline)}`
+                                  : `Locked in: ${plan.venue_name ?? "the winner"}`}
+                              </span>
+                            </div>
+                            <VoteList
+                              rows={voteRows}
+                              canVote={Boolean(me)}
+                              open={plan.status === "voting"}
+                              vote={vote.bind(null, slug)}
+                              add={addOption.bind(null, slug)}
+                              remove={me ? removeOption.bind(null, slug) : undefined}
+                              canRemoveAll={isHost}
+                              meId={me?.id ?? null}
+                              readOnly={readOnly}
+                              area={plan.area}
+                            />
+                            {isHost && plan.status === "voting" && options.length > 0 && (
+                              <form action={lockPlan.bind(null, slug)}>
+                                <Button.Root mode="ghost" size="small">
+                                  <i className="ri-lock-2-line db-icon" aria-hidden="true" />
+                                  Lock it in now
+                                </Button.Root>
+                              </form>
+                            )}
+                          </>
+                        ),
+                      },
+                    ]
+                  : []),
+                {
+                  id: "chat",
+                  label: "Chat",
+                  count: messages.filter((m) => m.kind !== "system").length || undefined,
+                  panel: (
+                    <>
+                      <Thread
+                        messages={me?.dibby_muted ? messages.filter((m) => !m.auto) : messages}
+                        vibe={plan.vibe}
+                        reactions={reactions}
+                        react={me?.user_id && !readOnly ? toggleReaction.bind(null, slug) : undefined}
+                        summary={[plan.title, when, plan.venue_name ?? plan.area, `${inCount} going`].filter(Boolean).join(" · ")}
+                        members={members}
+                        meId={me?.id ?? null}
+                        canPost={Boolean(me?.user_id)}
+                        readOnly={readOnly}
+                        post={postMessage.bind(null, slug)}
+                      />
+                      {me && (
+                        <form action={toggleDibbyMute.bind(null, slug)} className="dibby-mute">
+                          <Button.Root mode="ghost" aria-pressed={me.dibby_muted}>
+                            <i className={`${me.dibby_muted ? "ri-notification-3-line" : "ri-notification-off-line"} db-icon`} aria-hidden="true" />
+                            {me.dibby_muted ? "Show Dibby's nudges" : "Mute Dibby's nudges"}
+                          </Button.Root>
+                        </form>
+                      )}
+                    </>
+                  ),
+                },
+                {
+                  id: "who",
+                  label: wrapped ? "Who came" : "Who's in",
+                  count: inCount || undefined,
+                  panel: (
+                    <>
+                      <h2 className="sr-only">Who's coming</h2>
+                      <p className="paragraph-sm muted">
+                        {inCount} of {plan.capacity} spots taken
+                      </p>
+                      <div className="db-card">
+                        <ul className="people">
+                          {ORDER.flatMap((g) =>
+                            members
+                              .filter((m) => groupOf(m) === g)
+                              .map((m) => (
+                                <li key={m.id} className="person">
+                                  <Monogram name={m.display_name} colour={m.colour} />
+                                  <span className="label-md person__name">
+                                    {m.display_name}
+                                    {m.id === me?.id ? " (you)" : ""}
+                                    <small>
+                                      {m.role === "organiser" ? "Organiser · " : m.role === "cohost" ? "Co-host · " : ""}
+                                      {GROUP_LABEL[g]}
+                                      {m.plus_one ? " · +1" : ""}
+                                    </small>
+                                  </span>
+                                </li>
+                              ))
                           )}
-                        </>
-                      ),
-                    },
-                  ]
-                : []),
-              {
-                id: "chat",
-                label: "Chat",
-                count: messages.filter((m) => m.kind !== "system").length || undefined,
-                panel: (
-                  <>
-                    <Thread
-                      messages={me?.dibby_muted ? messages.filter((m) => !m.auto) : messages}
-                      vibe={plan.vibe}
-                      reactions={reactions}
-                      react={me?.user_id ? toggleReaction.bind(null, slug) : undefined}
-                      summary={[plan.title, when, plan.venue_name ?? plan.area, `${inCount} going`].filter(Boolean).join(" · ")}
-                      members={members}
-                      meId={me?.id ?? null}
-                      canPost={Boolean(me?.user_id)}
-                      post={postMessage.bind(null, slug)}
-                    />
-                    {me && (
-                      <form action={toggleDibbyMute.bind(null, slug)} className="dibby-mute">
-                        <Button.Root mode="ghost" aria-pressed={me.dibby_muted}>
-                          <i className={`${me.dibby_muted ? "ri-notification-3-line" : "ri-notification-off-line"} db-icon`} aria-hidden="true" />
-                          {me.dibby_muted ? "Show Dibby's nudges" : "Mute Dibby's nudges"}
-                        </Button.Root>
-                      </form>
-                    )}
-                  </>
-                ),
-              },
-              {
-                id: "who",
-                label: wrapped ? "Who came" : "Who's in",
-                count: inCount || undefined,
-                panel: (
-                  <>
-                    <h2 className="sr-only">Who's coming</h2>
-                    <p className="paragraph-sm muted">
-                      {inCount} of {plan.capacity} spots taken
-                    </p>
-                    <div className="db-card">
-                      <ul className="people">
-                        {ORDER.flatMap((g) =>
-                          members
-                            .filter((m) => groupOf(m) === g)
-                            .map((m) => (
-                              <li key={m.id} className="person">
-                                <Monogram name={m.display_name} colour={m.colour} />
-                                <span className="label-md person__name">
-                                  {m.display_name}
-                                  {m.id === me?.id ? " (you)" : ""}
-                                  <small>
-                                    {m.role === "organiser" ? "Organiser · " : m.role === "cohost" ? "Co-host · " : ""}
-                                    {GROUP_LABEL[g]}
-                                    {m.plus_one ? " · +1" : ""}
-                                  </small>
-                                </span>
-                              </li>
-                            ))
-                        )}
-                      </ul>
-                    </div>
-                  </>
-                ),
-              },
-            ]}
-          />
+                        </ul>
+                      </div>
+                    </>
+                  ),
+                },
+              ]}
+            />
+          </>
         )}
 
         {me?.guest_id && view.guest && me.guest_id === view.guest.id && (

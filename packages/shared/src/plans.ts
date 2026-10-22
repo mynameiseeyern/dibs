@@ -47,3 +47,24 @@ export function shareText(opts: { title: string; deadline?: string | null; url: 
   const by = opts.deadline ? ` Vote + RSVP by ${opts.deadline}` : " Vote + RSVP";
   return `${opts.title} is on.${by} 👉 ${opts.url}`;
 }
+
+/**
+ * What someone on the plan can do with the vote, chat and who's in, from their RSVP.
+ * Going: take part. Maybe, not replied yet, or on the waitlist: read along. Can't go: hidden.
+ * Hosts always take part, since they run the plan.
+ */
+export type Access = { level: "full" } | { level: "read"; why: "maybe" | "unreplied" | "waitlist" } | { level: "hidden" };
+
+export function planAccess(me: Pick<PlanMember, "rsvp" | "waitlisted" | "role">): Access {
+  if (me.role === "organiser" || me.role === "cohost") return { level: "full" };
+  if (me.rsvp === "out") return { level: "hidden" };
+  if (me.rsvp === "in") return me.waitlisted ? { level: "read", why: "waitlist" } : { level: "full" };
+  return { level: "read", why: me.rsvp === "maybe" ? "maybe" : "unreplied" };
+}
+
+/** The line shown when someone who can only read tries to vote, chat or add a place. */
+export const READ_ONLY_NOTE = {
+  maybe: "You're a maybe, so you can only read along. Tap I'm in to vote and chat.",
+  unreplied: "You can only take part if you're going. Tap I'm in to vote and chat.",
+  waitlist: "You're on the waitlist, so you can only read along until a spot opens.",
+} as const;
