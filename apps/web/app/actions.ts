@@ -26,7 +26,17 @@ export async function signIn(_prev: FormState, form: FormData): Promise<FormStat
     email,
     options: { emailRedirectTo: `${site}/auth/callback?next=${encodeURIComponent(next)}` },
   });
-  if (error) return { error: "Couldn't send the link. Try again in a sec." };
+  if (error) {
+    // Shows up in Vercel's logs, so we can see the real reason.
+    console.error("[sign-in]", error.status, error.code, error.message);
+    if (error.status === 429 || /rate limit/i.test(error.message)) {
+      return { error: "Too many sign-in emails just now. Give it a bit and try again." };
+    }
+    if (/redirect|url/i.test(error.message)) {
+      return { error: "Sign-in isn't set up for this address yet. Add it to Supabase's redirect URLs." };
+    }
+    return { error: "Couldn't send the link. Try again in a sec." };
+  }
   return { sent: email };
 }
 
