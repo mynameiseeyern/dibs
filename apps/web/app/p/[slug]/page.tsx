@@ -15,6 +15,7 @@ import { JoinForm } from "./JoinForm";
 import { ShareButton } from "./ShareButton";
 import { Thread } from "./Thread";
 import { VoteList } from "./Vote";
+import { siteUrl } from "@/lib/site";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -45,7 +46,7 @@ export default async function PlanPage({ params }: Props) {
   const voteRows = options.map((o) => ({ ...o, votes: votes.filter((v) => v.option_id === o.id).length, mine: Boolean(me && votes.some((v) => v.option_id === o.id && v.member_id === me.id)) }));
   const started = plan.starts_at ? Date.parse(plan.starts_at) < Date.now() : false;
 
-  const site = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const site = siteUrl();
   const url = `${site}/p/${plan.slug}?v=${plan.version}`;
   const going = members.filter((m) => m.rsvp === "in" && !m.waitlisted);
   const inCount = countIn(members);

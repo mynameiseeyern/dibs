@@ -6,6 +6,7 @@ import { currentOrganiser, demoSignIn, signOut, supabaseAuth } from "@/lib/auth"
 import { store, usingSupabase } from "@/lib/store";
 import { draftPlan } from "@/lib/dibby";
 import { localToIso } from "@/lib/time";
+import { siteUrl } from "@/lib/site";
 
 export type FormState = { error?: string; sent?: string } | undefined;
 
@@ -20,7 +21,7 @@ export async function signIn(_prev: FormState, form: FormData): Promise<FormStat
   }
   const email = clean(form.get("email"), 200).toLowerCase();
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { error: "That email doesn't look right." };
-  const site = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const site = siteUrl();
   const { error } = await (await supabaseAuth()).auth.signInWithOtp({
     email,
     options: { emailRedirectTo: `${site}/auth/callback?next=${encodeURIComponent(next)}` },
