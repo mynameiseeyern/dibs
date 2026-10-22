@@ -14,7 +14,8 @@ export function ManageForm({
   action: (s: FormState, f: FormData) => Promise<FormState>;
   cancel: () => Promise<void>;
   initial: { title: string; startsAt: string; place: string };
-  placeLabel: string;
+  /** The vote's area field. Null once there's a set place (that's changed on the map). */
+  placeLabel: string | null;
 }) {
   const [state, formAction, pending] = useActionState(action, undefined);
   const [confirming, setConfirming] = useState(false);
@@ -24,7 +25,7 @@ export function ManageForm({
       <form action={formAction} className="form">
         <Field label="Name" name="title" defaultValue={initial.title} maxLength={80} required autoComplete="off" />
         <Field label="When" name="starts_at" type="datetime-local" defaultValue={initial.startsAt} hint="Sydney and Melbourne time." />
-        <Field label={placeLabel} name="place" defaultValue={initial.place} icon="ri-map-pin-line" maxLength={80} autoComplete="off" />
+        {placeLabel && <Field label={placeLabel} name="place" defaultValue={initial.place} icon="ri-map-pin-line" maxLength={80} autoComplete="off" />}
         <FormError error={state?.error} />
         <Button.Root size="large" block disabled={pending}>
           {pending ? "Saving…" : "Save changes"}

@@ -13,6 +13,7 @@ import { nudgeOnBail } from "@/lib/nudges";
 import { loadPlan } from "@/lib/viewer";
 import { localToIso } from "@/lib/time";
 import { DIBBY_HEADS_UP, planLinkLine } from "@/lib/thread-links";
+import { getPlace } from "@/lib/places";
 
 export type FormState = { error?: string } | undefined;
 
@@ -199,17 +200,31 @@ export async function vote(slug: string, optionId: string): Promise<void> {
   revalidatePath(`/p/${slug}`);
 }
 
+/** Anyone on the plan adds a place to the vote. It has to be a real, open business from the map picker. */
 export async function addOption(slug: string, _prev: FormState, form: FormData): Promise<FormState> {
   const view = await loadPlan(slug);
   if (!view?.me || view.plan.status !== "voting") return { error: "Voting's closed." };
-  const label = String(form.get("label") ?? "").replace(/\s+/g, " ").trim().slice(0, 80);
-  if (!label) return { error: "Type a place or idea." };
   const options = await store.listOptions(view.plan.id);
   if (options.length >= 8) return { error: "That's plenty of options. Time to vote." };
-  if (options.some((o) => o.label.toLowerCase() === label.toLowerCase())) return { error: "That one's already on the list." };
-  await store.addOption({ planId: view.plan.id, label, addedBy: view.me.id });
+  const place = await getPlace(String(form.get("place_id") ?? ""));
+  if (!place) return { error: "Couldn't find that place. Pick one from the map." };
+  if (options.some((o) => o.place_id === place.placeId || o.label.toLowerCase() === place.name.toLowerCase())) return { error: "That one's already on the list." };
+  await store.addOption({ planId: view.plan.id, label: place.name, placeId: place.placeId, note: place.address, addedBy: view.me.id });
   revalidatePath(`/p/${slug}`);
   return undefined;
+}
+
+/** Hosts take an option off the vote (swipe, then confirm). Votes on it go too. */
+export async function removeOption(slug: string, optionId: string): Promise<{ error?: string; label?: string }> {
+  const view = await loadPlan(slug);
+  if (!view?.isHost) return { error: "Only hosts can take options off." };
+  if (view.plan.status !== "voting") return { error: "Voting's closed." };
+  const option = (await store.listOptions(view.plan.id)).find((o) => o.id === optionId);
+  if (!option) return { label: undefined };
+  await store.removeOption(view.plan.id, option.id);
+  await store.addMessage({ planId: view.plan.id, memberId: null, kind: "system", body: `${view.me!.display_name.split(" ")[0]} took ${option.label} off the vote.` });
+  revalidatePath(`/p/${slug}`);
+  return { label: option.label };
 }
 
 /** Host locks the plan to the winning option. A tie is settled by a seeded spin. */

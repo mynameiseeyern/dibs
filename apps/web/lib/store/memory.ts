@@ -76,11 +76,11 @@ export const memoryStore: Store = {
       title: p.title,
       area: p.area,
       starts_at: p.startsAt,
-      venue_place_id: null,
-      venue_name: null,
+      venue_place_id: p.venue?.placeId ?? null,
+      venue_name: p.venue?.name ?? null,
       vibe: p.vibe,
-      status: "voting",
-      vote_deadline: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
+      status: p.venue ? "locked" : "voting",
+      vote_deadline: p.venue ? null : new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
       capacity: 20,
       plus_ones: p.plusOnes,
       version: 1,
@@ -204,6 +204,11 @@ export const memoryStore: Store = {
     const o: PlanOption = { id: randomUUID(), plan_id: planId, kind: "venue", place_id: placeId ?? null, label, note: note ?? null, added_by: addedBy ?? null, created_at: now() };
     db.options.set(o.id, o);
     return o;
+  },
+  async removeOption(planId, optionId) {
+    if (db.options.get(optionId)?.plan_id !== planId) return;
+    db.options.delete(optionId);
+    db.votes = db.votes.filter((v) => v.option_id !== optionId);
   },
   async listVotes(planId) {
     return db.votes.filter((v) => db.options.get(v.option_id)?.plan_id === planId);

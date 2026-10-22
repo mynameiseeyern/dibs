@@ -174,6 +174,7 @@ const Input = React.forwardRef<
     return (
       <Component
         type={type}
+        data-input-el=''
         className={input({ class: className })}
         ref={forwardedRef}
         {...rest}

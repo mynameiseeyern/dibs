@@ -10,6 +10,7 @@ import { draftPlan } from "@/lib/dibby";
 import { localToIso } from "@/lib/time";
 import { siteUrl } from "@/lib/site";
 import { BETA_LIST } from "@dibs/email";
+import { getPlace } from "@/lib/places";
 
 export type FormState = { error?: string; sent?: string } | undefined;
 
@@ -146,14 +147,23 @@ export async function createPlan(_prev: FormState, form: FormData): Promise<Form
   if (whenRaw && !startsAt) return { error: "That date and time doesn't look right." };
   const vibe = (["chill", "extra", "straight"].includes(String(form.get("vibe"))) ? form.get("vibe") : "chill") as Vibe;
 
+  // "I've got a place": a real business from the map, and the plan starts locked to it.
+  let venue: { placeId: string; name: string } | null = null;
+  if (form.get("where") === "place") {
+    const place = await getPlace(String(form.get("venue_place_id") ?? ""));
+    if (!place) return { error: "Pick the place on the map, or put it to a vote." };
+    venue = { placeId: place.placeId, name: place.name };
+  }
+
   const plan = await store.createPlan({
     organiserUserId: me.id,
     organiserName: `${profile.first_name} ${profile.last_name}`,
     title,
-    area: clean(form.get("area"), 80) || null,
+    area: venue ? null : clean(form.get("area"), 80) || null,
     startsAt,
     vibe,
     plusOnes: form.get("plus_ones") === "on",
+    venue,
   });
   redirect(`/p/${plan.slug}`);
 }

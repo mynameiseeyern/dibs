@@ -30,6 +30,8 @@ export interface NewPlan {
   startsAt: string | null;
   vibe: Vibe;
   plusOnes: boolean;
+  /** The organiser already has a place: the plan starts locked to it, with no vote. */
+  venue?: { placeId: string; name: string } | null;
 }
 
 export interface NewMember {
@@ -84,6 +86,8 @@ export interface Store {
 
   listOptions(planId: string): Promise<PlanOption[]>;
   addOption(o: { planId: string; label: string; placeId?: string | null; note?: string | null; addedBy?: string | null }): Promise<PlanOption>;
+  /** Hosts take an option off the vote. Its votes go with it. */
+  removeOption(planId: string, optionId: string): Promise<void>;
   listVotes(planId: string): Promise<Vote[]>;
   /** One vote per person per plan; voting again moves it. */
   castVote(planId: string, optionId: string, memberId: string): Promise<void>;
