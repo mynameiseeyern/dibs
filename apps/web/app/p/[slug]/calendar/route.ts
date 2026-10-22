@@ -9,7 +9,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
   if (!view || !canAddToCalendar(view.plan)) return new Response("Not found", { status: 404 });
 
   const name = view.plan.title.replace(/[^\w\s-]/g, "").trim().replace(/\s+/g, "-").toLowerCase() || "plan";
-  return new Response(planIcs(view.plan, `${siteUrl()}/p/${slug}`), {
+  // A typed-in place's address only goes to people in the plan.
+  const plan = view.me ? view.plan : { ...view.plan, venue_address: null };
+  return new Response(planIcs(plan, `${siteUrl()}/p/${slug}`), {
     headers: {
       "content-type": "text/calendar; charset=utf-8",
       "content-disposition": `${new URL(req.url).searchParams.has("download") ? "attachment" : "inline"}; filename="${name}.ics"`,

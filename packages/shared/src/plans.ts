@@ -68,3 +68,28 @@ export const READ_ONLY_NOTE = {
   unreplied: "You can only take part if you're going. Tap I'm in to vote and chat.",
   waitlist: "You're on the waitlist, so you can only read along until a spot opens.",
 } as const;
+
+/** A place typed in instead of picked on the map: a title, and an optional address. */
+export interface CustomPlace {
+  name: string;
+  address: string | null;
+}
+
+export const CUSTOM_PLACE_LIMITS = { name: 60, address: 160 } as const;
+
+/** Tidies a typed-in place. Null if there's no title. */
+export function cleanCustomPlace(name: unknown, address: unknown): CustomPlace | null {
+  const tidy = (v: unknown, max: number) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, max);
+  const n = tidy(name, CUSTOM_PLACE_LIMITS.name);
+  if (!n) return null;
+  const a = tidy(address, CUSTOM_PLACE_LIMITS.address);
+  return { name: n, address: a || null };
+}
+
+/**
+ * Whether a title looks like a street address ("12 Smith St"), so the form can point out that
+ * anyone with the link will see it. A hint only: it never blocks.
+ */
+export function looksLikeAddress(text: string): boolean {
+  return /\b\d+[a-z]?(\/\d+)?\s+[a-z][a-z' -]*\s(st|street|rd|road|ave|avenue|pde|parade|ct|court|pl|place|dr|drive|ln|lane|way|cres|crescent|tce|terrace|hwy|highway|blvd|boulevard|cl|close|gr|grove|sq|square)\b/i.test(text);
+}

@@ -7,7 +7,7 @@ import { store } from "@/lib/store";
 import { formatWhen, localToIso } from "@/lib/time";
 import { loadPlan } from "@/lib/viewer";
 import { getPlace } from "@/lib/places";
-import { countIn } from "@dibs/shared/plans";
+import { cleanCustomPlace, countIn, type CustomPlace } from "@dibs/shared/plans";
 
 export type FormState = { error?: string } | undefined;
 const clean = (v: FormDataEntryValue | null, max = 80) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, max);
@@ -109,27 +109,38 @@ export async function setPlusOnes(slug: string, on: boolean): Promise<Result> {
 const firstName = (view: NonNullable<Awaited<ReturnType<typeof loadPlan>>>) => view.me!.display_name.split(" ")[0];
 
 /**
- * The organiser already has a place, or changes it: a real business from the map. Locks the
- * plan to it (ending any vote; the options stay on the page as "The vote").
+ * The organiser already has a place, or changes it: a real business from the map (by place ID),
+ * or a place they type in. Locks the plan to it (ending any vote; the options stay on the page
+ * as "The vote").
  */
-export async function setPlace(slug: string, placeId: string): Promise<{ error?: string }> {
+export async function setPlace(slug: string, pick: string | CustomPlace): Promise<{ error?: string }> {
   const view = await loadPlan(slug);
   if (!view?.isHost) return { error: "Only hosts can change the plan." };
   const { plan } = view;
   if (plan.status !== "voting" && plan.status !== "locked") return { error: "This plan's finished, so it can't be changed." };
-  const place = await getPlace(placeId);
-  if (!place) return { error: "Couldn't find that place. Pick one from the map." };
-  if (plan.status === "locked" && plan.venue_place_id === place.placeId) return {};
-  const note = plan.status === "voting" ? `No vote needed: it's ${place.name}.` : `Now at ${place.name}.`;
+  let venue: { name: string; placeId: string | null; address: string | null };
+  if (typeof pick === "string") {
+    const place = await getPlace(pick);
+    if (!place) return { error: "Couldn't find that place. Pick one from the map." };
+    venue = { name: place.name, placeId: place.placeId, address: null };
+  } else {
+    const custom = cleanCustomPlace(pick.name, pick.address);
+    if (!custom) return { error: "Give the place a name." };
+    venue = { name: custom.name, placeId: null, address: custom.address };
+  }
+  const same = plan.status === "locked" && plan.venue_name === venue.name && plan.venue_place_id === venue.placeId && (plan.venue_address ?? null) === venue.address;
+  if (same) return {};
+  const note = plan.status === "voting" ? `No vote needed: it's ${venue.name}.` : `Now at ${venue.name}.`;
   await store.updatePlan(plan.id, {
     status: "locked",
-    venue_name: place.name,
-    venue_place_id: place.placeId,
+    venue_name: venue.name,
+    venue_place_id: venue.placeId,
+    venue_address: venue.address,
     vote_deadline: null,
     version: plan.version + 1,
     updated_note: note,
   });
-  await store.addMessage({ planId: plan.id, memberId: null, kind: "system", body: `${firstName(view)} picked the place: ${place.name}.` });
+  await store.addMessage({ planId: plan.id, memberId: null, kind: "system", body: `${firstName(view)} picked the place: ${venue.name}.` });
   revalidatePath(`/p/${slug}`);
   revalidatePath(`/p/${slug}/manage`);
   return {};
@@ -148,12 +159,13 @@ export async function openVote(slug: string): Promise<{ error?: string }> {
   const options = await store.listOptions(plan.id);
   if (plan.venue_name && !options.some((o) => (plan.venue_place_id && o.place_id === plan.venue_place_id) || o.label === plan.venue_name)) {
     const place = plan.venue_place_id ? await getPlace(plan.venue_place_id) : null;
-    await store.addOption({ planId: plan.id, label: plan.venue_name, placeId: plan.venue_place_id, note: place?.address ?? null, addedBy: view.me!.id });
+    await store.addOption({ planId: plan.id, label: plan.venue_name, placeId: plan.venue_place_id, note: place?.address ?? plan.venue_address ?? null, addedBy: view.me!.id });
   }
   await store.updatePlan(plan.id, {
     status: "voting",
     venue_name: null,
     venue_place_id: null,
+    venue_address: null,
     vote_deadline: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
     version: plan.version + 1,
     updated_note: "Back to a vote. Pick your favourite.",

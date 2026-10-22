@@ -21,9 +21,17 @@ export async function wrapUp(slug: string, form: FormData): Promise<void> {
   for (const m of view.members) {
     await store.updateMember(m.id, { attended: came.has(m.id) });
   }
+  // "Nothing to split": a hangout where nobody paid, or people sorted it themselves.
+  const noBills = form.get("next") === "none";
   if (view.plan.status !== "wrapped") {
-    await store.updatePlan(view.plan.id, { status: "wrapped" });
-    await store.addMessage({ planId: view.plan.id, memberId: null, kind: "system", body: `${came.size} came. Time to square up.` });
+    await store.updatePlan(view.plan.id, { status: "wrapped", no_bills: noBills });
+    await store.addMessage({ planId: view.plan.id, memberId: null, kind: "system", body: `${came.size} came. ${noBills ? "Nothing to split." : "Time to square up."}` });
+  } else if (noBills !== view.plan.no_bills) {
+    await store.updatePlan(view.plan.id, { no_bills: noBills });
+  }
+  if (noBills) {
+    revalidatePath(`/p/${slug}`);
+    redirect(`/p/${slug}`);
   }
   redirect(path(slug));
 }

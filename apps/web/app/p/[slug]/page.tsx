@@ -65,7 +65,8 @@ export default async function PlanPage({ params }: Props) {
   // Dibby's automatic nudges are checked on page load (we're on Vercel Hobby: no frequent cron).
   const messages = (await nudgeIfDue(plan, members, options, votes)) ? await store.listMessages(plan.id, 50) : firstMessages;
   const reactions = await store.listReactions(plan.id);
-  const voteRows = options.map((o) => ({ ...o, votes: votes.filter((v) => v.option_id === o.id).length, mine: Boolean(me && votes.some((v) => v.option_id === o.id && v.member_id === me.id)) }));
+  // A typed-in option's address (its note) is only for people in the plan.
+  const voteRows = options.map((o) => ({ ...o, note: o.place_id || me ? o.note : null, votes: votes.filter((v) => v.option_id === o.id).length, mine: Boolean(me && votes.some((v) => v.option_id === o.id && v.member_id === me.id)) }));
   const started = plan.starts_at ? Date.parse(plan.starts_at) < Date.now() : false;
 
   const site = siteUrl();
@@ -137,8 +138,18 @@ export default async function PlanPage({ params }: Props) {
             {(plan.venue_name || plan.area) && (
               <li>
                 <i className="ri-map-pin-line db-icon" aria-hidden="true" />{" "}
-                {plan.venue_name ? (
+                {plan.venue_name && plan.venue_place_id ? (
                   <a href={mapsLink(plan.venue_place_id, plan.venue_name)} target="_blank" rel="noreferrer">{plan.venue_name}</a>
+                ) : plan.venue_name ? (
+                  // Typed in: the address is only for people in the plan.
+                  me && plan.venue_address ? (
+                    <span>
+                      {plan.venue_name} ·{" "}
+                      <a href={mapsLink(null, plan.venue_address)} target="_blank" rel="noreferrer">{plan.venue_address}</a>
+                    </span>
+                  ) : (
+                    plan.venue_name
+                  )
                 ) : (
                   plan.area
                 )}
@@ -189,7 +200,8 @@ export default async function PlanPage({ params }: Props) {
         {wrapped && me?.attended && (
           <section className="wrap-links" aria-label="After the night">
             {/* Money first while it's open; once everyone's square, the night comes first and bills become history. */}
-            {!allSquare && (
+            {/* "Nothing to split" at wrap-up: no money card unless someone adds a bill anyway. */}
+            {!allSquare && !(plan.no_bills && bills.length === 0) && (
             <a className="db-card db-card--violet section link-card" href={`/p/${slug}/bills`}>
               <strong className="title-h4">Square up</strong>
               <span>
@@ -226,6 +238,13 @@ export default async function PlanPage({ params }: Props) {
                 <i className="ri-arrow-right-line db-icon" aria-hidden="true" />
               </span>
             </a>
+            {plan.no_bills && bills.length === 0 && (
+              <a className="history-link" href={`/p/${slug}/bills?add=1`}>
+                <i className="ri-receipt-line db-icon" aria-hidden="true" />
+                <span className="label-sm">Paid for something after all?</span>
+                <span className="paragraph-sm muted">Add a bill</span>
+              </a>
+            )}
             {allSquare && (
               <a className="history-link" href={`/p/${slug}/bills`}>
                 <i className="ri-check-double-line db-icon" aria-hidden="true" />

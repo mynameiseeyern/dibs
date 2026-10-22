@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { PlacePicker } from "@/components/PlacePicker";
+import { PlacePicker, pickArg } from "@/components/PlacePicker";
+import type { CustomPlace } from "@dibs/shared/plans";
 import { PlaceCard } from "@/components/PlaceCard";
 import * as SegmentedControl from "@/components/ui/segmented-control";
 import * as Button from "@/components/ui/button";
@@ -27,7 +28,7 @@ export function PlaceSection({
   venue: string | null;
   area: string | null;
   optionCount: number;
-  setPlace: (placeId: string) => Promise<{ error?: string }>;
+  setPlace: (pick: string | CustomPlace) => Promise<{ error?: string }>;
   openVote: () => Promise<{ error?: string }>;
 }) {
   const [picking, setPicking] = useState(false);
@@ -81,7 +82,7 @@ export function PlaceSection({
         title={mode === "place" ? "Change the place" : "Where's it at?"}
         cta="Use"
         area={area}
-        onPick={(p) => run(() => setPlace(p.placeId), mode === "vote" ? `Locked in: ${p.name}` : `Now at ${p.name}`)}
+        onPick={(p) => run(() => setPlace(pickArg(p)), mode === "vote" ? `Locked in: ${p.name}` : `Now at ${p.name}`)}
       />
 
       <Modal.Root open={confirmVote} onOpenChange={setConfirmVote}>

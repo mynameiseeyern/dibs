@@ -19,6 +19,10 @@ export interface Plan {
   starts_at: string | null;
   venue_place_id: string | null;
   venue_name: string | null;
+  /** A custom (typed-in) set place's address. Only shown to people in the plan. */
+  venue_address: string | null;
+  /** Wrapped with "Nothing to split": no Square up card unless someone adds a bill anyway. */
+  no_bills: boolean;
   vibe: Vibe;
   status: PlanStatus;
   vote_deadline: string | null;

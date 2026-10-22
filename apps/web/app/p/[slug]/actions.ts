@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { hasRoom, planAccess, READ_ONLY_NOTE } from "@dibs/shared/plans";
+import { READ_ONLY_NOTE, cleanCustomPlace, hasRoom, planAccess } from "@dibs/shared/plans";
 import type { PlanMember, Rsvp } from "@dibs/shared/types";
 import { BRB, mentionsDibby, replyInThread, suggestMore, type PlanDraft } from "@/lib/dibby";
 import { clearGuestSession, createGuestSession } from "@/lib/guest";
@@ -219,7 +219,7 @@ export async function vote(slug: string, optionId: string): Promise<void> {
   revalidatePath(`/p/${slug}`);
 }
 
-/** Anyone on the plan adds a place to the vote. It has to be a real, open business from the map picker. */
+/** Anyone on the plan adds a place to the vote: a real, open business from the map, or one they type in. */
 export async function addOption(slug: string, _prev: FormState, form: FormData): Promise<FormState> {
   const view = await loadPlan(slug);
   if (!view?.me || view.plan.status !== "voting") return { error: "Voting's closed." };
@@ -227,10 +227,14 @@ export async function addOption(slug: string, _prev: FormState, form: FormData):
   if (no) return { error: no };
   const options = await store.listOptions(view.plan.id);
   if (options.length >= 8) return { error: "That's plenty of options. Time to vote." };
-  const place = await getPlace(String(form.get("place_id") ?? ""));
-  if (!place) return { error: "Couldn't find that place. Pick one from the map." };
-  if (options.some((o) => o.place_id === place.placeId || o.label.toLowerCase() === place.name.toLowerCase())) return { error: "That one's already on the list." };
-  await store.addOption({ planId: view.plan.id, label: place.name, placeId: place.placeId, note: place.address, addedBy: view.me.id });
+  // Typed in: a title and an optional address, as given. Otherwise a real business from the map.
+  const custom = form.has("custom_name") ? cleanCustomPlace(form.get("custom_name"), form.get("custom_address")) : null;
+  if (form.has("custom_name") && !custom) return { error: "Give the place a name." };
+  const place = custom ? null : await getPlace(String(form.get("place_id") ?? ""));
+  if (!custom && !place) return { error: "Couldn't find that place. Pick one from the map." };
+  const label = custom?.name ?? place!.name;
+  if (options.some((o) => (place && o.place_id === place.placeId) || o.label.toLowerCase() === label.toLowerCase())) return { error: "That one's already on the list." };
+  await store.addOption({ planId: view.plan.id, label, placeId: place?.placeId ?? null, note: custom ? custom.address : place!.address, addedBy: view.me.id });
   revalidatePath(`/p/${slug}`);
   return undefined;
 }

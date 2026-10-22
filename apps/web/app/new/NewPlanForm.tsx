@@ -10,7 +10,7 @@ import * as Input from "@/components/ui/input";
 import * as Label from "@/components/ui/label";
 import * as Switch from "@/components/ui/switch";
 import * as SegmentedControl from "@/components/ui/segmented-control";
-import { PlacePicker, type PickedPlace } from "@/components/PlacePicker";
+import { PlacePicker, isTyped, type PlacePick } from "@/components/PlacePicker";
 import { PlaceCard } from "@/components/PlaceCard";
 import { SearchChips, WhenChips, dayWord, nextDays, timeWord, type SearchValue, type WhenValue } from "./chips";
 import { DibbyBubble, useCyclingPlaceholder } from "./DibbyBubble";
@@ -27,7 +27,7 @@ export function NewPlanForm() {
   const [state, action, pending] = useActionState(createPlan, undefined);
   const [where, setWhere] = useState<Where>("place");
   const [who, setWho] = useState<Who>("dibby");
-  const [place, setPlace] = useState<PickedPlace | null>(null);
+  const [place, setPlace] = useState<PlacePick | null>(null);
   const [picking, setPicking] = useState(false);
   const mode = where === "place" ? "place" : who === "dibby" ? "dibby" : "vote";
 
@@ -60,13 +60,24 @@ export function NewPlanForm() {
 
       {where === "place" ? (
         <div className="flex flex-col gap-2">
-          <input type="hidden" name="venue_place_id" value={place?.placeId ?? ""} />
+          {place && isTyped(place) ? (
+            <>
+              <input type="hidden" name="venue_custom_name" value={place.name} />
+              <input type="hidden" name="venue_custom_address" value={place.address ?? ""} />
+            </>
+          ) : (
+            <input type="hidden" name="venue_place_id" value={place?.placeId ?? ""} />
+          )}
           {place ? (
-            <PlaceCard name={place.name} detail={[place.kind, place.address].filter(Boolean).join(" · ")} onChange={() => setPicking(true)} />
+            <PlaceCard
+              name={place.name}
+              detail={isTyped(place) ? (place.address ? `${place.address} · only people in the plan see this` : null) : [place.kind, place.address].filter(Boolean).join(" · ")}
+              onChange={() => setPicking(true)}
+            />
           ) : (
             <Button.Root type="button" variant="neutral" mode="lighter" block onClick={() => setPicking(true)}>
               <i className="ri-map-2-line db-icon" aria-hidden="true" />
-              Pick it on the map
+              Pick the place
             </Button.Root>
           )}
           <PlacePicker open={picking} onOpenChange={setPicking} title="Where's it at?" cta="Use" onPick={setPlace} />

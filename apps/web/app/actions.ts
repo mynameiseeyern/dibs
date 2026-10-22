@@ -11,6 +11,7 @@ import { localToIso } from "@/lib/time";
 import { resolveStart } from "@dibs/shared/when";
 import { siteUrl } from "@/lib/site";
 import { BETA_LIST } from "@dibs/email";
+import { cleanCustomPlace } from "@dibs/shared/plans";
 import { getPlace } from "@/lib/places";
 
 export type FormState = { error?: string; sent?: string } | undefined;
@@ -193,12 +194,16 @@ export async function createPlan(_prev: FormState, form: FormData): Promise<Form
 
   if (!title) return { error: "Give it a name, like “Friday dinner”." };
 
-  // "Pick a place": a real business from the map, and the plan starts locked to it.
-  let venue: { placeId: string; name: string } | null = null;
+  // "Already decided": a real business from the map, or a place typed in, and the plan starts locked to it.
+  let venue: { placeId: string | null; name: string; address: string | null } | null = null;
   if (where === "place") {
-    const place = await getPlace(String(form.get("venue_place_id") ?? ""));
-    if (!place) return { error: "Pick the place on the map, or vote on it." };
-    venue = { placeId: place.placeId, name: place.name };
+    const custom = form.has("venue_custom_name") ? cleanCustomPlace(form.get("venue_custom_name"), form.get("venue_custom_address")) : null;
+    if (custom) venue = { placeId: null, name: custom.name, address: custom.address };
+    else {
+      const place = await getPlace(String(form.get("venue_place_id") ?? ""));
+      if (!place) return { error: "Pick the place on the map or type it in, or put it to a vote." };
+      venue = { placeId: place.placeId, name: place.name, address: null };
+    }
   }
 
   const plan = await store.createPlan({

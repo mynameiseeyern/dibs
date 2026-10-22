@@ -138,6 +138,7 @@ export const supabaseStore: Store = {
           status: p.venue ? "locked" : "voting",
           venue_place_id: p.venue?.placeId ?? null,
           venue_name: p.venue?.name ?? null,
+          venue_address: p.venue?.address ?? null,
           vote_deadline: p.venue ? null : new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
           expires_at: p.startsAt ? new Date(Date.parse(p.startsAt) + 30 * 86400 * 1000).toISOString() : null,
         })

@@ -4,7 +4,8 @@ import { useOptimistic, useRef, useState, useTransition } from "react";
 import type { PlanOption } from "@dibs/shared/types";
 import type { FormState } from "./actions";
 import { Fresh } from "@/components/moments/Fresh";
-import { PlacePicker } from "@/components/PlacePicker";
+import { PlacePicker, isTyped, pickArg } from "@/components/PlacePicker";
+import type { CustomPlace } from "@dibs/shared/plans";
 import { DibbyMark } from "@/components/Logo";
 import { DibbyWorking } from "@/components/DibbyWorking";
 import * as Input from "@/components/ui/input";
@@ -48,7 +49,7 @@ export function VoteList({
   /** Dibby adds up to three more spots. Set when this person can add places and Dibby's on. */
   askDibby?: (f: FormData) => Promise<{ error?: string; added?: string[] }>;
   /** Host only: skip the vote and lock in a place from the map. */
-  decide?: (placeId: string) => Promise<{ error?: string }>;
+  decide?: (pick: string | CustomPlace) => Promise<{ error?: string }>;
 }) {
   const [adding, startAdding] = useTransition();
   // The tap moves your vote straight away: counts and bars update here, the server saves it behind,
@@ -223,7 +224,7 @@ export function VoteList({
           area={area}
           onPick={(p) =>
             startAdding(async () => {
-              const res = await decide(p.placeId);
+              const res = await decide(pickArg(p));
               if (res.error) toast.error(res.error);
               else toast.success(`Locked in: ${p.name}`);
             })
@@ -240,7 +241,10 @@ export function VoteList({
         exclude={rows.map((r) => r.place_id).filter((id): id is string => Boolean(id))}
         onPick={(p) => {
           const f = new FormData();
-          f.set("place_id", p.placeId);
+          if (isTyped(p)) {
+            f.set("custom_name", p.name);
+            f.set("custom_address", p.address ?? "");
+          } else f.set("place_id", p.placeId);
           // Say how it went either way: a toast is hard to miss, unlike a line under the button.
           startAdding(async () => {
             const res = await add(undefined, f);

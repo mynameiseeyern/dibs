@@ -2,6 +2,7 @@
 
 import { useOptimistic, useState, useTransition, type ReactNode } from "react";
 import type { DibbyVolume, Vibe } from "@dibs/shared/types";
+import type { CustomPlace } from "@dibs/shared/plans";
 import { Field, FormError } from "@/components/Field";
 import { VibePick, VIBE_OPTIONS } from "@/components/VibePick";
 import * as Button from "@/components/ui/button";
@@ -36,7 +37,7 @@ export interface EditPlanProps {
     setVoteDeadline: (v: string) => Promise<Result>;
     setCapacity: (n: number) => Promise<Result>;
     setPlusOnes: (on: boolean) => Promise<Result>;
-    setPlace: (placeId: string) => Promise<Result>;
+    setPlace: (pick: string | CustomPlace) => Promise<Result>;
     openVote: () => Promise<Result>;
     setVibe: (v: Vibe) => Promise<void>;
     setVolume: (v: DibbyVolume) => Promise<void>;

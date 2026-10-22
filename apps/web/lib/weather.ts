@@ -139,9 +139,12 @@ export async function forecastFor(plan: {
   starts_at: string | null;
   venue_place_id: string | null;
   venue_name: string | null;
+  venue_address?: string | null;
   area: string | null;
 }): Promise<Forecast | null> {
-  const where = plan.venue_name ?? plan.area;
+  // A typed-in place ("Ee's place") can't be looked up by name: use its address, else the area.
+  const typed = !plan.venue_place_id && plan.venue_name;
+  const where = typed ? plan.venue_address ?? plan.area : plan.venue_name ?? plan.area;
   const key = weatherKey();
   if (!plan.starts_at || !where || !key) return null;
   const start = Date.parse(plan.starts_at);
@@ -152,7 +155,7 @@ export async function forecastFor(plan: {
 
   try {
     // A venue name alone can be ambiguous ("The Royal"), so search it with the area.
-    const point = await locate(plan.venue_place_id, plan.venue_name && plan.area ? `${plan.venue_name}, ${plan.area}` : where);
+    const point = await locate(plan.venue_place_id, !typed && plan.venue_name && plan.area ? `${plan.venue_name}, ${plan.area}` : where!);
     if (!point) return null;
     return start - now < 23 * 3600 * 1000 ? await hourly(point, start, key) : await daily(point, plan.starts_at, key);
   } catch (e) {

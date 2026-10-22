@@ -24,7 +24,8 @@ function fold(line: string): string {
 export const canAddToCalendar = (plan: Plan) =>
   !!plan.starts_at && (plan.status === "locked" || plan.status === "wrapped");
 
-const place = (plan: Plan) => plan.venue_name ?? plan.area ?? "";
+/** Name, plus a typed-in place's address (callers only pass that for people in the plan). */
+const place = (plan: Plan) => (plan.venue_name && plan.venue_address ? `${plan.venue_name}, ${plan.venue_address}` : plan.venue_name ?? plan.area ?? "");
 
 /**
  * A one-event calendar file. The UID stays the same for a plan and SEQUENCE follows

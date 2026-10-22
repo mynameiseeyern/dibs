@@ -29,6 +29,8 @@ export async function closeVote(plan: Plan, why: "host" | "deadline"): Promise<b
     status: "locked",
     venue_name: winner.label,
     venue_place_id: winner.place_id,
+    // A typed-in option keeps its address (the option's note) as the plan's private address.
+    venue_address: winner.place_id ? null : winner.note,
     version: plan.version + 1,
     updated_note: note,
   });

@@ -31,7 +31,7 @@ export default async function Wrap({ params }: { params: Promise<{ slug: string 
         <div className="section">
           <span className="subheading-sm eyebrow">{plan.title} · wrap-up</span>
           <h1 className="title-h3">Who actually came?</h1>
-          <p className="muted">Only people you tick can be added to bills or see your PayID.</p>
+          <p className="muted">Only people you tick can be added to bills or see your PayID. Nobody paid for anything, or it&rsquo;s sorted? Pick Nothing to split.</p>
         </div>
         <div className="db-card">
           <div className="people">
@@ -54,7 +54,12 @@ export default async function Wrap({ params }: { params: Promise<{ slug: string 
       </main>
       <div className="dock">
         <div className="dock__inner">
-          <Button.Root size="large" block>On to bills</Button.Root>
+          <Button.Root size="large" block name="next" value="bills">
+            On to bills
+          </Button.Root>
+          <Button.Root variant="neutral" mode="lighter" size="large" block name="next" value="none">
+            Nothing to split
+          </Button.Root>
         </div>
       </div>
     </form>
