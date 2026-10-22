@@ -3,7 +3,6 @@ import { Monogram } from "@/components/Monogram";
 import { BETA_LIST } from "@dibs/email";
 import { store, usingSupabase } from "@/lib/store";
 import { whoIsHere } from "@/lib/viewer";
-import { store } from "@/lib/store";
 import { formatAud, rouletteTally } from "@dibs/shared/bills";
 import { forgetDeviceAction, signOutAction, switchAccountAction } from "../actions";
 import { KeepPlansForm } from "./KeepPlansForm";
