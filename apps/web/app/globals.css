@@ -210,3 +210,4 @@ a { color: var(--primary-dark); }
 .add-to-calendar__option { justify-content: flex-start; }
 .thread__plan-link { margin-top: var(--space-2); }
 .dibby-mute { display: flex; justify-content: center; margin-top: var(--space-2); }
+.account-record .title-h4, .account-record .paragraph-sm { margin: 0; }

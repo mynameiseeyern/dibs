@@ -10,6 +10,8 @@ import { addBill, confirmPaid, saysPaid, spin, toggleSpin } from "./actions";
 import { AddBill } from "./AddBill";
 import { Wheel } from "./Wheel";
 import { RouletteResult } from "./RouletteResult";
+import { OptIn } from "./OptIn";
+import { rouletteTally } from "@dibs/shared/bills";
 import { Once } from "@/components/moments/Once";
 import { OWE_REMIND_AFTER_MS, OWE_REMIND_AGAIN_MS, TELL_PAYER_AFTER_MS } from "@/lib/nudges";
 import { allSquare, oweReminder, tellPayer } from "@/lib/copy";
@@ -65,6 +67,10 @@ export default async function Bills({ params, searchParams }: Props) {
   const pendingSpins = bills.filter((b) => b.split_mode === "roulette" && !b.roulette_loser_id);
   // Every spun roulette bill stays on the page, newest first. Only the newest gets the big moment.
   const spunBills = bills.filter((b) => b.split_mode === "roulette" && b.roulette_loser_id).sort((a, b) => b.created_at.localeCompare(a.created_at));
+  const tally = rouletteTally(spunBills);
+  // Members with a DOB on file are checked server-side; guests tick 18+ when they opt in.
+  const meProfile = me.user_id ? await store.getProfile(me.user_id) : null;
+  const meAdultOnFile = Boolean(meProfile?.dob);
 
   const payidFor = async (bill: Bill) => {
     if (bill.payid) return { name: bill.payid_name ?? first(bill.payer_member_id), payid: bill.payid };
@@ -121,6 +127,30 @@ export default async function Bills({ params, searchParams }: Props) {
           />
         ))}
 
+        {tally.length > 0 && (
+          <section className="db-card section" aria-labelledby="tally-h">
+            <h2 id="tally-h" className="subheading-sm eyebrow">Roulette record</h2>
+            <ul className="people">
+              {tally.map((r) => {
+                const m = byId.get(r.memberId);
+                return (
+                  <li key={r.memberId} className="person">
+                    <Monogram name={m?.display_name ?? "?"} colour={m?.colour ?? "violet"} />
+                    <span className="label-md person__name">
+                      {first(r.memberId)}
+                      {r.memberId === me.id ? " (you)" : ""}
+                      <small>
+                        {r.lost === 0 ? `Dodged ${r.played} ${r.played === 1 ? "spin" : "spins"}` : `Lost ${r.lost} of ${r.played} · paid ${formatAud(r.paidCents)}`}
+                      </small>
+                    </span>
+                    {r.lost > 0 && <span className="db-badge db-badge--warning">{r.lost === r.played && r.played >= 2 ? "Cursed" : "Unlucky"}</span>}
+                    {r.lost === 0 && r.played >= 2 && <span className="db-badge db-badge--success">Charmed</span>}
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
         {owedShares.length > 0 && (
           <div className="db-stack">
             <div className="db-hint">{settled} of {owedShares.length} settled</div>
@@ -189,9 +219,8 @@ export default async function Bills({ params, searchParams }: Props) {
               <p className="paragraph-sm muted center">
                 {b.roulette_entrants.length === 0 ? "Nobody's in yet." : `${b.roulette_entrants.length} in: ${b.roulette_entrants.map(first).join(", ")}`}
               </p>
-              <form action={toggleSpin.bind(null, slug, b.id)}>
-                <button className={`db-btn db-btn--block ${inIt ? "db-btn--secondary" : "db-btn--dibs"}`}>{inIt ? "Actually, I'm out" : "I'm in"}</button>
-              </form>
+              <OptIn action={toggleSpin.bind(null, slug, b.id)} inIt={inIt} needsTick={!meAdultOnFile} />
+              {!inIt && !meAdultOnFile && <p className="paragraph-xs muted center">Sit it out and you just pay your share.</p>}
               {isPayer && (
                 <form action={spin.bind(null, slug, b.id)}>
                   <button className="db-btn db-btn--primary db-btn--block" disabled={b.roulette_entrants.length < 2}>

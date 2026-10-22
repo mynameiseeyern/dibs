@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { FormError } from "@/components/Field";
 import type { FormState } from "./actions";
+import { ROULETTE_CAP_CENTS, rouletteAllowed } from "@dibs/shared/bills";
 
 type Person = { id: string; name: string };
 const MODES = [
@@ -21,6 +22,10 @@ export function AddBill({ action, people, needsPayid }: { action: (s: FormState,
   const [state, formAction, pending] = useActionState(action, undefined);
   const [mode, setMode] = useState<(typeof MODES)[number]["id"]>("even");
   const [total, setTotal] = useState("");
+  const setTotalSafe = (v: string) => {
+    setTotal(v);
+    if (mode === "roulette" && !rouletteAllowed(cents(v)) && cents(v) > 0) setMode("even");
+  };
   const [on, setOn] = useState<Set<string>>(new Set(people.map((p) => p.id)));
   const count = mode === "exclude" ? on.size : people.length;
   const each = count ? Math.floor(cents(total) / count) : 0;
@@ -36,20 +41,28 @@ export function AddBill({ action, people, needsPayid }: { action: (s: FormState,
         <label className="db-label" htmlFor="total">Total</label>
         <div className="db-input">
           <span className="money muted" aria-hidden="true">$</span>
-          <input id="total" name="total" inputMode="decimal" placeholder="186.00" value={total} onChange={(e) => setTotal(e.target.value)} className="money" required />
+          <input id="total" name="total" inputMode="decimal" placeholder="186.00" value={total} onChange={(e) => setTotalSafe(e.target.value)} className="money" required />
         </div>
       </div>
       <div className="db-field">
         <span className="db-label" id="split-l">Split</span>
         <div className="db-segmented" role="group" aria-labelledby="split-l">
-          {MODES.map((m) => (
-            <button key={m.id} type="button" aria-pressed={mode === m.id} onClick={() => setMode(m.id)}>{m.label}</button>
-          ))}
+          {MODES.map((m) => {
+            const tooBig = m.id === "roulette" && cents(total) > ROULETTE_CAP_CENTS;
+            return (
+              <button key={m.id} type="button" aria-pressed={mode === m.id} disabled={tooBig} title={tooBig ? `Roulette is for bills up to ${aud(ROULETTE_CAP_CENTS)}` : undefined} onClick={() => setMode(m.id)}>
+                {m.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
+      {cents(total) > ROULETTE_CAP_CENTS && mode !== "roulette" && (
+        <p className="paragraph-xs muted">Too big for roulette: the game is for bills up to {aud(ROULETTE_CAP_CENTS)}.</p>
+      )}
       {mode === "roulette" ? (
-        <p className="paragraph-sm muted">Card roulette: people opt in, you spin, the loser pays the lot. Nobody's on the wheel unless they tap in.</p>
+        <p className="paragraph-sm muted">Card roulette: people opt in, you spin, the loser pays the lot. Nobody's on the wheel unless they tap in. 18+ only.</p>
       ) : (
         <div className="db-card">
           <div className="people">

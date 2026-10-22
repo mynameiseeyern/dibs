@@ -4,7 +4,7 @@ import { renderTemplate, type Template } from "@/lib/copy";
 import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { BillError, spinRoulette, splitBill } from "@dibs/shared/bills";
+import { BillError, rouletteAllowed, spinRoulette, splitBill } from "@dibs/shared/bills";
 import { store } from "@/lib/store";
 import { loadPlan } from "@/lib/viewer";
 
@@ -66,6 +66,7 @@ export async function addBill(slug: string, _prev: FormState, form: FormData): P
   };
 
   if (mode === "roulette") {
+    if (!rouletteAllowed(total)) return { error: "Too big for roulette. Split it instead." };
     // Shares are made after the spin; until then everyone opts in or out.
     await store.createBill({ ...base, split_mode: "roulette" }, []);
   } else {
@@ -94,14 +95,35 @@ async function billFor(slug: string, billId: string) {
 }
 
 /** Opt in or out of a roulette spin. Nobody is on the wheel without choosing to be. */
-export async function toggleSpin(slug: string, billId: string): Promise<void> {
+/**
+ * Opt in or out of a spin. 18+ only: members are checked from their date of birth,
+ * guests (no account, no DOB) confirm with a tick when they opt in.
+ */
+export async function toggleSpin(slug: string, billId: string, form?: FormData): Promise<void> {
   const r = await billFor(slug, billId);
   if (!r || r.bill.split_mode !== "roulette" || r.bill.roulette_loser_id) return;
   const set = new Set(r.bill.roulette_entrants);
   if (set.has(r.me.id)) set.delete(r.me.id);
-  else set.add(r.me.id);
+  else {
+    if (!(await canPlay(r.me, form))) return;
+    set.add(r.me.id);
+  }
   await store.updateBill(billId, { roulette_entrants: [...set] });
   revalidatePath(path(slug));
+}
+
+async function canPlay(me: { user_id: string | null }, form?: FormData): Promise<boolean> {
+  if (me.user_id) {
+    const profile = await store.getProfile(me.user_id);
+    return profile ? isAdult(profile.dob) : form?.get("adult") === "on";
+  }
+  return form?.get("adult") === "on";
+}
+
+function isAdult(dob: string): boolean {
+  const d = new Date(dob + "T00:00:00Z");
+  if (Number.isNaN(d.getTime())) return false;
+  return new Date(Date.UTC(d.getUTCFullYear() + 18, d.getUTCMonth(), d.getUTCDate())) <= new Date();
 }
 
 /** The payer spins. The result is saved before any animation, so a refresh can't re-roll it. */

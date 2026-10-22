@@ -2,6 +2,8 @@ import { Wordmark } from "@/components/Logo";
 import { Monogram } from "@/components/Monogram";
 import { usingSupabase } from "@/lib/store";
 import { whoIsHere } from "@/lib/viewer";
+import { store } from "@/lib/store";
+import { formatAud, rouletteTally } from "@dibs/shared/bills";
 import { forgetDeviceAction, signOutAction, switchAccountAction } from "../actions";
 import { KeepPlansForm } from "./KeepPlansForm";
 
@@ -11,6 +13,19 @@ export const dynamic = "force-dynamic";
 export default async function Account() {
   const here = await whoIsHere();
   const { organiser, guest, name } = here;
+
+  // Lifetime roulette record: every spun bill on every plan you're on, counted for your member id there.
+  const memberships = [...(organiser ? await store.listPlansForUser(organiser.id) : []), ...(guest ? await store.listPlansForGuest(guest.id) : [])];
+  const record = { played: 0, lost: 0, paidCents: 0 };
+  for (const { plan, member } of memberships) {
+    const bills = (await store.listBills(plan.id)).filter((b) => b.split_mode === "roulette" && b.roulette_loser_id);
+    const mine = rouletteTally(bills).find((r) => r.memberId === member.id);
+    if (mine) {
+      record.played += mine.played;
+      record.lost += mine.lost;
+      record.paidCents += mine.paidCents;
+    }
+  }
 
   return (
     <main className="page">
@@ -35,6 +50,18 @@ export default async function Account() {
               {organiser ? (organiser.email ?? "Signed in") : "Guest on this browser, no account"}
             </p>
           </div>
+        </section>
+      )}
+
+      {record.played > 0 && (
+        <section className="db-card section account-record" aria-labelledby="rec-h">
+          <h2 id="rec-h" className="subheading-sm eyebrow">Your roulette record</h2>
+          <p className="title-h4">
+            {record.lost === 0 ? `Dodged ${record.played} ${record.played === 1 ? "spin" : "spins"}` : `Lost ${record.lost} of ${record.played}`}
+          </p>
+          <p className="paragraph-sm muted">
+            {record.lost === 0 ? "Not a cent from a spin. Charmed." : `${formatAud(record.paidCents)} paid from losing spins. ${record.lost === record.played && record.played >= 2 ? "Cursed." : "Could be worse."}`}
+          </p>
         </section>
       )}
 

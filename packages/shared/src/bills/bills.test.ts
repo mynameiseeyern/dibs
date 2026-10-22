@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BillError, owedToPayer, spinRoulette, splitBill, type BillPerson } from "./index";
+import { BillError, owedToPayer, rouletteAllowed, rouletteTally, spinRoulette, splitBill, type BillPerson } from "./index";
 
 const crew: BillPerson[] = [{ id: "ana" }, { id: "ben" }, { id: "cam" }];
 const sum = (xs: { cents: number }[]) => xs.reduce((s, x) => s + x.cents, 0);
@@ -109,5 +109,26 @@ describe("payer and edge cases", () => {
   it("rejects fractions of a cent and negative totals", () => {
     expect(() => splitBill({ ...base, mode: "even", totalCents: 10.5 }, crew)).toThrow(BillError);
     expect(() => splitBill({ ...base, mode: "even", totalCents: -1 }, crew)).toThrow(BillError);
+  });
+});
+
+describe("roulette rules", () => {
+  it("caps at $300", () => {
+    expect(rouletteAllowed(300_00)).toBe(true);
+    expect(rouletteAllowed(300_01)).toBe(false);
+    expect(rouletteAllowed(0)).toBe(false);
+  });
+  it("tallies wins and losses, unluckiest first", () => {
+    const t = rouletteTally([
+      { roulette_entrants: ["a", "b", "c"], roulette_loser_id: "b", total_cents: 90_00 },
+      { roulette_entrants: ["a", "b"], roulette_loser_id: "b", total_cents: 40_00 },
+      { roulette_entrants: ["a", "c"], roulette_loser_id: "a", total_cents: 20_00 },
+      { roulette_entrants: ["a", "c"], roulette_loser_id: null, total_cents: 99_00 },
+    ]);
+    expect(t.map((r) => [r.memberId, r.played, r.lost, r.paidCents])).toEqual([
+      ["b", 2, 2, 130_00],
+      ["a", 3, 1, 20_00],
+      ["c", 2, 0, 0],
+    ]);
   });
 });

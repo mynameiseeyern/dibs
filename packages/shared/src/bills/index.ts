@@ -63,6 +63,42 @@ export function seededPick<T>(items: readonly T[], seed: string): T {
 }
 
 /** Spin the card roulette wheel: only people who opted in are entrants. */
+/** No roulette over this. Big bills get split; the game is for rounds, not rent. */
+export const ROULETTE_CAP_CENTS = 300_00;
+
+export function rouletteAllowed(totalCents: number): boolean {
+  return totalCents > 0 && totalCents <= ROULETTE_CAP_CENTS;
+}
+
+export interface RouletteRecord {
+  memberId: string;
+  /** Times on the wheel. */
+  played: number;
+  /** Times it landed on them. */
+  lost: number;
+  /** Total they ended up paying from losses, in cents. */
+  paidCents: number;
+}
+
+/** Wins and losses per person across a set of spun roulette bills. */
+export function rouletteTally(bills: readonly { roulette_entrants: readonly string[]; roulette_loser_id: string | null; total_cents: number }[]): RouletteRecord[] {
+  const by = new Map<string, RouletteRecord>();
+  for (const b of bills) {
+    if (!b.roulette_loser_id) continue;
+    for (const id of b.roulette_entrants) {
+      const r = by.get(id) ?? { memberId: id, played: 0, lost: 0, paidCents: 0 };
+      r.played++;
+      if (id === b.roulette_loser_id) {
+        r.lost++;
+        r.paidCents += b.total_cents;
+      }
+      by.set(id, r);
+    }
+  }
+  // Unluckiest first, then most played.
+  return [...by.values()].sort((a, b) => b.lost - a.lost || b.paidCents - a.paidCents || b.played - a.played);
+}
+
 export function spinRoulette(entrantIds: readonly string[], seed: string): string {
   if (entrantIds.length < 2) throw new BillError("Roulette needs at least 2 people in");
   return seededPick(entrantIds, seed);
