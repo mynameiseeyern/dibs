@@ -10,7 +10,7 @@ import { Weather } from "./Weather";
 import { PlanTabs } from "./PlanTabs";
 import { RsvpPicker } from "./RsvpPicker";
 import { AddToCalendar } from "./AddToCalendar";
-import { canAddToCalendar, googleCalendarLink } from "@/lib/calendar";
+import { canAddToCalendar, googleCalendarLink, outlookCalendarLink } from "@/lib/calendar";
 import { Once } from "@/components/moments/Once";
 import { planStatus } from "@/lib/status";
 import { Monogram, MonogramStack } from "@/components/Monogram";
@@ -135,7 +135,14 @@ export default async function PlanPage({ params }: Props) {
             )}
           </ul>
           {me && canAddToCalendar(plan) && plan.status === "locked" && (
-            <AddToCalendar icsHref={`/p/${slug}/calendar`} googleHref={googleCalendarLink(plan, `${siteUrl()}/p/${slug}`)} />
+            <AddToCalendar
+              links={{
+                ics: `/p/${slug}/calendar`,
+                google: googleCalendarLink(plan, `${siteUrl()}/p/${slug}`),
+                outlook: outlookCalendarLink(plan, `${siteUrl()}/p/${slug}`),
+                office: outlookCalendarLink(plan, `${siteUrl()}/p/${slug}`, true),
+              }}
+            />
           )}
           {(cancelled || plan.updated_note) && (
             <p className={`label-sm plan-card__note${cancelled ? " plan-card__note--off" : ""}`} role="status">

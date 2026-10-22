@@ -69,3 +69,19 @@ export function googleCalendarLink(plan: Plan, url: string): string {
   });
   return `https://calendar.google.com/calendar/render?${q}`;
 }
+
+/** Outlook's add-event page. `work` uses Microsoft 365 (outlook.office.com), otherwise Outlook.com. */
+export function outlookCalendarLink(plan: Plan, url: string, work = false): string {
+  const start = new Date(plan.starts_at!);
+  const end = new Date(start.getTime() + DURATION_MS);
+  const q = new URLSearchParams({
+    path: "/calendar/action/compose",
+    rru: "addevent",
+    subject: plan.title,
+    startdt: start.toISOString(),
+    enddt: end.toISOString(),
+    body: `Who's coming and what's changed: ${url}`,
+    location: place(plan),
+  });
+  return `https://${work ? "outlook.office.com" : "outlook.live.com"}/calendar/0/deeplink/compose?${q}`;
+}
