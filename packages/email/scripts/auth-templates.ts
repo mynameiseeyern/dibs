@@ -21,6 +21,11 @@ const sender = {
   contact: process.env.EMAIL_REPLY_TO || "hello@dibby.social",
 };
 
+// A token_hash link to our own /auth/callback, not {{ .ConfirmationURL }}: it works in whichever
+// browser the email app opens (Gmail's and Mail's in-app ones included), because it doesn't need
+// a cookie from the tab that asked. app/auth/callback/route.ts verifies it.
+const SIGN_IN_LINK = "{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=email";
+
 const signIn = (heading: string, lead: string) =>
   renderEmail({
     sender,
@@ -29,7 +34,7 @@ const signIn = (heading: string, lead: string) =>
     body: [
       h1(heading),
       para(lead),
-      button("{{ .ConfirmationURL }}", "Sign in to dibs"),
+      button(SIGN_IN_LINK, "Sign in to dibs"),
       muted("The link works once and runs out in an hour. Open it on the phone or laptop you want to use dibs on."),
       muted("Didn't ask for this? You can ignore it. Nobody can sign in without this email."),
     ].join("\n"),
