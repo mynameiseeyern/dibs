@@ -295,7 +295,9 @@ export default async function PlanPage({ params }: Props) {
                             open={plan.status === "voting"}
                             vote={vote.bind(null, slug)}
                             add={addOption.bind(null, slug)}
-                            remove={isHost ? removeOption.bind(null, slug) : undefined}
+                            remove={me ? removeOption.bind(null, slug) : undefined}
+                            canRemoveAll={isHost}
+                            meId={me?.id ?? null}
                             area={plan.area}
                           />
                           {isHost && plan.status === "voting" && options.length > 0 && (

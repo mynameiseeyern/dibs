@@ -22,6 +22,8 @@ export function VoteList({
   vote,
   add,
   remove,
+  canRemoveAll = false,
+  meId = null,
   area,
 }: {
   rows: VoteRow[];
@@ -29,8 +31,11 @@ export function VoteList({
   open: boolean;
   vote: (optionId: string) => Promise<void>;
   add: (s: FormState, f: FormData) => Promise<FormState>;
-  /** Hosts only: take an option off the vote. Rows become swipeable. */
+  /** Take an option off the vote. Rows this person may remove become swipeable. */
   remove?: (optionId: string) => Promise<{ error?: string; label?: string }>;
+  /** Hosts can take off any option; everyone else only the ones they added. */
+  canRemoveAll?: boolean;
+  meId?: string | null;
   /** The plan's area, to start the map search near it. */
   area?: string | null;
 }) {
@@ -42,7 +47,8 @@ export function VoteList({
   const [openRow, setOpenRow] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<VoteRow | null>(null);
   const [removing, setRemoving] = useState(false);
-  const canRemove = Boolean(remove) && open;
+  const canRemove = (r: VoteRow) => Boolean(remove) && open && (canRemoveAll || (meId !== null && r.added_by === meId));
+  const anyRemovable = rows.some(canRemove);
 
   const confirmRemove = async () => {
     if (!confirming || !remove) return;
@@ -58,7 +64,9 @@ export function VoteList({
   return (
     <Fresh>
       {rows.length === 0 && <p className="paragraph-sm muted">No options yet. Add a place, or ask Dibby.</p>}
-      {canRemove && rows.length > 0 && <p className="paragraph-xs muted">Swipe an option left to take it off.</p>}
+      {anyRemovable && (
+        <p className="paragraph-xs muted">{canRemoveAll ? "Swipe an option left to take it off." : "Swipe a place you added left to take it off."}</p>
+      )}
       {rows.map((r) => {
         const share = total ? Math.round((r.votes / total) * 100) : 0;
         const winning = top > 0 && r.votes === top;
@@ -85,7 +93,7 @@ export function VoteList({
             </span>
           </button>
         );
-        return canRemove ? (
+        return canRemove(r) ? (
           <SwipeRow
             key={r.id}
             freshId={r.id}

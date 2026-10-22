@@ -214,13 +214,17 @@ export async function addOption(slug: string, _prev: FormState, form: FormData):
   return undefined;
 }
 
-/** Hosts take an option off the vote (swipe, then confirm). Votes on it go too. */
+/**
+ * Take an option off the vote (swipe, then confirm). Hosts can take any off; everyone else
+ * only the ones they added. Votes on it go too.
+ */
 export async function removeOption(slug: string, optionId: string): Promise<{ error?: string; label?: string }> {
   const view = await loadPlan(slug);
-  if (!view?.isHost) return { error: "Only hosts can take options off." };
+  if (!view?.me) return { error: "Join the plan first." };
   if (view.plan.status !== "voting") return { error: "Voting's closed." };
   const option = (await store.listOptions(view.plan.id)).find((o) => o.id === optionId);
   if (!option) return { label: undefined };
+  if (!view.isHost && option.added_by !== view.me.id) return { error: "You can only take off places you added." };
   await store.removeOption(view.plan.id, option.id);
   await store.addMessage({ planId: view.plan.id, memberId: null, kind: "system", body: `${view.me!.display_name.split(" ")[0]} took ${option.label} off the vote.` });
   revalidatePath(`/p/${slug}`);
