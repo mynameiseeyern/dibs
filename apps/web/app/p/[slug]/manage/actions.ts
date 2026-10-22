@@ -7,48 +7,103 @@ import { store } from "@/lib/store";
 import { formatWhen, localToIso } from "@/lib/time";
 import { loadPlan } from "@/lib/viewer";
 import { getPlace } from "@/lib/places";
+import { countIn } from "@dibs/shared/plans";
 
 export type FormState = { error?: string } | undefined;
 const clean = (v: FormDataEntryValue | null, max = 80) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, max);
 
-/**
- * Hosts change the name, time or place. Each change bumps the plan's version, so the
- * next WhatsApp share gets a fresh preview card, and leaves an "Updated" note on the page.
- */
-export async function updateDetails(slug: string, _prev: FormState, form: FormData): Promise<FormState> {
+type View = NonNullable<Awaited<ReturnType<typeof loadPlan>>>;
+type Result = { error?: string };
+
+/** Hosts only, and only while the plan is still on. */
+async function editable(slug: string): Promise<View | Result> {
   const view = await loadPlan(slug);
   if (!view?.isHost) return { error: "Only hosts can change the plan." };
-  const { plan } = view;
-  if (plan.status === "cancelled" || plan.status === "wrapped") return { error: "This plan's finished, so it can't be changed." };
+  if (view.plan.status === "cancelled" || view.plan.status === "wrapped") return { error: "This plan's finished, so it can't be changed." };
+  return view;
+}
+const isView = (v: View | Result): v is View => "plan" in v;
 
-  const title = clean(form.get("title")) || plan.title;
-  const whenRaw = clean(form.get("starts_at"), 16);
-  const startsAt = whenRaw ? localToIso(whenRaw) : null;
-  if (whenRaw && !startsAt) return { error: "That date and time doesn't look right." };
-  const place = clean(form.get("place")) || null;
-
-  const changes: string[] = [];
-  const patch: Parameters<typeof store.updatePlan>[1] = {};
-  if (title !== plan.title) {
-    patch.title = title;
-    changes.push(`now called ${title}`);
-  }
-  if ((startsAt ?? null) !== (plan.starts_at ?? null) && !(startsAt && plan.starts_at && Date.parse(startsAt) === Date.parse(plan.starts_at))) {
-    patch.starts_at = startsAt;
-    changes.push(startsAt ? `moved to ${formatWhen(startsAt)}` : "time to be decided");
-  }
-  // Before it's locked, this is the area for the vote. The venue itself is picked on the map (setPlace).
-  if (plan.status === "voting" && place !== plan.area) {
-    patch.area = place;
-    changes.push(place ? `now around ${place}` : "area to be decided");
-  }
-
-  if (changes.length === 0) redirect(`/p/${slug}`);
-  const note = changes.join(", ").replace(/^./, (c) => c.toUpperCase()) + ".";
-  await store.updatePlan(plan.id, { ...patch, version: plan.version + 1, updated_note: note });
-  await store.addMessage({ planId: plan.id, memberId: null, kind: "system", body: `${view.me!.display_name.split(" ")[0]} updated the plan: ${note}` });
+/**
+ * A change guests care about (name, time, area, when voting closes). Bumps the plan's version,
+ * so the next WhatsApp share gets a fresh preview card, leaves an "Updated" note on the page and
+ * says so in the chat.
+ */
+async function announce(slug: string, view: View, patch: Parameters<typeof store.updatePlan>[1], note: string) {
+  await store.updatePlan(view.plan.id, { ...patch, version: view.plan.version + 1, updated_note: note });
+  await store.addMessage({ planId: view.plan.id, memberId: null, kind: "system", body: `${view.me!.display_name.split(" ")[0]} updated the plan: ${note}` });
   revalidatePath(`/p/${slug}`);
-  redirect(`/p/${slug}?updated=1`);
+  revalidatePath(`/p/${slug}/manage`);
+}
+
+export async function setTitle(slug: string, raw: string): Promise<Result> {
+  const view = await editable(slug);
+  if (!isView(view)) return view;
+  const title = clean(raw);
+  if (!title) return { error: "Give it a name, like \u201cFriday dinner\u201d." };
+  if (title === view.plan.title) return {};
+  await announce(slug, view, { title }, `Now called ${title}.`);
+  return {};
+}
+
+/** Empty clears the time: "to be decided". */
+export async function setWhen(slug: string, local: string): Promise<Result> {
+  const view = await editable(slug);
+  if (!isView(view)) return view;
+  const raw = clean(local, 16);
+  const startsAt = raw ? localToIso(raw) : null;
+  if (raw && !startsAt) return { error: "That date and time doesn't look right." };
+  const same = startsAt === view.plan.starts_at || (startsAt && view.plan.starts_at && Date.parse(startsAt) === Date.parse(view.plan.starts_at));
+  if (same) return {};
+  await announce(slug, view, { starts_at: startsAt }, startsAt ? `Moved to ${formatWhen(startsAt)}.` : "Time to be decided.");
+  return {};
+}
+
+/** While it's a vote, the rough area Dibby and the map search around. The venue itself is picked on the map. */
+export async function setArea(slug: string, raw: string): Promise<Result> {
+  const view = await editable(slug);
+  if (!isView(view)) return view;
+  if (view.plan.status !== "voting") return {};
+  const area = clean(raw) || null;
+  if (area === view.plan.area) return {};
+  await announce(slug, view, { area }, area ? `Now around ${area}.` : "Area to be decided.");
+  return {};
+}
+
+/** When the vote closes. In the future, and before the plan starts. */
+export async function setVoteDeadline(slug: string, local: string): Promise<Result> {
+  const view = await editable(slug);
+  if (!isView(view)) return view;
+  if (view.plan.status !== "voting") return { error: "The vote's already closed." };
+  const at = localToIso(clean(local, 16));
+  if (!at) return { error: "That date and time doesn't look right." };
+  if (Date.parse(at) <= Date.now() + 5 * 60 * 1000) return { error: "Pick a time at least a few minutes from now. Or lock it in from the vote." };
+  if (view.plan.starts_at && Date.parse(at) >= Date.parse(view.plan.starts_at)) return { error: "Voting has to close before the plan starts." };
+  if (view.plan.vote_deadline && Date.parse(at) === Date.parse(view.plan.vote_deadline)) return {};
+  await announce(slug, view, { vote_deadline: at }, `Voting now closes ${formatWhen(at)}.`);
+  return {};
+}
+
+/** How many spots (2 to 20). Never fewer than are already going; lowering it doesn't bump anyone. */
+export async function setCapacity(slug: string, n: number): Promise<Result> {
+  const view = await editable(slug);
+  if (!isView(view)) return view;
+  if (!Number.isInteger(n) || n < 2 || n > 20) return { error: "Spots can be anywhere from 2 to 20." };
+  const going = countIn(view.members);
+  if (n < going) return { error: `${going} are already going, so it can't be fewer than that.` };
+  if (n === view.plan.capacity) return {};
+  await store.updatePlan(view.plan.id, { capacity: n });
+  revalidatePath(`/p/${slug}`);
+  revalidatePath(`/p/${slug}/manage`);
+  return {};
+}
+
+export async function setPlusOnes(slug: string, on: boolean): Promise<Result> {
+  const view = await editable(slug);
+  if (!isView(view)) return view;
+  if (on === view.plan.plus_ones) return {};
+  await announce(slug, view, { plus_ones: on }, on ? "Plus-ones welcome." : "No plus-ones this time.");
+  return {};
 }
 
 const firstName = (view: NonNullable<Awaited<ReturnType<typeof loadPlan>>>) => view.me!.display_name.split(" ")[0];

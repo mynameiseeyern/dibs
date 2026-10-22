@@ -19,7 +19,10 @@ export function PlaceSection({
   optionCount,
   setPlace,
   openVote,
+  bare = false,
 }: {
+  /** Inside a sheet: no card and no heading of its own. */
+  bare?: boolean;
   status: "voting" | "locked";
   venue: string | null;
   area: string | null;
@@ -40,8 +43,8 @@ export function PlaceSection({
     });
 
   return (
-    <section className="db-card section" aria-labelledby="place-h">
-      <h2 id="place-h" className="title-h4">The place</h2>
+    <section className={bare ? "db-stack" : "db-card section"} aria-labelledby={bare ? undefined : "place-h"} aria-label={bare ? "The place" : undefined}>
+      {!bare && <h2 id="place-h" className="title-h4">The place</h2>}
       <SegmentedControl.Root
         value={mode}
         onValueChange={(v) => {

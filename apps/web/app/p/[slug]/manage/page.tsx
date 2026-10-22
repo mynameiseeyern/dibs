@@ -1,21 +1,14 @@
 import { notFound, redirect } from "next/navigation";
-import { TZ } from "@/lib/time";
+import { TZ, formatWhen } from "@/lib/time";
+import { countIn } from "@dibs/shared/plans";
 import { loadPlan } from "@/lib/viewer";
-import { cancelPlan, openVote, setDibbyVolume, setPlace, setVibe, updateDetails } from "./actions";
-import { PlaceSection } from "./PlaceSection";
+import { cancelPlan, openVote, setArea, setCapacity, setDibbyVolume, setPlace, setPlusOnes, setTitle, setVibe, setVoteDeadline, setWhen } from "./actions";
 import { store } from "@/lib/store";
-import { VibePick } from "@/components/VibePick";
-import { ManageForm } from "./ManageForm";
+import { EditPlan } from "./EditPlan";
 import * as Button from "@/components/ui/button";
 
 export const metadata = { title: "Edit plan" };
 
-const VOLUME_LABEL = { quiet: "Quiet", normal: "Normal", loud: "Loud" } as const;
-const VOLUME_HINT = {
-  quiet: "Just the useful stuff: vote closing, the day before, and wrapping up. One a day at most.",
-  normal: "Also chases replies and maybes, and says when someone pulls out. Up to three a day.",
-  loud: "Everything Normal does, up to five a day.",
-} as const;
 export const dynamic = "force-dynamic";
 
 /** ISO -> "2026-10-23T19:00" in Sydney time, for the datetime-local input. */
@@ -56,43 +49,35 @@ export default async function Manage({ params }: { params: Promise<{ slug: strin
         <span className="subheading-sm eyebrow">{plan.title}</span>
         <h1 className="title-h3">Edit the plan</h1>
       </div>
-      <PlaceSection
+      <EditPlan
         status={locked ? "locked" : "voting"}
+        title={plan.title}
+        whenLabel={formatWhen(plan.starts_at)}
+        deadlineLabel={formatWhen(plan.vote_deadline)}
+        whenInput={toLocalInput(plan.starts_at)}
+        deadlineInput={toLocalInput(plan.vote_deadline)}
         venue={plan.venue_name}
         area={plan.area}
         optionCount={optionCount}
-        setPlace={setPlace.bind(null, slug)}
-        openVote={openVote.bind(null, slug)}
+        capacity={plan.capacity}
+        going={countIn(view.members)}
+        plusOnes={plan.plus_ones}
+        vibe={plan.vibe}
+        volume={plan.dibby_volume ?? "normal"}
+        actions={{
+          setTitle: setTitle.bind(null, slug),
+          setWhen: setWhen.bind(null, slug),
+          setArea: setArea.bind(null, slug),
+          setVoteDeadline: setVoteDeadline.bind(null, slug),
+          setCapacity: setCapacity.bind(null, slug),
+          setPlusOnes: setPlusOnes.bind(null, slug),
+          setPlace: setPlace.bind(null, slug),
+          openVote: openVote.bind(null, slug),
+          setVibe: setVibe.bind(null, slug),
+          setVolume: setDibbyVolume.bind(null, slug),
+          cancel: cancelPlan.bind(null, slug),
+        }}
       />
-      <ManageForm
-        action={updateDetails.bind(null, slug)}
-        cancel={cancelPlan.bind(null, slug)}
-        placeLabel={locked ? null : "Where-ish"}
-        initial={{ title: plan.title, startsAt: toLocalInput(plan.starts_at), place: plan.area ?? "" }}
-      />
-      <section className="db-card section" aria-labelledby="vibe-h">
-        <h2 id="vibe-h" className="title-h4">How Dibby talks</h2>
-        <p className="paragraph-sm muted">Changes how Dibby and the app talk on this plan, straight away. Dibby&rsquo;s reminders already in the chat change too.</p>
-        <VibePick value={plan.vibe} onChange={setVibe.bind(null, slug)} />
-      </section>
-      <section className="db-card section" aria-labelledby="dibby-volume-h">
-        <h2 id="dibby-volume-h" className="title-h4">How chatty is Dibby?</h2>
-        <p className="paragraph-sm muted">{VOLUME_HINT[plan.dibby_volume ?? "normal"]}</p>
-        <div className="rsvp" role="group" aria-label="How chatty is Dibby?">
-          {(["quiet", "normal", "loud"] as const).map((v) => (
-            <form key={v} action={setDibbyVolume.bind(null, slug, v)}>
-              <Button.Root
-                variant={plan.dibby_volume === v ? "primary" : "neutral"}
-                mode={plan.dibby_volume === v ? "filled" : "lighter"}
-                className="px-2"
-                aria-pressed={plan.dibby_volume === v}
-              >
-                {VOLUME_LABEL[v]}
-              </Button.Root>
-            </form>
-          ))}
-        </div>
-      </section>
     </main>
   );
 }
