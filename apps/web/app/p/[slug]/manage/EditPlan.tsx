@@ -4,6 +4,7 @@ import { useOptimistic, useState, useTransition, type ReactNode } from "react";
 import type { DibbyVolume, Vibe } from "@dibs/shared/types";
 import type { CustomPlace } from "@dibs/shared/plans";
 import { Field, FormError } from "@/components/Field";
+import { DateTimeField } from "@/components/DateTime";
 import { VibePick, VIBE_OPTIONS } from "@/components/VibePick";
 import * as Button from "@/components/ui/button";
 import * as Modal from "@/components/ui/modal";
@@ -103,7 +104,7 @@ export function EditPlan(p: EditPlanProps) {
         open={sheet === "when"}
         onClose={close}
         title="When"
-        field={{ label: "Date and time", name: "starts_at", type: "datetime-local", defaultValue: p.whenInput, hint: "Sydney and Melbourne time. Leave it blank to sort it out later." }}
+        name="starts_at"
         extra={
           p.askWhenHref ? (
             <Button.Root asChild variant="neutral" mode="ghost" size="small">
@@ -115,15 +116,19 @@ export function EditPlan(p: EditPlanProps) {
           ) : null
         }
         save={p.actions.setWhen}
-      />
+      >
+        <DateTimeField name="starts_at" label="Day and time" defaultValue={p.whenInput} hint="Sydney and Melbourne time." />
+      </TextSheet>
       <TextSheet
         open={sheet === "deadline"}
         onClose={close}
         title="Vote closes"
         body="The top pick locks in then. Dibby gives everyone a heads-up in the last hour."
-        field={{ label: "Closes at", name: "vote_deadline", type: "datetime-local", defaultValue: p.deadlineInput, required: true }}
+        name="vote_deadline"
         save={p.actions.setVoteDeadline}
-      />
+      >
+        <DateTimeField name="vote_deadline" label="Closes at" defaultValue={p.deadlineInput} required />
+      </TextSheet>
       <TextSheet
         open={sheet === "spots"}
         onClose={close}
@@ -271,7 +276,9 @@ function TextSheet({
   body,
   extra,
   field,
+  name = field?.name ?? "",
   save,
+  children,
 }: {
   open: boolean;
   onClose: () => void;
@@ -279,8 +286,11 @@ function TextSheet({
   body?: string;
   /** Shown under the field, e.g. another way to set it. */
   extra?: ReactNode;
-  field: Parameters<typeof Field>[0];
+  /** A plain text field, or pass `name` and your own input as children. */
+  field?: Parameters<typeof Field>[0];
+  name?: string;
   save: (v: string) => Promise<Result>;
+  children?: ReactNode;
 }) {
   const [error, setError] = useState<string>();
   const [pending, start] = useTransition();
@@ -299,7 +309,7 @@ function TextSheet({
           className="contents"
           onSubmit={(e) => {
             e.preventDefault();
-            const v = String(new FormData(e.currentTarget).get(field.name) ?? "");
+            const v = String(new FormData(e.currentTarget).get(name) ?? "");
             start(async () => {
               const r = await save(v);
               if (r.error) setError(r.error);
@@ -315,7 +325,7 @@ function TextSheet({
           <Modal.Body>
             <div className="db-stack">
               {body && <p className="paragraph-sm muted">{body}</p>}
-              <Field {...field} key={String(open)} />
+              <div key={String(open)} className="contents">{field ? <Field {...field} /> : children}</div>
               <FormError error={error} />
               {extra}
             </div>
