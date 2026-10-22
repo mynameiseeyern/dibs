@@ -78,8 +78,8 @@ export function NewPlanForm() {
             </Label.Root>
             <SegmentedControl.Root value={who} onValueChange={(v) => setWho(v as Who)}>
               <SegmentedControl.List aria-labelledby="who-l">
-                <SegmentedControl.Trigger value="dibby">Dibby suggests 3</SegmentedControl.Trigger>
-                <SegmentedControl.Trigger value="us">We&rsquo;ll add our own</SegmentedControl.Trigger>
+                <SegmentedControl.Trigger value="dibby">Let Dibby help</SegmentedControl.Trigger>
+                <SegmentedControl.Trigger value="us">Open vote</SegmentedControl.Trigger>
               </SegmentedControl.List>
             </SegmentedControl.Root>
           </div>
@@ -103,9 +103,10 @@ export function NewPlanForm() {
 
       <fieldset className="m-0 min-w-0 border-0 p-0">
         <Label.Root asChild className="mb-2">
-          <legend>Vibe</legend>
+          <legend>How Dibby talks</legend>
         </Label.Root>
         <VibePick onPick={setVibe} />
+        <p className="paragraph-xs muted mt-2">Dibby&rsquo;s tone in the group chat, and the app&rsquo;s. You can change it later.</p>
       </fieldset>
 
       <label className="flex min-h-11 cursor-pointer items-center gap-3">

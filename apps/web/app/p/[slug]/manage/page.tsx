@@ -71,7 +71,7 @@ export default async function Manage({ params }: { params: Promise<{ slug: strin
         initial={{ title: plan.title, startsAt: toLocalInput(plan.starts_at), place: plan.area ?? "" }}
       />
       <section className="db-card section" aria-labelledby="vibe-h">
-        <h2 id="vibe-h" className="title-h4">Vibe</h2>
+        <h2 id="vibe-h" className="title-h4">How Dibby talks</h2>
         <p className="paragraph-sm muted">Changes how Dibby and the app talk on this plan, straight away. Dibby&rsquo;s reminders already in the chat change too.</p>
         <VibePick value={plan.vibe} onChange={setVibe.bind(null, slug)} />
       </section>
