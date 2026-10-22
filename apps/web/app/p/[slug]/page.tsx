@@ -60,7 +60,14 @@ export default async function PlanPage({ params }: Props) {
       <main className="page">
         <header className="topbar">
           <Wordmark />
-          {me && <span className="db-badge db-badge--primary">{me.role === "guest" ? "You're on this plan" : "You're hosting"}</span>}
+          {isHost && !cancelled && plan.status !== "wrapped" ? (
+            <a className="db-btn db-btn--secondary db-btn--sm" href={`/p/${slug}/manage`}>
+              <i className="ri-edit-line db-icon" aria-hidden="true" />
+              Edit
+            </a>
+          ) : (
+            me && <span className="db-badge db-badge--primary">{me.role === "guest" ? "You're on this plan" : "You're hosting"}</span>
+          )}
         </header>
 
         {cancelled && (
@@ -68,7 +75,7 @@ export default async function PlanPage({ params }: Props) {
             <i className="ri-close-circle-fill db-icon" aria-hidden="true" />
             <div>
               <strong>Called off</strong>
-              This one's not happening. The host might set up a new one.
+              {plan.updated_note ?? "This one's not happening."} Nobody owes anything for it.
             </div>
           </div>
         )}
@@ -156,10 +163,18 @@ export default async function PlanPage({ params }: Props) {
         )}
 
         {plan.status === "wrapped" && (
-          <a className="db-card db-card--violet section" href={`/p/${slug}/bills`} style={{ textDecoration: "none" }}>
-            <strong className="title-h4" style={{ color: "inherit" }}>Square up</strong>
-            <span>{me?.attended ? "See what you owe, or add what you paid." : "Bills are for people who came."}</span>
-          </a>
+          <div className="wrap-links">
+            <a className="db-card db-card--violet section" href={`/p/${slug}/bills`} style={{ textDecoration: "none" }}>
+              <strong className="title-h4" style={{ color: "inherit" }}>Square up</strong>
+              <span>{me?.attended ? "See what you owe, or add what you paid." : "Bills are for people who came."}</span>
+            </a>
+            {me?.attended && (
+              <a className="db-card section" href={`/p/${slug}/recap`} style={{ textDecoration: "none", color: "inherit" }}>
+                <strong className="title-h4">The recap</strong>
+                <span className="muted">Rate the night, best moment, MVP.</span>
+              </a>
+            )}
+          </div>
         )}
         {me?.role === "organiser" && plan.status === "locked" && (
           <a className="db-btn db-btn--secondary db-btn--block" href={`/p/${slug}/wrap`}>

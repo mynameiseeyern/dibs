@@ -74,6 +74,17 @@ export interface Store {
   listShares(planId: string): Promise<BillShare[]>;
   updateShare(billId: string, memberId: string, patch: Partial<Pick<BillShare, "status" | "says_paid_at" | "confirmed_at">>): Promise<void>;
   recordSpin(billId: string, entrantIds: string[], resultMemberId: string): Promise<void>;
+
+  listRecap(planId: string): Promise<RecapAnswer[]>;
+  saveRecap(a: RecapAnswer): Promise<void>;
+}
+
+export interface RecapAnswer {
+  plan_id: string;
+  member_id: string;
+  stars: number | null;
+  best_moment: string | null;
+  mvp_member_id: string | null;
 }
 
 export type { Plan, PlanMember, Rsvp, PlanOption, Vote, Message, Bill, BillShare };

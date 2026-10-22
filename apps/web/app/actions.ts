@@ -73,7 +73,13 @@ export async function saveProfile(_prev: FormState, form: FormData): Promise<For
   const payid = clean(form.get("payid"), 100) || null;
   if (!first || !last) return { error: "We need your first and last name." };
   if (!isAdult(dob)) return { error: "You need to be 18 or over to organise plans on dibs." };
-  await store.upsertProfile({ user_id: me.id, first_name: first, last_name: last, dob, payid, payid_name: payid ? `${first} ${last}` : null });
+  try {
+    await store.upsertProfile({ user_id: me.id, first_name: first, last_name: last, dob, payid, payid_name: payid ? `${first} ${last}` : null });
+  } catch (e) {
+    // Shows in Vercel's logs with the database's reason.
+    console.error("[onboarding] save profile failed", me.id, e);
+    return { error: "Couldn't save that. Try again in a sec, and if it keeps happening, tell Ee." };
+  }
   redirect(safeNext(String(form.get("next") ?? "/new")));
 }
 

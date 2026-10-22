@@ -1,7 +1,7 @@
 import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { makeSlug, pickColour } from "@dibs/shared/plans";
-import type { Bill, BillShare, Message, NewMember, NewPlan, Plan, PlanMember, PlanOption, Store, Vote } from "./types";
+import type { Bill, BillShare, Message, NewMember, NewPlan, Plan, PlanMember, PlanOption, Store, Vote, RecapAnswer } from "./types";
 
 // Server-side Supabase store using the service key. Every caller checks access first
 // (lib/viewer.ts); row-level security still protects anything the browser reads directly.
@@ -162,5 +162,12 @@ export const supabaseStore: Store = {
   },
   async recordSpin(billId, entrantIds, resultMemberId) {
     must(await admin().from("roulette_spins").insert({ bill_id: billId, entrant_ids: entrantIds, result_member_id: resultMemberId }));
+  },
+
+  async listRecap(planId) {
+    return must(await admin().from("recap_answers").select("*").eq("plan_id", planId)) as RecapAnswer[];
+  },
+  async saveRecap(a) {
+    must(await admin().from("recap_answers").upsert(a));
   },
 };

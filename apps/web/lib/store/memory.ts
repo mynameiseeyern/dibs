@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { makeSlug, pickColour } from "@dibs/shared/plans";
-import type { Bill, BillShare, Guest, Message, NewMember, NewPlan, Plan, PlanMember, PlanOption, Profile, Store, Vote } from "./types";
+import type { Bill, BillShare, Guest, Message, NewMember, NewPlan, Plan, PlanMember, PlanOption, Profile, Store, Vote, RecapAnswer } from "./types";
 
 // In-memory store for local runs without Supabase. Lost on restart.
 interface Db {
@@ -13,6 +13,7 @@ interface Db {
   messages: Message[];
   bills: Map<string, Bill>;
   shares: BillShare[];
+  recap: RecapAnswer[];
 }
 
 const g = globalThis as unknown as { __dibsDb?: Db };
@@ -26,7 +27,10 @@ const db: Db = (g.__dibsDb ??= {
   messages: [],
   bills: new Map(),
   shares: [],
+  recap: [],
 });
+
+db.recap ??= [];
 
 const now = () => new Date().toISOString();
 
@@ -179,4 +183,11 @@ export const memoryStore: Store = {
     if (s) Object.assign(s, patch);
   },
   async recordSpin() {},
+  async listRecap(planId) {
+    return db.recap.filter((r) => r.plan_id === planId);
+  },
+  async saveRecap(a) {
+    db.recap = db.recap.filter((r) => !(r.plan_id === a.plan_id && r.member_id === a.member_id));
+    db.recap.push(a);
+  },
 };

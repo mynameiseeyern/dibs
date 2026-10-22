@@ -109,6 +109,14 @@ export default async function Bills({ params, searchParams }: Props) {
           </div>
         )}
 
+        {owedShares.length > 0 && settled === owedShares.length && (
+          <section className="moment">
+            <span className="db-badge db-badge--success"><i className="ri-checkbox-circle-fill db-icon" aria-hidden="true" />All squared up</span>
+            <p className="muted">Everyone&rsquo;s paid back. Nice work, crew.</p>
+            <a className="db-btn db-btn--secondary" href={`/p/${slug}/recap`}><i className="ri-star-smile-line db-icon" aria-hidden="true" />On to the recap</a>
+          </section>
+        )}
+
         {myPayids.map(({ share, bill, pay }) => (
           <section key={bill.id} className="db-card section" aria-label={`You owe ${first(bill.payer_member_id)}`}>
             <span className="db-plan__eyebrow">{bill.title}</span>
