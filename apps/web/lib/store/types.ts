@@ -9,6 +9,12 @@ export interface Profile {
   payid_name: string | null;
 }
 
+export interface Subscription {
+  email: string;
+  token: string;
+  subscribed: boolean;
+}
+
 export interface Guest {
   id: string;
   first_name: string;
@@ -55,6 +61,14 @@ export interface Store {
    * already on. Returns how many plans moved.
    */
   claimGuests(userId: string, email: string | null, guestId: string | null): Promise<number>;
+
+  /**
+   * Email lists (today just beta updates). Opt-in only: a row appears when someone says yes,
+   * and unsubscribing keeps the row with unsubscribed_at as the record that we stopped.
+   */
+  getSubscription(list: string, who: { userId: string } | { token: string }): Promise<Subscription | null>;
+  subscribe(list: string, s: { email: string; userId: string | null; source: "onboarding" | "account" | "resubscribe" }): Promise<Subscription>;
+  unsubscribe(list: string, who: { userId: string } | { token: string }): Promise<Subscription | null>;
 
   createPlan(p: NewPlan): Promise<Plan>;
   getPlanBySlug(slug: string): Promise<Plan | null>;

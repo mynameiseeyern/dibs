@@ -9,6 +9,7 @@ import { store, usingSupabase } from "@/lib/store";
 import { draftPlan } from "@/lib/dibby";
 import { localToIso } from "@/lib/time";
 import { siteUrl } from "@/lib/site";
+import { BETA_LIST } from "@dibs/email";
 
 export type FormState = { error?: string; sent?: string } | undefined;
 
@@ -119,6 +120,15 @@ export async function saveProfile(_prev: FormState, form: FormData): Promise<For
     // Shows in Vercel's logs with the database's reason.
     console.error("[onboarding] save profile failed", me.id, e);
     return { error: "Couldn't save that. Try again in a sec, and if it keeps happening, tell Ee." };
+  }
+  // Opt-in only: the box starts unticked, and ticking it is the consent we keep a record of.
+  if (form.get("beta_updates") === "on" && me.email) {
+    try {
+      await store.subscribe(BETA_LIST, { email: me.email, userId: me.id, source: "onboarding" });
+    } catch (e) {
+      // Not worth blocking sign-up over; they can turn it on from their account.
+      console.error("[onboarding] beta updates subscribe failed", me.id, e);
+    }
   }
   redirect(safeNext(String(form.get("next") ?? "/new")));
 }

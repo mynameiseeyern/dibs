@@ -21,6 +21,15 @@ export function OnboardingForm({ next }: { next: string }) {
         placeholder="Phone, email or ABN"
         hint="Only shown to people who owe you, after they've come along. You can add it later."
       />
+      <div className="db-field">
+        <label className="db-check">
+          <input type="checkbox" name="beta_updates" aria-describedby="beta_updates-hint" />
+          Send me dibs beta updates
+        </label>
+        <p id="beta_updates-hint" className="db-hint">
+          A short email when we ship something new. Unsubscribe any time.
+        </p>
+      </div>
       <FormError error={state?.error} />
       <button className="db-btn db-btn--primary db-btn--lg db-btn--block" disabled={pending}>
         {pending ? "Saving…" : "Let's go"}

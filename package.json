@@ -7,6 +7,8 @@
     "build": "pnpm --filter @dibs/ui build && pnpm --filter @dibs/web build",
     "test": "pnpm --filter @dibs/shared test",
     "typecheck": "pnpm -r typecheck",
-    "tokens": "pnpm --filter @dibs/ui build"
+    "tokens": "pnpm --filter @dibs/ui build",
+    "release-notes": "pnpm --filter @dibs/email release-notes",
+    "email-templates": "pnpm --filter @dibs/email auth-templates"
   }
 }

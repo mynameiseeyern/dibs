@@ -1,11 +1,13 @@
 import { Wordmark } from "@/components/Logo";
 import { Monogram } from "@/components/Monogram";
-import { usingSupabase } from "@/lib/store";
+import { BETA_LIST } from "@dibs/email";
+import { store, usingSupabase } from "@/lib/store";
 import { whoIsHere } from "@/lib/viewer";
 import { store } from "@/lib/store";
 import { formatAud, rouletteTally } from "@dibs/shared/bills";
 import { forgetDeviceAction, signOutAction, switchAccountAction } from "../actions";
 import { KeepPlansForm } from "./KeepPlansForm";
+import { BetaUpdatesToggle } from "./BetaUpdatesToggle";
 
 export const metadata = { title: "You" };
 export const dynamic = "force-dynamic";
@@ -13,6 +15,8 @@ export const dynamic = "force-dynamic";
 export default async function Account() {
   const here = await whoIsHere();
   const { organiser, guest, name } = here;
+  // Fails soft so the page still works if the mailing_list migration hasn't run yet.
+  const betaUpdates = organiser ? await store.getSubscription(BETA_LIST, { userId: organiser.id }).catch(() => null) : null;
 
   // Lifetime roulette record: every spun bill on every plan you're on, counted for your member id there.
   const memberships = [...(organiser ? await store.listPlansForUser(organiser.id) : []), ...(guest ? await store.listPlansForGuest(guest.id) : [])];
@@ -72,6 +76,13 @@ export default async function Account() {
             Right now dibs only knows you on this browser. Add your email and your plans come with you to your phone, laptop or the WhatsApp browser.
           </p>
           <KeepPlansForm demo={!usingSupabase} />
+        </section>
+      )}
+
+      {organiser && (
+        <section id="email" className="db-card section" aria-labelledby="email-h">
+          <h2 id="email-h" className="title-h5">Emails from dibs</h2>
+          <BetaUpdatesToggle initial={betaUpdates?.subscribed ?? false} email={organiser.email} />
         </section>
       )}
 

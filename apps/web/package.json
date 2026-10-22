@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@dibs/email": "workspace:*",
     "@dibs/shared": "workspace:*",
     "@dibs/ui": "workspace:*",
     "@fontsource/bricolage-grotesque": "5.3.0",
