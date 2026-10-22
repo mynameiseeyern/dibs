@@ -51,6 +51,8 @@ export interface Store {
   createPlan(p: NewPlan): Promise<Plan>;
   getPlanBySlug(slug: string): Promise<Plan | null>;
   listPlansForUser(userId: string): Promise<{ plan: Plan; member: PlanMember }[]>;
+  /** Plans this device has joined as a guest. */
+  listPlansForGuest(guestId: string): Promise<{ plan: Plan; member: PlanMember }[]>;
 
   updatePlan(planId: string, patch: Partial<Pick<Plan, "status" | "venue_name" | "venue_place_id" | "starts_at" | "vote_deadline" | "version" | "updated_note" | "title" | "area">>): Promise<Plan>;
 

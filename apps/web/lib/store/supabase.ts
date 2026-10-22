@@ -18,6 +18,20 @@ function must<T>(res: { data: T | null; error: { message: string } | null }): T 
   return res.data as T;
 }
 
+/** A person's memberships with their plans, soonest first. Two plain queries, no embeds. */
+async function plansFor(column: "user_id" | "guest_id", id: string) {
+  const members = must(await admin().from("plan_members").select("*").eq(column, id)) as PlanMember[];
+  if (members.length === 0) return [];
+  const plans = must(await admin().from("plans").select("*").in("id", [...new Set(members.map((m) => m.plan_id))])) as Plan[];
+  const byId = new Map(plans.map((p) => [p.id, p]));
+  return members
+    .flatMap((member) => {
+      const plan = byId.get(member.plan_id);
+      return plan ? [{ plan, member }] : [];
+    })
+    .sort((a, b) => (a.plan.starts_at ?? a.plan.created_at).localeCompare(b.plan.starts_at ?? b.plan.created_at));
+}
+
 export const supabaseStore: Store = {
   kind: "supabase",
 
@@ -69,10 +83,11 @@ export const supabaseStore: Store = {
     return must(await admin().from("plans").select("*").eq("slug", slug).maybeSingle()) as Plan | null;
   },
   async listPlansForUser(userId) {
-    const rows = must(await admin().from("plan_members").select("*, plan:plans(*)").eq("user_id", userId)) as (PlanMember & { plan: Plan })[];
-    return rows
-      .map(({ plan, ...member }) => ({ plan, member: member as PlanMember }))
-      .sort((a, b) => (a.plan.starts_at ?? a.plan.created_at).localeCompare(b.plan.starts_at ?? b.plan.created_at));
+    return plansFor("user_id", userId);
+  },
+
+  async listPlansForGuest(guestId) {
+    return plansFor("guest_id", guestId);
   },
 
   async listMembers(planId) {
@@ -153,9 +168,11 @@ export const supabaseStore: Store = {
     );
   },
   async listShares(planId) {
-    return must(await admin().from("bill_shares").select("*, bills!inner(plan_id)").eq("bills.plan_id", planId)).map(
-      ({ bills: _b, ...s }: BillShare & { bills: unknown }) => s
-    ) as BillShare[];
+    // Two plain queries rather than an embed: bill_shares has more than one path to bills,
+    // so PostgREST refuses to guess ("more than one relationship was found").
+    const ids = (must(await admin().from("bills").select("id").eq("plan_id", planId)) as { id: string }[]).map((b) => b.id);
+    if (ids.length === 0) return [];
+    return must(await admin().from("bill_shares").select("*").in("bill_id", ids)) as BillShare[];
   },
   async updateShare(billId, memberId, patch) {
     must(await admin().from("bill_shares").update(patch).eq("bill_id", billId).eq("member_id", memberId));

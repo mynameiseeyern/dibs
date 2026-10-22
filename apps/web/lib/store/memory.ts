@@ -99,6 +99,16 @@ export const memoryStore: Store = {
     return out.sort((a, b) => (a.plan.starts_at ?? a.plan.created_at).localeCompare(b.plan.starts_at ?? b.plan.created_at));
   },
 
+  async listPlansForGuest(guestId) {
+    const out: { plan: Plan; member: PlanMember }[] = [];
+    for (const m of db.members.values()) {
+      if (m.guest_id !== guestId) continue;
+      const plan = db.plans.get(m.plan_id);
+      if (plan) out.push({ plan, member: m });
+    }
+    return out.sort((a, b) => (a.plan.starts_at ?? a.plan.created_at).localeCompare(b.plan.starts_at ?? b.plan.created_at));
+  },
+
   async listMembers(planId) {
     return [...db.members.values()].filter((m) => m.plan_id === planId).sort((a, b) => a.joined_at.localeCompare(b.joined_at));
   },
