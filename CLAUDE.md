@@ -3,6 +3,11 @@
 Hackathon POC for Dibs, a group plans app: plan → share to WhatsApp → vote and RSVP → bills, PayID, card roulette → recap.
 Build plan: https://claude.ai/artifact/2Lce9vh9ZvGunTKngL6sWX · Linear project "Dibs — Hackathon" (P-ARV-1).
 
+## Commits
+
+- Commit as `mynameiseeyern <eeyern.ux@gmail.com>`. Vercel is on the Hobby plan and only deploys commits authored by the account owner.
+- Vercel skips a deploy when nothing under `apps/web` (or a package it uses) changed.
+
 ## Commands
 
 - `pnpm dev` — web app on :3000 (in-memory demo store if Supabase env is empty)
