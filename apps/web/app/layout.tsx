@@ -12,6 +12,7 @@ import "@fontsource/dm-mono/latin-500.css";
 import "remixicon/fonts/remixicon.css";
 import "./globals.css";
 import { siteUrl } from "@/lib/site";
+import { FinishSignIn } from "@/components/FinishSignIn";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
@@ -32,7 +33,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en-AU">
-      <body>{children}</body>
+      <body>
+        {children}
+        <FinishSignIn />
+      </body>
     </html>
   );
 }

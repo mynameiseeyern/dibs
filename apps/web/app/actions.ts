@@ -1,8 +1,9 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { createClient } from "@supabase/supabase-js";
 import type { Vibe } from "@dibs/shared/types";
-import { currentOrganiser, demoSignIn, signOut, supabaseAuth } from "@/lib/auth";
+import { currentOrganiser, demoSignIn, signOut } from "@/lib/auth";
 import { store, usingSupabase } from "@/lib/store";
 import { draftPlan } from "@/lib/dibby";
 import { localToIso } from "@/lib/time";
@@ -22,9 +23,14 @@ export async function signIn(_prev: FormState, form: FormData): Promise<FormStat
   const email = clean(form.get("email"), 200).toLowerCase();
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { error: "That email doesn't look right." };
   const site = siteUrl();
-  const { error } = await (await supabaseAuth()).auth.signInWithOtp({
+  // Implicit flow: the link carries the session itself, so it works in whichever browser
+  // the email app opens it in. (The default PKCE link only works in the asking browser.)
+  const mailer = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+    auth: { flowType: "implicit", persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+  const { error } = await mailer.auth.signInWithOtp({
     email,
-    options: { emailRedirectTo: `${site}/auth/callback?next=${encodeURIComponent(next)}` },
+    options: { emailRedirectTo: `${site}/auth/done?next=${encodeURIComponent(next)}` },
   });
   if (error) {
     // Shows up in Vercel's logs, so we can see the real reason.

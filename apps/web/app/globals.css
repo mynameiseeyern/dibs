@@ -129,3 +129,5 @@ a { color: var(--primary-dark); }
 .payid__row > div { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .payid__row > div span { font: 400 13px/18px var(--font-sans); color: var(--text-sub-600); }
 .payid__row .payid__name { font: 600 16px/22px var(--font-sans); }
+
+.signin-overlay { position: fixed; inset: 0; z-index: 50; display: grid; place-content: center; background: color-mix(in srgb, var(--bg-white-0) 88%, transparent); backdrop-filter: blur(6px); }
