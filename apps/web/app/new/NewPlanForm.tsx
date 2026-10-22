@@ -72,17 +72,13 @@ export function NewPlanForm() {
         </div>
       ) : (
         <div className="db-card section">
-          <div className="flex flex-col gap-2">
-            <Label.Root asChild>
-              <span id="who-l">Who adds the options?</span>
-            </Label.Root>
-            <SegmentedControl.Root value={who} onValueChange={(v) => setWho(v as Who)}>
-              <SegmentedControl.List aria-labelledby="who-l">
-                <SegmentedControl.Trigger value="dibby">Let Dibby help</SegmentedControl.Trigger>
-                <SegmentedControl.Trigger value="us">Open vote</SegmentedControl.Trigger>
-              </SegmentedControl.List>
-            </SegmentedControl.Root>
-          </div>
+          <label className="flex min-h-11 cursor-pointer items-center gap-3">
+            <span className="flex-1">
+              <span className="label-md block">Let Dibby help</span>
+              <span className="paragraph-xs muted block">Three real spots to start the vote</span>
+            </span>
+            <Switch.Root checked={who === "dibby"} onCheckedChange={(on) => setWho(on ? "dibby" : "us")} />
+          </label>
           {who === "dibby" ? (
             <>
               <DibbyBubble vibe={vibe} parts={{ ask, day: dayWord(days, when.date), time: timeWord(when.time), spend: search.spend, near: !!search.near }} />
@@ -96,7 +92,7 @@ export function NewPlanForm() {
               <p className="paragraph-xs muted">Dibby picks three real spots to vote on. Anyone can add more from the map. What you type goes to an AI provider.</p>
             </>
           ) : (
-            <Field label="Where-ish" name="area" placeholder="Surry Hills" icon="ri-map-pin-line" maxLength={80} autoComplete="off" hint="Everyone adds places to the vote from the map." />
+            <Field label="Where-ish" name="area" placeholder="Surry Hills" icon="ri-map-pin-line" maxLength={80} autoComplete="off" hint="Open vote: everyone adds places from the map." />
           )}
         </div>
       )}
