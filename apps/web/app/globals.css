@@ -277,3 +277,8 @@
 /* Read-only composer (maybes and anyone not going yet) */
 .composer__readonly { all: unset; box-sizing: border-box; flex: 1; display: flex; align-items: center; gap: var(--space-2); min-height: var(--size-control-md); padding: 0 var(--space-4); border-radius: var(--radius-md); border: 1.5px dashed var(--stroke-sub-300); color: var(--text-soft-400); font: 400 16px/26px var(--font-sans); cursor: pointer; }
 .composer__readonly:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+/* Dibby talks back on the new-plan form */
+.dibby-bubble .db-msg__bubble { min-height: 44px; }
+.dibby-bubble__text { transition: opacity var(--motion-fast) var(--ease-standard), transform var(--motion-fast) var(--ease-standard); }
+.dibby-bubble__text--fading { opacity: 0; transform: translateY(4px); }

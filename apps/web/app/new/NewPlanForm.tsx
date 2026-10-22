@@ -1,9 +1,9 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
+import type { Vibe } from "@dibs/shared/types";
 import { createPlan } from "../actions";
 import { Field, FormError } from "@/components/Field";
-import { DibbyMark } from "@/components/Logo";
 import { VibePick } from "@/components/VibePick";
 import * as Button from "@/components/ui/button";
 import * as Input from "@/components/ui/input";
@@ -12,7 +12,8 @@ import * as Switch from "@/components/ui/switch";
 import * as SegmentedControl from "@/components/ui/segmented-control";
 import { PlacePicker, type PickedPlace } from "@/components/PlacePicker";
 import { PlaceCard } from "@/components/PlaceCard";
-import { SearchChips, WhenChips } from "./chips";
+import { SearchChips, WhenChips, dayWord, nextDays, timeWord, type SearchValue, type WhenValue } from "./chips";
+import { DibbyBubble, DibbyWorking, useCyclingPlaceholder } from "./DibbyBubble";
 
 type Where = "place" | "vote";
 type Who = "dibby" | "us";
@@ -29,12 +30,20 @@ export function NewPlanForm() {
   const [picking, setPicking] = useState(false);
   const mode = where === "place" ? "place" : who === "dibby" ? "dibby" : "vote";
 
+  // Dibby listens to the form: everything below feeds the bubble that talks back as you fill it.
+  const days = useMemo(nextDays, []);
+  const [when, setWhen] = useState<WhenValue>({ date: null, time: null });
+  const [search, setSearch] = useState<SearchValue>({ spend: null, near: null });
+  const [ask, setAsk] = useState("");
+  const [vibe, setVibe] = useState<Vibe>("chill");
+  const placeholder = useCyclingPlaceholder(mode === "dibby" && ask === "");
+
   return (
     <form action={action} className="form">
       <input type="hidden" name="where" value={mode} />
       <Field label="Name it" name="title" placeholder="Friday dinner" maxLength={80} autoComplete="off" hint={mode === "dibby" ? "Leave it blank and Dibby names it." : undefined} />
 
-      <WhenChips />
+      <WhenChips value={when} onChange={setWhen} />
 
       <div className="flex flex-col gap-2">
         <Label.Root asChild>
@@ -76,16 +85,14 @@ export function NewPlanForm() {
           </div>
           {who === "dibby" ? (
             <>
-              <div className="db-row">
-                <DibbyMark size={28} />
-                <label htmlFor="ask" className="label-md">What are you after?</label>
-              </div>
+              <DibbyBubble vibe={vibe} parts={{ ask, day: dayWord(days, when.date), time: timeWord(when.time), spend: search.spend, near: !!search.near }} />
+              <label htmlFor="ask" className="label-md">What are you after?</label>
               <Input.Root>
                 <Input.Wrapper>
-                  <Input.Input id="ask" name="ask" placeholder="Dumplings in Haymarket, bowling, bottomless brunch…" maxLength={500} autoComplete="off" />
+                  <Input.Input id="ask" name="ask" value={ask} onChange={(e) => setAsk(e.target.value)} placeholder={placeholder} maxLength={500} autoComplete="off" />
                 </Input.Wrapper>
               </Input.Root>
-              <SearchChips />
+              <SearchChips value={search} onChange={setSearch} />
               <p className="paragraph-xs muted">Dibby picks three real spots to vote on. Anyone can add more from the map. What you type goes to an AI provider.</p>
             </>
           ) : (
@@ -98,7 +105,7 @@ export function NewPlanForm() {
         <Label.Root asChild className="mb-2">
           <legend>Vibe</legend>
         </Label.Root>
-        <VibePick />
+        <VibePick onPick={setVibe} />
       </fieldset>
 
       <label className="flex min-h-11 cursor-pointer items-center gap-3">
@@ -107,16 +114,12 @@ export function NewPlanForm() {
       </label>
 
       <FormError error={state?.error} />
-      {pending && mode === "dibby" && (
-        <p className="paragraph-sm muted typing" aria-live="polite">
-          Dibby&rsquo;s on it<span className="dots" aria-hidden="true"><i /><i /><i /></span>
-        </p>
-      )}
+      {pending && mode === "dibby" && <DibbyWorking where={search.near ? "near you" : null} />}
 
       <div className="dock">
         <div className="dock__inner">
           <Button.Root variant="dibs" size="large" block disabled={pending || (where === "place" && !place)}>
-            {pending ? (mode === "dibby" ? "Drafting…" : "Making it…") : "Make the plan"}
+            {pending ? (mode === "dibby" ? "Dibby's on it…" : "Making it…") : mode === "dibby" ? "Let Dibby pick" : "Make the plan"}
           </Button.Root>
         </div>
       </div>

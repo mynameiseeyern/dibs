@@ -153,3 +153,36 @@ export function asTemplate(raw: unknown): Template | null {
   const k = (raw as { k: string }).k;
   return ["rsvp", "vote_closing", "wrap_up", "day_before", "maybe", "bail", "roulette", "locked"].includes(k) ? (raw as Template) : null;
 }
+
+// ---------- Ask Dibby: the line that rewrites itself as you fill the form ----------
+
+export interface AskParts {
+  ask: string;
+  day: string | null; // "today", "tomorrow", "Sat 24"
+  time: string | null; // "brunch", "dinner"…
+  spend: 1 | 2 | 3 | null;
+  near: boolean;
+}
+
+const SPEND_WORDS: Record<1 | 2 | 3, [string, string, string]> = {
+  1: ["cheap and cheerful", "cheap n cheerful 🤑", "budget"],
+  2: ["mid-range", "not too spenny", "mid-range"],
+  3: ["a bit fancy", "treat ourselves 💅", "upmarket"],
+};
+
+/** What Dibby says back while you fill in the form. Never invents a day or time: only echoes what's tapped. */
+export function askDibbyLine(vibe: Vibe, p: AskParts): string {
+  const what = p.ask.trim();
+  const when = [p.time, p.day].filter(Boolean).join(" ");
+  const whenCap = when ? when.charAt(0).toUpperCase() + when.slice(1) : "";
+  const spend = p.spend ? SPEND_WORDS[p.spend][vibe === "chill" ? 0 : vibe === "extra" ? 1 : 2] : null;
+  const where = p.near ? "near you" : null;
+  const bits = [spend, where].filter(Boolean).join(", ");
+  const setup = whenCap ? `${whenCap}${bits ? `, ${bits}` : ""}.` : bits ? `${bits.charAt(0).toUpperCase() + bits.slice(1)}.` : "";
+
+  if (!what && !setup) {
+    return v3(vibe, "Tell me what you're after and I'll find three spots.", "what are we doing?? 👀 gimme a vibe and I'll find three spots", "Describe the outing. I will suggest three venues.");
+  }
+  const ask = what ? v3(vibe, `${what}? Say less, I'll find three.`, `${what}?? SAY LESS 🔥 finding three now`, `${what}. I will suggest three venues.`) : v3(vibe, "Tell me what you're after and I'll find three.", "now tell me what we're eating 👀", "Describe the outing.");
+  return [setup, ask].filter(Boolean).join(" ");
+}

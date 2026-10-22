@@ -13,7 +13,7 @@ export const VIBE_OPTIONS = [
  * Pick a vibe. Inside a form it's a plain radio group (name="vibe").
  * With `onChange` it switches straight away, for the plan's edit screen.
  */
-export function VibePick({ value = "chill", onChange }: { value?: Vibe; onChange?: (v: Vibe) => Promise<void> }) {
+export function VibePick({ value = "chill", onChange, onPick }: { value?: Vibe; onChange?: (v: Vibe) => Promise<void>; onPick?: (v: Vibe) => void }) {
   const [pending, start] = useTransition();
   const [shown, setShown] = useOptimistic(value);
   return (
@@ -33,7 +33,7 @@ export function VibePick({ value = "chill", onChange }: { value?: Vibe; onChange
                       await onChange(v.id);
                     }),
                 }
-              : { defaultChecked: value === v.id })}
+              : { defaultChecked: value === v.id, onChange: () => onPick?.(v.id) })}
           />
           <span>
             {v.name}
