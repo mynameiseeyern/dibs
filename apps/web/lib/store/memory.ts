@@ -5,7 +5,7 @@ import type { Bill, BillShare, Guest, Message, NewMember, NewPlan, Plan, PlanMem
 // In-memory store for local runs without Supabase. Lost on restart.
 interface Db {
   profiles: Map<string, Profile>;
-  guests: Map<string, Guest & { tokenHash: string }>;
+  guests: Map<string, Guest & { tokenHash: string; email?: string; email_requested_at?: number }>;
   plans: Map<string, Plan>;
   members: Map<string, PlanMember>;
   options: Map<string, PlanOption>;
@@ -97,6 +97,26 @@ export const memoryStore: Store = {
       if (plan) out.push({ plan, member: m });
     }
     return out.sort((a, b) => (a.plan.starts_at ?? a.plan.created_at).localeCompare(b.plan.starts_at ?? b.plan.created_at));
+  },
+
+  async setGuestEmail(guestId, email) {
+    const g = db.guests.get(guestId);
+    if (g) Object.assign(g, { email: email.toLowerCase(), email_requested_at: Date.now() });
+  },
+
+  async claimGuests(userId, email, guestId) {
+    const hourAgo = Date.now() - 3600 * 1000;
+    const guestIds = new Set<string>(guestId ? [guestId] : []);
+    if (email) for (const g of db.guests.values()) if (g.email === email.toLowerCase() && (g.email_requested_at ?? 0) > hourAgo) guestIds.add(g.id);
+    const mine = new Set([...db.members.values()].filter((m) => m.user_id === userId).map((m) => m.plan_id));
+    let moved = 0;
+    for (const m of db.members.values()) {
+      if (!m.guest_id || !guestIds.has(m.guest_id) || m.user_id || mine.has(m.plan_id)) continue;
+      m.user_id = userId;
+      mine.add(m.plan_id);
+      moved++;
+    }
+    return moved;
   },
 
   async listPlansForGuest(guestId) {

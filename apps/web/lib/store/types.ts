@@ -47,6 +47,14 @@ export interface Store {
   findGuestByTokenHash(hash: string): Promise<Guest | null>;
   createGuest(g: { first_name: string; last_name: string; tokenHash: string }): Promise<Guest>;
   removeGuest(guestId: string): Promise<void>;
+  /** A guest asked for a sign-in link to this email, to keep their plans. */
+  setGuestEmail(guestId: string, email: string): Promise<void>;
+  /**
+   * Moves guest memberships onto an account: the guest on this browser, plus any guest
+   * that asked for a link to this email in the last hour. Skips plans the account is
+   * already on. Returns how many plans moved.
+   */
+  claimGuests(userId: string, email: string | null, guestId: string | null): Promise<number>;
 
   createPlan(p: NewPlan): Promise<Plan>;
   getPlanBySlug(slug: string): Promise<Plan | null>;

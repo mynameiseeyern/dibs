@@ -34,6 +34,13 @@ export async function joinPlan(slug: string, _prev: FormState, form: FormData): 
   const last = clean(form.get("last_name"));
   if (!first || !last) return { error: "Pop in your first and last name so the crew knows who you are." };
 
+  // Signed in but never set up to organise (a guest who added their email): join as the account.
+  if (view.organiser) {
+    await store.addMember({ planId: view.plan.id, userId: view.organiser.id, name: `${first} ${last}`, role: "guest" });
+    revalidatePath(`/p/${slug}`);
+    return undefined;
+  }
+
   const guest = view.guest ?? (await createGuestSession(first, last));
   await store.addMember({ planId: view.plan.id, guestId: guest.id, name: `${first} ${last}`, role: "guest" });
   revalidatePath(`/p/${slug}`);

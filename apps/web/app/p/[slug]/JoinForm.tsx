@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import type { FormState } from "./actions";
 
-export function JoinForm({ action, signedIn }: { action: (s: FormState, f: FormData) => Promise<FormState>; signedIn: boolean }) {
+export function JoinForm({ action, signedIn, slug }: { action: (s: FormState, f: FormData) => Promise<FormState>; signedIn: boolean; slug: string }) {
   const [state, formAction, pending] = useActionState(action, undefined);
   return (
     <form action={formAction} className="form" aria-describedby={state?.error ? "join-error" : undefined}>
@@ -31,7 +31,12 @@ export function JoinForm({ action, signedIn }: { action: (s: FormState, f: FormD
       <button className="db-btn db-btn--primary db-btn--lg db-btn--block" disabled={pending}>
         {pending ? "Joining…" : "Join the plan"}
       </button>
-      {!signedIn && <p className="paragraph-sm muted">No app or account needed. We just remember you on this device.</p>}
+      {!signedIn && (
+        <p className="paragraph-sm muted">
+          No app or account needed. We just remember you on this browser.{" "}
+          <a href={`/login?next=${encodeURIComponent(`/p/${slug}`)}`}>Added your email on another device? Sign in</a>
+        </p>
+      )}
     </form>
   );
 }

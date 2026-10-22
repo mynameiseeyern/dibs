@@ -153,3 +153,10 @@ a { color: var(--primary-dark); }
 /* Utilities */
 .link-card { text-decoration: none; color: inherit; }
 .center { text-align: center; }
+
+/* ---------- Account ---------- */
+.topbar__end { display: flex; align-items: center; gap: var(--space-2); }
+.account-btn { display: inline-grid; place-content: center; width: var(--size-tap); height: var(--size-tap); border-radius: var(--radius-full); text-decoration: none; }
+.account-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.account-who { flex-direction: row; align-items: center; gap: var(--space-4); }
+.account-who h1, .account-who p { margin: 0; overflow-wrap: anywhere; }

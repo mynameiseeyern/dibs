@@ -57,6 +57,35 @@ export const supabaseStore: Store = {
     must(await admin().from("guests").update({ removed_at: new Date().toISOString(), first_name: "Removed", last_name: "" }).eq("id", guestId));
   },
 
+  async setGuestEmail(guestId, email) {
+    must(await admin().from("guests").update({ email: email.toLowerCase(), email_requested_at: new Date().toISOString() }).eq("id", guestId));
+  },
+
+  async claimGuests(userId, email, guestId) {
+    const guestIds = new Set<string>(guestId ? [guestId] : []);
+    if (email) {
+      const hourAgo = new Date(Date.now() - 3600 * 1000).toISOString();
+      const rows = must(
+        await admin().from("guests").select("id").eq("email", email.toLowerCase()).gt("email_requested_at", hourAgo).is("removed_at", null)
+      ) as { id: string }[];
+      for (const r of rows) guestIds.add(r.id);
+    }
+    if (guestIds.size === 0) return 0;
+    const [theirs, mine] = await Promise.all([
+      admin().from("plan_members").select("id, plan_id").in("guest_id", [...guestIds]).is("user_id", null),
+      admin().from("plan_members").select("plan_id").eq("user_id", userId),
+    ]);
+    const onPlans = new Set((must(mine) as { plan_id: string }[]).map((r) => r.plan_id));
+    let moved = 0;
+    for (const m of must(theirs) as { id: string; plan_id: string }[]) {
+      if (onPlans.has(m.plan_id)) continue;
+      must(await admin().from("plan_members").update({ user_id: userId }).eq("id", m.id));
+      onPlans.add(m.plan_id);
+      moved++;
+    }
+    return moved;
+  },
+
   async createPlan(p: NewPlan) {
     const plan = must(
       await admin()

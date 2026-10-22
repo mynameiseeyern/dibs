@@ -1,20 +1,21 @@
 import { redirect } from "next/navigation";
 import { Wordmark } from "@/components/Logo";
-import { currentOrganiser } from "@/lib/auth";
-import { store } from "@/lib/store";
+import { AccountButton } from "@/components/AccountButton";
+import { whoIsHere } from "@/lib/viewer";
 import { AskDibby } from "./AskDibby";
 import { NewPlanForm } from "./NewPlanForm";
 
 export const metadata = { title: "New plan" };
 
 export default async function NewPlan() {
-  const me = await currentOrganiser();
-  if (!me) redirect("/login?next=/new");
-  if (!(await store.getProfile(me.id))) redirect("/onboarding?next=/new");
+  const here = await whoIsHere();
+  if (!here.organiser) redirect("/login?next=/new");
+  if (!here.canOrganise) redirect("/onboarding?next=/new");
   return (
     <main className="page">
       <header className="topbar">
         <Wordmark href="/home" />
+        <AccountButton here={here} />
       </header>
       <h1 className="title-h3">What's the plan?</h1>
       <AskDibby />

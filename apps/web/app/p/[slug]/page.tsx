@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { countIn, RSVP_LABEL, shareText } from "@dibs/shared/plans";
 import type { PlanMember, Rsvp } from "@dibs/shared/types";
 import { Wordmark } from "@/components/Logo";
+import { AccountButton } from "@/components/AccountButton";
 import { Monogram, MonogramStack } from "@/components/Monogram";
 import { LiveRefresh } from "@/components/LiveRefresh";
 import { mapsLink } from "@/lib/places";
@@ -59,15 +60,16 @@ export default async function PlanPage({ params }: Props) {
       <LiveRefresh />
       <main className="page">
         <header className="topbar">
-          <Wordmark />
-          {isHost && !cancelled && plan.status !== "wrapped" ? (
+          <Wordmark href={view.here.name ? "/home" : "/"} />
+          <div className="topbar__end">
+            {isHost && !cancelled && plan.status !== "wrapped" && (
             <a className="db-btn db-btn--secondary db-btn--sm" href={`/p/${slug}/manage`}>
               <i className="ri-edit-line db-icon" aria-hidden="true" />
               Edit
             </a>
-          ) : (
-            me && <span className="db-badge db-badge--primary">{me.role === "guest" ? "You're on this plan" : "You're hosting"}</span>
-          )}
+            )}
+            <AccountButton here={view.here} />
+          </div>
         </header>
 
         {cancelled && (
@@ -125,7 +127,7 @@ export default async function PlanPage({ params }: Props) {
         {!me && !cancelled && (
           <section className="section db-card" aria-labelledby="join-h">
             <h2 id="join-h" className="title-h4">You coming?</h2>
-            <JoinForm action={joinPlan.bind(null, slug)} signedIn={Boolean(view.organiser)} />
+            <JoinForm action={joinPlan.bind(null, slug)} signedIn={view.here.canOrganise} slug={slug} />
           </section>
         )}
 
@@ -232,7 +234,17 @@ export default async function PlanPage({ params }: Props) {
           </div>
         </section>
 
-        {me?.role === "guest" && view.guest && (
+        {me?.guest_id && !view.organiser && (
+          <a className="db-alert db-alert--information link-card" href="/account">
+            <i className="ri-smartphone-line db-icon" aria-hidden="true" />
+            <div>
+              <strong>On another phone too?</strong>
+              Add your email and this plan comes with you to any browser.
+            </div>
+          </a>
+        )}
+
+        {me?.role === "guest" && view.guest && me.guest_id === view.guest.id && (
           <form action={removeMe.bind(null, slug)}>
             <button className="db-btn db-btn--ghost db-btn--sm">Remove me from this plan</button>
           </form>

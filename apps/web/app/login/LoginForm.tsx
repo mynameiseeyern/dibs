@@ -12,7 +12,7 @@ export function LoginForm({ next, demo }: { next: string; demo: boolean }) {
         <i className="ri-mail-check-fill db-icon" aria-hidden="true" />
         <div>
           <strong>Check your email</strong>
-          We sent a sign-in link to {state.sent}. Open it on this device.
+          We sent a sign-in link to {state.sent}. Open it on any device.
         </div>
       </div>
     );

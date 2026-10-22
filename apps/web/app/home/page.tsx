@@ -4,10 +4,10 @@ import { countIn } from "@dibs/shared/plans";
 import type { Plan, PlanMember } from "@dibs/shared/types";
 import { CrewWave, Wordmark } from "@/components/Logo";
 import { MonogramStack } from "@/components/Monogram";
-import { currentOrganiser } from "@/lib/auth";
+import { AccountButton } from "@/components/AccountButton";
 import { store } from "@/lib/store";
 import { formatShort, formatWhen } from "@/lib/time";
-import { signOutAction } from "../actions";
+import { whoIsHere } from "@/lib/viewer";
 
 export const metadata = { title: "Your plans" };
 export const dynamic = "force-dynamic";
@@ -37,12 +37,18 @@ function status(plan: Plan): { label: string; tone: string; icon: string } {
 }
 
 export default async function Home() {
-  const user = await currentOrganiser();
-  if (!user) redirect("/login?next=/home");
-  if (!(await store.getProfile(user.id))) redirect("/onboarding?next=/home");
+  const here = await whoIsHere();
+  const { organiser, guest } = here;
+  if (!organiser && !guest) redirect("/login?next=/home");
+
+  // Everything you're on: as your account, plus anything joined as a guest on this browser.
+  const mine = organiser ? await store.listPlansForUser(organiser.id) : [];
+  const onThisBrowser = guest ? await store.listPlansForGuest(guest.id) : [];
+  const seen = new Set(mine.map((r) => r.plan.id));
+  const memberships = [...mine, ...onThisBrowser.filter((r) => !seen.has(r.plan.id))];
 
   const rows: Row[] = await Promise.all(
-    (await store.listPlansForUser(user.id)).map(async ({ plan, member }) => {
+    memberships.map(async ({ plan, member }) => {
       const [members, bills, shares] = await Promise.all([store.listMembers(plan.id), store.listBills(plan.id), store.listShares(plan.id)]);
       const payerOf = new Map(bills.map((b) => [b.id, b.payer_member_id]));
       const open = shares.filter((s) => s.status !== "confirmed" && s.amount_cents > 0 && s.member_id !== payerOf.get(s.bill_id));
@@ -70,10 +76,18 @@ export default async function Home() {
     <main className="page">
       <header className="topbar">
         <Wordmark href="/home" />
-        <form action={signOutAction}>
-          <button className="db-btn db-btn--ghost db-btn--sm">Sign out</button>
-        </form>
+        <AccountButton here={here} />
       </header>
+
+      {guest && !organiser && rows.length > 0 && (
+        <a className="db-alert db-alert--information link-card" href="/account">
+          <i className="ri-smartphone-line db-icon" aria-hidden="true" />
+          <div>
+            <strong>Only on this browser for now</strong>
+            Add your email to see these plans on your other devices.
+          </div>
+        </a>
+      )}
 
       {rows.length > 0 && (
         <section className="balance" aria-label="Your money across plans">

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import type { Vibe } from "@dibs/shared/types";
 import { currentOrganiser, demoSignIn, signOut } from "@/lib/auth";
+import { clearGuestSession, currentGuest } from "@/lib/guest";
 import { store, usingSupabase } from "@/lib/store";
 import { draftPlan } from "@/lib/dibby";
 import { localToIso } from "@/lib/time";
@@ -22,6 +23,29 @@ export async function signIn(_prev: FormState, form: FormData): Promise<FormStat
   }
   const email = clean(form.get("email"), 200).toLowerCase();
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { error: "That email doesn't look right." };
+  return sendLink(email, next);
+}
+
+/** Guest adds an email so their plans follow them to any browser (and become an account). */
+export async function keepMyPlans(_prev: FormState, form: FormData): Promise<FormState> {
+  const guest = await currentGuest();
+  if (!guest) return { error: "Join a plan first, then you can keep it." };
+  const email = clean(form.get("email"), 200).toLowerCase();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { error: "That email doesn't look right." };
+  try {
+    await store.setGuestEmail(guest.id, email);
+  } catch (e) {
+    console.error("[keep plans] save email", e);
+    return { error: "Couldn't save that. Try again in a sec." };
+  }
+  if (!usingSupabase) {
+    await demoSignIn();
+    redirect("/home");
+  }
+  return sendLink(email, "/home");
+}
+
+async function sendLink(email: string, next: string): Promise<FormState> {
   const site = siteUrl();
   // Implicit flow: the link carries the session itself, so it works in whichever browser
   // the email app opens it in. (The default PKCE link only works in the asking browser.)
@@ -46,8 +70,24 @@ export async function signIn(_prev: FormState, form: FormData): Promise<FormStat
   return { sent: email };
 }
 
+// Signing out also forgets the guest on this browser: their plans are on the account now,
+// and the next person to sign in here shouldn't inherit them.
 export async function signOutAction() {
   await signOut();
+  await clearGuestSession();
+  redirect("/");
+}
+
+/** Sign out and straight back to the sign-in page, to come back as someone else. */
+export async function switchAccountAction() {
+  await signOut();
+  await clearGuestSession();
+  redirect("/login?next=/home");
+}
+
+/** "Not you?" on a shared phone: this device stops being that guest. Their RSVPs stay on the plans. */
+export async function forgetDeviceAction() {
+  await clearGuestSession();
   redirect("/");
 }
 

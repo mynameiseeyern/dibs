@@ -35,7 +35,8 @@ Open `packages/ui/design-system/index.html` in a browser to see every component 
 - PayID is shown only to people with a share on that bill who were confirmed at wrap-up (`get_payid`).
 - Balances are private: you see your own share; the payer sees their bill; everyone else sees "4 of 6 settled".
 - Dibby reads only messages it's tagged in, keeps no memory between plans, and never mentions money owed or anything personal.
-- Guests have no account: signed device cookie (`lib/guest.ts`), every guest write goes through a server action or route.
+- Guests have no account by default: signed device cookie (`lib/guest.ts`), every guest write goes through a server action or route.
+- A guest can add an email (`/account`). When someone signs in with it within an hour, or signs in on the browser holding the guest cookie, `store.claimGuests` moves those memberships onto the account (`lib/viewer.ts` `whoIsHere`). Signing out also clears the guest cookie.
 - Amounts are integer cents with a currency code (default AUD).
 
 ## Layout
