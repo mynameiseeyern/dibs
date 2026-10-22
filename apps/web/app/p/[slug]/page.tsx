@@ -4,6 +4,8 @@ import { countIn, RSVP_LABEL, shareText } from "@dibs/shared/plans";
 import type { PlanMember, Rsvp } from "@dibs/shared/types";
 import { Wordmark } from "@/components/Logo";
 import { AccountButton } from "@/components/AccountButton";
+import { Suspense } from "react";
+import { Weather } from "./Weather";
 import { Monogram, MonogramStack } from "@/components/Monogram";
 import { LiveRefresh } from "@/components/LiveRefresh";
 import { mapsLink } from "@/lib/places";
@@ -109,6 +111,11 @@ export default async function PlanPage({ params }: Props) {
                   plan.area
                 )}
               </li>
+            )}
+            {!cancelled && plan.status !== "wrapped" && (
+              <Suspense fallback={null}>
+                <Weather plan={plan} />
+              </Suspense>
             )}
             {plan.status === "voting" && plan.vote_deadline && (
               <li>
