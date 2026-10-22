@@ -11,7 +11,7 @@ export const progressBarVariants = tv({
   },
   variants: {
     color: {
-      primary: { progress: 'bg-primary-base' },
+      primary: { progress: 'bg-primary-bar' },
       // Lime gets an ink edge so it reads on the light track; done is success-dark.
       accent: { progress: 'bg-accent-base shadow-[inset_0_0_0_1.5px_var(--stroke-strong-950)]' },
       success: { progress: 'bg-success-dark' },

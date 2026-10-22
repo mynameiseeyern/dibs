@@ -63,6 +63,7 @@
   --primary-dark: #4a2fd6;
   --primary-darker: #3420a3;
   --primary-hover: #3420a3;
+  --primary-bar: #6d4aff;
   --primary-light: #ddd4ff;
   --primary-lighter: #f1edff;
   --accent-base: #c8f03c;
@@ -151,6 +152,7 @@
     --primary-dark: #b3a3ff;
     --primary-darker: #d3c9ff;
     --primary-hover: #5530e0;
+    --primary-bar: #8a6dff;
     --primary-light: rgba(109, 74, 255, 0.4);
     --primary-lighter: rgba(109, 74, 255, 0.22);
     --accent-base: #c8f03c;
@@ -238,6 +240,7 @@
   --primary-dark: #b3a3ff;
   --primary-darker: #d3c9ff;
   --primary-hover: #5530e0;
+  --primary-bar: #8a6dff;
   --primary-light: rgba(109, 74, 255, 0.4);
   --primary-lighter: rgba(109, 74, 255, 0.22);
   --accent-base: #c8f03c;
