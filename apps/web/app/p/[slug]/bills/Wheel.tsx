@@ -63,7 +63,7 @@ export function Wheel({
             return (
               <g key={i}>
                 <path d={`M130 130 L${x0} ${y0} A${r} ${r} 0 ${large} 1 ${x1} ${y1} Z`} fill={FILLS[i % FILLS.length]} stroke="var(--stroke-strong-950)" strokeWidth="2" />
-                <text x={lx} y={ly} textAnchor="middle" dominantBaseline="middle" transform={`rotate(${-rot} ${lx} ${ly})`} fontFamily="var(--font-sans)" fontWeight="800" fontSize="17" fill="var(--static-black)">
+                <text x={lx} y={ly} textAnchor="middle" dominantBaseline="middle" transform={`rotate(${-rot} ${lx} ${ly})`} fontFamily="var(--font-sans)" fontWeight="800" fontSize="17" fill={i % FILLS.length === 0 ? "var(--static-black)" : "var(--text-strong-950)"}>
                   {name}
                 </text>
               </g>
