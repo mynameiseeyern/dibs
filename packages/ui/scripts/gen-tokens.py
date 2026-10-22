@@ -44,7 +44,8 @@ tok('overlay', 'rgba(20, 18, 22, 0.40)', 'rgba(0, 0, 0, 0.64)', 'Scrim behind bo
 # ---- Primary: Dibs violet ----
 tok('primary-base', '#6d4aff', '#6d4aff', 'THE brand colour (the V3 app-icon tile). Primary buttons, active tabs, own chat bubbles, progress. Text on it is static-white.')
 tok('primary-dark', '#4a2fd6', '#b3a3ff', 'Violet text and links on bg-white-0 / bg-weak-50 / primary-lighter.')
-tok('primary-darker', '#3420a3', '#d3c9ff', 'Pressed links; hover of primary buttons.')
+tok('primary-darker', '#3420a3', '#d3c9ff', 'Pressed links; violet avatar initials. Not a fill under white text (it turns light in Dark).')
+tok('primary-hover', '#3420a3', '#5530e0', 'Hover and pressed fill of primary buttons. Text on it is static-white in both themes.')
 tok('primary-light', '#ddd4ff', rgba('#6d4aff', .40), 'Selected-row fill, violet badge border.')
 tok('primary-lighter', '#f1edff', rgba('#6d4aff', .22), 'Soft violet fill: lighter badges, selected vote option, highlighted cards.')
 
@@ -90,7 +91,9 @@ checks = [('text-strong-950', 'bg-weak-50', 4.5), ('text-strong-950', 'bg-soft-2
           ('text-sub-600', 'bg-soft-200', 4.5), ('text-soft-400', 'bg-white-0', 4.5), ('text-soft-400', 'bg-weak-50', 4.5),
           ('text-white-0', 'bg-strong-950', 4.5), ('text-white-0', 'bg-surface-800', 4.5), ('primary-dark', 'bg-white-0', 4.5),
           ('primary-dark', 'bg-weak-50', 4.5), ('static-white', 'primary-base', 4.5), ('static-black', 'accent-base', 4.5), ('accent-dark', 'accent-lighter', 4.5), ('accent-dark','bg-white-0',4.5), ('primary-dark','primary-lighter',4.5), ('stroke-sub-300','bg-white-0',3), ('primary-dark', 'primary-lighter', 4.5),
-          ('stroke-sub-300', 'bg-white-0', 1.6), ('focus-ring', 'bg-white-0', 3), ('focus-ring', 'bg-weak-50', 3), ('focus-ring', 'bg-soft-200', 3)]
+          ('stroke-sub-300', 'bg-white-0', 1.6), ('focus-ring', 'bg-white-0', 3), ('focus-ring', 'bg-weak-50', 3), ('focus-ring', 'bg-soft-200', 3),
+          # component states (see components.css): primary hover, switch off track and thumb
+          ('static-white', 'primary-hover', 4.5), ('static-white', 'stroke-sub-300', 3), ('stroke-sub-300', 'bg-weak-50', 3)]
 for n, *_ in FAM:
     checks += [(f'{n}-dark', f'{n}-lighter', 4.5), (f'{n}-dark', 'bg-white-0', 4.5)]
 fails = []
