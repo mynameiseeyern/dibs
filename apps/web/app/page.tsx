@@ -1,6 +1,13 @@
+import { redirect } from "next/navigation";
 import { LogoMark } from "@/components/Logo";
 
-export default function Landing() {
+// If Supabase falls back to the Site URL, the sign-in link lands here: pass it on.
+export default async function Landing({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+  const sp = await searchParams;
+  if (sp.code || sp.token_hash) {
+    const q = new URLSearchParams(Object.entries(sp).filter((e): e is [string, string] => typeof e[1] === "string"));
+    redirect(`/auth/callback?${q.toString()}`);
+  }
   return (
     <main className="page page--center">
       <LogoMark size={88} title="dibs" />
