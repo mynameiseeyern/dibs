@@ -22,7 +22,8 @@ import { owedToYou, youOwe } from "@/lib/copy";
 import { store } from "@/lib/store";
 import { formatShort, formatWhen } from "@/lib/time";
 import { loadPlan } from "@/lib/viewer";
-import { addOption, joinPlan, lockPlan, postMessage, removeMe, removeOption, setRsvp, toggleDibbyMute, toggleReaction, vote } from "./actions";
+import { addOption, askDibbyMore, joinPlan, lockPlan, postMessage, removeMe, removeOption, setRsvp, toggleDibbyMute, toggleReaction, vote } from "./actions";
+import { setPlace } from "./manage/actions";
 import { JoinForm } from "./JoinForm";
 import { ShareButton } from "./ShareButton";
 import { Thread } from "./Thread";
@@ -236,20 +237,36 @@ export default async function PlanPage({ params }: Props) {
 
         {me && !cancelled && plan.status !== "wrapped" && (
           <section className="db-card section" aria-labelledby="rsvp-h">
-            {me.rsvp === "in" && !me.waitlisted && (
+            {me.rsvp === "in" && !me.waitlisted && me.role !== "organiser" && (
               <Once id={`in:${plan.id}:${me.id}`} kind="pop" size={140} colour={me.colour} label="You popped up. You're in." />
             )}
             {plan.status === "locked" && (
               <Once id={`locked:${plan.id}`} kind="lock" size={150} label={`Locked in: ${plan.venue_name ?? "the plan"}`} />
             )}
-            <RsvpPicker
-              rsvp={me.rsvp ?? null}
-              waitlisted={me.waitlisted}
-              plusOne={me.plus_one}
-              plusOnes={plan.plus_ones}
-              setRsvp={setRsvp.bind(null, slug)}
-              vibe={plan.vibe}
-            />
+            {me.role === "organiser" ? (
+              // Hosts are always going: no RSVP to make on your own plan. Can't make it any more? That's a change to the plan, not an RSVP.
+              <>
+                <h2 id="rsvp-h" className="label-md">
+                  You&rsquo;re hosting this one
+                </h2>
+                <p className="paragraph-sm muted">
+                  You&rsquo;re counted as going. Can&rsquo;t make it any more?{" "}
+                  <a href={`/p/${slug}/manage`}>
+                    Change the plan
+                  </a>
+                  .
+                </p>
+              </>
+            ) : (
+              <RsvpPicker
+                rsvp={me.rsvp ?? null}
+                waitlisted={me.waitlisted}
+                plusOne={me.plus_one}
+                plusOnes={plan.plus_ones}
+                setRsvp={setRsvp.bind(null, slug)}
+                vibe={plan.vibe}
+              />
+            )}
             {me.rsvp === "in" && !me.waitlisted && !isHost && (
               <ShareButton
                 quiet
@@ -320,6 +337,8 @@ export default async function PlanPage({ params }: Props) {
                               meId={me?.id ?? null}
                               readOnly={readOnly}
                               area={plan.area}
+                              askDibby={me && process.env.ANTHROPIC_API_KEY ? askDibbyMore.bind(null, slug) : undefined}
+                              decide={isHost ? setPlace.bind(null, slug) : undefined}
                             />
                             {isHost && plan.status === "voting" && options.length > 0 && (
                               <form action={lockPlan.bind(null, slug)}>

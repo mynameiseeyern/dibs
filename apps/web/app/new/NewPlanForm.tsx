@@ -13,7 +13,8 @@ import * as SegmentedControl from "@/components/ui/segmented-control";
 import { PlacePicker, type PickedPlace } from "@/components/PlacePicker";
 import { PlaceCard } from "@/components/PlaceCard";
 import { SearchChips, WhenChips, dayWord, nextDays, timeWord, type SearchValue, type WhenValue } from "./chips";
-import { DibbyBubble, DibbyWorking, useCyclingPlaceholder } from "./DibbyBubble";
+import { DibbyBubble, useCyclingPlaceholder } from "./DibbyBubble";
+import { DibbyWorking } from "@/components/DibbyWorking";
 
 type Where = "place" | "vote";
 type Who = "dibby" | "us";
@@ -24,7 +25,7 @@ type Who = "dibby" | "us";
  */
 export function NewPlanForm() {
   const [state, action, pending] = useActionState(createPlan, undefined);
-  const [where, setWhere] = useState<Where>("vote");
+  const [where, setWhere] = useState<Where>("place");
   const [who, setWho] = useState<Who>("dibby");
   const [place, setPlace] = useState<PickedPlace | null>(null);
   const [picking, setPicking] = useState(false);

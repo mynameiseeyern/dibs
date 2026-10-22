@@ -5,6 +5,9 @@ import type { PlanOption } from "@dibs/shared/types";
 import type { FormState } from "./actions";
 import { Fresh } from "@/components/moments/Fresh";
 import { PlacePicker } from "@/components/PlacePicker";
+import { DibbyMark } from "@/components/Logo";
+import { DibbyWorking } from "@/components/DibbyWorking";
+import * as Input from "@/components/ui/input";
 import * as Button from "@/components/ui/button";
 import * as Modal from "@/components/ui/modal";
 import { toast } from "@/components/ui/toast";
@@ -25,6 +28,8 @@ export function VoteList({
   meId = null,
   readOnly = null,
   area,
+  askDibby,
+  decide,
 }: {
   rows: VoteRow[];
   canVote: boolean;
@@ -40,6 +45,10 @@ export function VoteList({
   readOnly?: string | null;
   /** The plan's area, to start the map search near it. */
   area?: string | null;
+  /** Dibby adds up to three more spots. Set when this person can add places and Dibby's on. */
+  askDibby?: (f: FormData) => Promise<{ error?: string; added?: string[] }>;
+  /** Host only: skip the vote and lock in a place from the map. */
+  decide?: (placeId: string) => Promise<{ error?: string }>;
 }) {
   const [adding, startAdding] = useTransition();
   // The tap moves your vote straight away: counts and bars update here, the server saves it behind,
@@ -52,9 +61,20 @@ export function VoteList({
     })
   );
   const [voting, startVote] = useTransition();
+  // Leaders first once anyone's voted (ties keep the order they were added), and a long list
+  // folds past the top few so the page stays short. Your own pick is never hidden.
+  const ranked = shownRows.some((r) => r.votes > 0) ? [...shownRows].sort((a, b) => b.votes - a.votes) : shownRows;
+  const [showAll, setShowAll] = useState(false);
+  const mineHidden = ranked.findIndex((r) => r.mine) >= FOLD_AT;
+  const folded = ranked.length > FOLD_AT + 1 && !showAll && !mineHidden;
+  const visible = folded ? ranked.slice(0, FOLD_AT) : ranked;
   const total = shownRows.reduce((n, r) => n + r.votes, 0);
   const top = Math.max(0, ...shownRows.map((r) => r.votes));
   const [picking, setPicking] = useState(false);
+  const [asking, setAsking] = useState(false);
+  const [ask, setAsk] = useState("");
+  const [dibbyBusy, startDibby] = useTransition();
+  const [deciding, setDeciding] = useState(false);
   const [openRow, setOpenRow] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<VoteRow | null>(null);
   const [removing, setRemoving] = useState(false);
@@ -78,7 +98,7 @@ export function VoteList({
       {anyRemovable && (
         <p className="paragraph-xs muted">{canRemoveAll ? "Swipe an option left to take it off." : "Swipe a place you added left to take it off."}</p>
       )}
-      {shownRows.map((r) => {
+      {visible.map((r) => {
         const share = total ? Math.round((r.votes / total) * 100) : 0;
         const winning = top > 0 && r.votes === top;
         const option = (
@@ -128,11 +148,87 @@ export function VoteList({
         );
       })}
 
-      {canVote && open && rows.length < 8 && (
-        <Button.Root type="button" variant="neutral" mode="lighter" block disabled={adding} onClick={() => (readOnly ? toast.info(readOnly) : setPicking(true))}>
-          <i className="ri-map-pin-add-line db-icon" aria-hidden="true" />
-          {adding ? "Adding…" : "Add a place"}
+      {folded && (
+        <Button.Root type="button" variant="neutral" mode="ghost" size="small" onClick={() => setShowAll(true)}>
+          <i className="ri-arrow-down-s-line db-icon" aria-hidden="true" />
+          Show {ranked.length - FOLD_AT} more
         </Button.Root>
+      )}
+
+      {canVote && open && rows.length < 8 && (
+        <div className="flex gap-2">
+          {askDibby && (
+            <Button.Root type="button" variant="neutral" mode="lighter" className="flex-1" disabled={dibbyBusy} onClick={() => (readOnly ? toast.info(readOnly) : setAsking(true))}>
+              <DibbyMark size={20} />
+              {dibbyBusy ? "Dibby's on it…" : "Ask Dibby for more"}
+            </Button.Root>
+          )}
+          <Button.Root type="button" variant="neutral" mode="lighter" className="flex-1" disabled={adding} onClick={() => (readOnly ? toast.info(readOnly) : setPicking(true))}>
+            <i className="ri-map-pin-add-line db-icon" aria-hidden="true" />
+            {adding ? "Adding…" : "Add a place"}
+          </Button.Root>
+        </div>
+      )}
+      {decide && open && (
+        <Button.Root type="button" mode="ghost" size="small" onClick={() => setDeciding(true)}>
+          <i className="ri-map-pin-2-line db-icon" aria-hidden="true" />
+          Already decided? Pick the place
+        </Button.Root>
+      )}
+
+      <Modal.Root open={asking} onOpenChange={(o) => !dibbyBusy && setAsking(o)}>
+        <Modal.Content>
+          <Modal.Header title="What else are we after?" />
+          <Modal.Body>
+            <form
+              id="ask-more"
+              className="flex flex-col gap-3"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const f = new FormData();
+                f.set("ask", ask);
+                startDibby(async () => {
+                  const res = await askDibby!(f);
+                  setAsking(false);
+                  if (res.error) toast.error(res.error);
+                  else if (res.added?.length) toast.success(`Dibby added ${res.added.length} more to the vote`);
+                  else toast.info("Dibby couldn't find anything new for that");
+                  setAsk("");
+                });
+              }}
+            >
+              <Input.Root>
+                <Input.Wrapper>
+                  <Input.Input name="ask" value={ask} onChange={(e) => setAsk(e.target.value)} placeholder="Somewhere cheaper, a rooftop, more ramen…" maxLength={500} autoComplete="off" autoFocus />
+                </Input.Wrapper>
+              </Input.Root>
+              <p className="paragraph-xs muted">Dibby adds up to three real spots{rows.length ? " it hasn't already suggested" : ""}. What you type goes to an AI provider.</p>
+              {dibbyBusy && <DibbyWorking where={area ?? null} />}
+            </form>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button.Root type="submit" form="ask-more" variant="dibs" size="large" block disabled={dibbyBusy}>
+              {dibbyBusy ? "Dibby's on it…" : "Let Dibby pick"}
+            </Button.Root>
+          </Modal.Footer>
+        </Modal.Content>
+      </Modal.Root>
+
+      {decide && (
+        <PlacePicker
+          open={deciding}
+          onOpenChange={setDeciding}
+          title="Where's it at?"
+          cta="Lock it in"
+          area={area}
+          onPick={(p) =>
+            startAdding(async () => {
+              const res = await decide(p.placeId);
+              if (res.error) toast.error(res.error);
+              else toast.success(`Locked in: ${p.name}`);
+            })
+          }
+        />
       )}
 
       <PlacePicker
@@ -179,6 +275,8 @@ export function VoteList({
 }
 
 const REVEAL = 96;
+/** How many options show before the list folds. */
+const FOLD_AT = 4;
 
 /**
  * Swipe left to show Delete behind a vote option. Tapping the option while it's open closes it.

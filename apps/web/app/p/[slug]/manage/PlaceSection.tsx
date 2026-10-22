@@ -51,8 +51,8 @@ export function PlaceSection({
         }}
       >
         <SegmentedControl.List aria-label="Vote or a set place">
-          <SegmentedControl.Trigger value="vote">Put it to a vote</SegmentedControl.Trigger>
-          <SegmentedControl.Trigger value="place">I&rsquo;ve got a place</SegmentedControl.Trigger>
+          <SegmentedControl.Trigger value="place">Already decided</SegmentedControl.Trigger>
+          <SegmentedControl.Trigger value="vote">Feeling democratic?</SegmentedControl.Trigger>
         </SegmentedControl.List>
       </SegmentedControl.Root>
 
@@ -68,7 +68,7 @@ export function PlaceSection({
       ) : (
         <p className="paragraph-sm muted">
           {optionCount ? `${optionCount} ${optionCount === 1 ? "place" : "places"} on the vote.` : "No places on the vote yet."} Already know where? Pick
-          &ldquo;I&rsquo;ve got a place&rdquo; and the vote ends.
+          &ldquo;Already decided&rdquo; and the vote ends.
         </p>
       )}
 

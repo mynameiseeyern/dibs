@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { hasRoom, planAccess, READ_ONLY_NOTE } from "@dibs/shared/plans";
 import type { PlanMember, Rsvp } from "@dibs/shared/types";
-import { BRB, mentionsDibby, replyInThread, type PlanDraft } from "@/lib/dibby";
+import { BRB, mentionsDibby, replyInThread, suggestMore, type PlanDraft } from "@/lib/dibby";
 import { clearGuestSession, createGuestSession } from "@/lib/guest";
 import { store } from "@/lib/store";
 import { REACTIONS, type Reaction } from "@/lib/store/types";
@@ -55,6 +55,8 @@ export async function joinPlan(slug: string, _prev: FormState, form: FormData): 
 export async function setRsvp(slug: string, rsvp: Rsvp, form: FormData): Promise<void> {
   const view = await loadPlan(slug);
   if (!view?.me || view.plan.status === "cancelled" || view.plan.status === "wrapped") return;
+  // Hosts are always going: changing that is a change to the plan (manage), not an RSVP.
+  if (view.me.role === "organiser") return;
   const plusOne = view.plan.plus_ones && form.get("plus_one") === "on";
 
   let waitlisted = false;
@@ -231,6 +233,40 @@ export async function addOption(slug: string, _prev: FormState, form: FormData):
   await store.addOption({ planId: view.plan.id, label: place.name, placeId: place.placeId, note: place.address, addedBy: view.me.id });
   revalidatePath(`/p/${slug}`);
   return undefined;
+}
+
+/**
+ * Dibby adds up to three more real spots to an open vote. Anyone who can add a place can ask;
+ * the ask and Dibby's reply go in the chat like any other @dibby message.
+ */
+export async function askDibbyMore(slug: string, form: FormData): Promise<{ error?: string; added?: string[] }> {
+  const view = await loadPlan(slug);
+  if (!view?.me) return { error: "Join the plan first." };
+  if (view.plan.status !== "voting") return { error: "Voting's closed." };
+  const no = blocked(view);
+  if (no) return { error: no };
+  if (!process.env.ANTHROPIC_API_KEY) return { error: "Dibby isn't switched on yet. Add a place from the map instead." };
+  const options = await store.listOptions(view.plan.id);
+  if (options.length >= 8) return { error: "That's plenty of options. Time to vote." };
+  const ask = clean(form.get("ask"), 500);
+  let more;
+  try {
+    more = await suggestMore(ask, view.plan.vibe, view.plan.area, options.map((o) => ({ placeId: o.place_id, label: o.label })));
+  } catch (e) {
+    console.error("[dibby more]", e);
+    return { error: "brb, Dibby's having a moment. Try again, or add a place from the map." };
+  }
+  const room = Math.max(0, 8 - options.length);
+  const venues = more.venues.slice(0, room);
+  await store.addMessage({ planId: view.plan.id, memberId: view.me.id, kind: "text", body: `@dibby ${ask || "more options?"}`, mentionsDibby: true });
+  for (const v of venues) await store.addOption({ planId: view.plan.id, label: v.name, placeId: v.placeId, note: v.address });
+  const names = venues.map((v) => v.name);
+  const body = venues.length
+    ? `${more.reply} Added ${names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`} to the vote.`
+    : "Couldn't find anything new for that on Maps. Try a different ask, or add one from the map.";
+  await store.addMessage({ planId: view.plan.id, memberId: null, kind: "dibby", body });
+  revalidatePath(`/p/${slug}`);
+  return { added: names };
 }
 
 /**

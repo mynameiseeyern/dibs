@@ -166,6 +166,41 @@ export async function draftPlan(prompt: string, vibe: Vibe, picks: DraftPicks = 
 }
 
 
+// ---------- More options for a vote that's already open ----------
+
+const MORE_TOOL: Tool = {
+  name: "find_places",
+  description: "Turn what the group is after into a venue search.",
+  input_schema: {
+    type: "object",
+    properties: {
+      search_query: { type: "string", description: "What to search for venues, e.g. 'cheap dumplings' or 'rooftop bar'. Include the cuisine or activity and any budget words." },
+      reply: { type: "string", description: "One short line to the group, in the vibe's voice, introducing the new options (don't list them, the app does)." },
+    },
+    required: ["search_query", "reply"],
+  },
+};
+
+/**
+ * Three more real spots for an open vote, skipping what's already on it. Same rule as a draft:
+ * Google Places only, nothing made up, and no results means none added.
+ */
+export async function suggestMore(ask: string, vibe: Vibe, area: string | null, have: { placeId: string | null; label: string }[]): Promise<{ venues: Venue[]; reply: string }> {
+  const content = `The vote already has: ${have.map((h) => h.label).join(", ") || "nothing yet"}.${area ? ` The plan's area is ${area}.` : ""}\nSomeone asked for more: ${ask.slice(0, 500) || "more like these"}`;
+  const res = await claude(`${RULES}\nVoice: ${VOICE[vibe]}`, [{ role: "user", content }], [MORE_TOOL], { type: "tool", name: "find_places" });
+  const call = res.content.find((b): b is Extract<Block, { type: "tool_use" }> => b.type === "tool_use");
+  if (!call) throw new Error("Dibby didn't search");
+  const input = call.input as { search_query: string; reply: string };
+  const found = (await searchPlaces(input.search_query, null, area)) ?? [];
+  const ids = new Set(have.map((h) => h.placeId));
+  const names = new Set(have.map((h) => h.label.toLowerCase()));
+  const venues: Venue[] = found
+    .filter((p) => !ids.has(p.placeId) && !names.has(p.name.toLowerCase()))
+    .slice(0, 3)
+    .map((p) => ({ placeId: p.placeId, name: p.name, address: p.address, rating: p.rating, priceLevel: null }));
+  return { venues, reply: String(input.reply ?? "").slice(0, 300) };
+}
+
 // ---------- Reply when tagged in a plan thread ----------
 
 export interface ThreadContext {
