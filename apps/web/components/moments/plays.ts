@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { clamp01, confetti, crew, easeOutBack, easeOutCubic, matte, palette, stage, type Stage } from "./scene";
+import { clamp01, confetti, crew, easeOutBack, easeOutCubic, matte, palette, prop, stage, type Stage } from "./scene";
 
 export type MomentKind = "pop" | "lock" | "square" | "paid";
 
@@ -16,7 +16,7 @@ export function play(kind: MomentKind, canvas: HTMLCanvasElement, size: number, 
 
 /** A crew member's monogram colour (violet, lime, sun, mint, tangerine) as the matching token. */
 function crewColour(name: string, el: HTMLElement): THREE.Color {
-  const token = { violet: "--primary-light", lime: "--accent-base", sun: "--away-light", mint: "--success-light", tangerine: "--highlighted-light" }[name];
+  const token = { violet: "--primary-light", lime: "--accent-base", sun: "--away-light", mint: "--success-light", tangerine: "--highlighted-light", sky: "--information-light", coral: "--error-light", rose: "--feature-light", aqua: "--verified-light", ivory: "--stable-light" }[name as keyof object];
   const v = token ? getComputedStyle(el).getPropertyValue(token).trim() : "";
   return new THREE.Color(v || "#c8f03c");
 }
@@ -46,6 +46,35 @@ const pop: Play = async (s, p, colour, name) => {
 
 /** Locked in: a flag plants in the ground with a thunk and a puff of confetti. */
 const lock: Play = async (s, p) => {
+  const art = await prop("flag", 3.2);
+  if (art) {
+    const g = new THREE.Group();
+    g.add(art);
+    g.position.y = 4;
+    s.scene.add(g);
+    const ground = new THREE.Mesh(new THREE.CircleGeometry(1.0, 40), new THREE.MeshBasicMaterial({ color: p.ink, transparent: true, opacity: 0.12 }));
+    ground.rotation.x = -Math.PI / 2;
+    s.scene.add(ground);
+    const c = confetti(36, p);
+    c.group.visible = false;
+    s.scene.add(c.group);
+    let landed = false;
+    return (t) => {
+      const drop = easeOutCubic(clamp01(t / 0.45));
+      g.position.y = 4 * (1 - drop);
+      if (t >= 0.45 && !landed) {
+        landed = true;
+        c.group.visible = true;
+      }
+      if (landed) {
+        const u = t - 0.45;
+        g.position.y = -Math.sin(Math.min(u, 0.3) * Math.PI / 0.3) * 0.08;
+        g.rotation.z = Math.sin(u * 7) * 0.08 * Math.max(0, 1.5 - u);
+        c.update(u);
+      }
+      return t < 2.4;
+    };
+  }
   const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 2.6, 12), matte(p.ink));
   pole.position.y = 1.3;
   const flag = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.8, 0.04), matte(p.violet));
@@ -109,6 +138,22 @@ const square: Play = async (s, p) => {
 
 /** Paid: a coin flips up and drops into a lime tick. Short and sweet. */
 const paid: Play = async (s, p) => {
+  const [coinArt, tickArt] = await Promise.all([prop("coin", 1.6), prop("tick", 1.5)]);
+  if (coinArt && tickArt) {
+    coinArt.position.y = 0.8;
+    tickArt.scale.setScalar(0.001);
+    tickArt.position.z = 0.6;
+    s.scene.add(coinArt, tickArt);
+    return (t) => {
+      // the coin flips (squash on x reads as a spin for a billboard) and rises, then shrinks away as the tick lands
+      coinArt.scale.x = Math.abs(Math.cos(t * 9)) * (1 - clamp01((t - 0.55) / 0.25) * 0.999);
+      coinArt.scale.y = 1 - clamp01((t - 0.55) / 0.25) * 0.999;
+      coinArt.position.y = 0.8 + Math.sin(Math.min(t, 0.6) * Math.PI / 0.6) * 1.2;
+      const u = easeOutBack(clamp01((t - 0.6) / 0.4));
+      tickArt.scale.set(u, u, u);
+      return t < 1.4;
+    };
+  }
   const coin = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.1, 32), matte(p.lime));
   coin.rotation.x = Math.PI / 2;
   coin.position.y = 0.8;

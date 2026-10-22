@@ -9,12 +9,15 @@ import { Suspense } from "react";
 import { Weather } from "./Weather";
 import { PlanTabs } from "./PlanTabs";
 import { RsvpPicker } from "./RsvpPicker";
+import { AddToCalendar } from "./AddToCalendar";
+import { canAddToCalendar, googleCalendarLink, outlookCalendarLink } from "@/lib/calendar";
 import { Once } from "@/components/moments/Once";
 import { planStatus } from "@/lib/status";
 import { Monogram, MonogramStack } from "@/components/Monogram";
 import { LiveRefresh } from "@/components/LiveRefresh";
 import { mapsLink } from "@/lib/places";
 import { closeIfDue } from "@/lib/plan-ops";
+import { nudgeIfDue } from "@/lib/nudges";
 import { store } from "@/lib/store";
 import { formatShort, formatWhen } from "@/lib/time";
 import { loadPlan } from "@/lib/viewer";
@@ -50,7 +53,9 @@ export default async function PlanPage({ params }: Props) {
   // Votes close themselves once the deadline passes.
   if (await closeIfDue(view.plan)) view = (await loadPlan(slug))!;
   const { plan, members, me, isHost } = view;
-  const [options, votes, messages] = await Promise.all([store.listOptions(plan.id), store.listVotes(plan.id), store.listMessages(plan.id, 50)]);
+  const [options, votes, firstMessages] = await Promise.all([store.listOptions(plan.id), store.listVotes(plan.id), store.listMessages(plan.id, 50)]);
+  // Dibby's automatic nudges are checked on page load (we're on Vercel Hobby: no frequent cron).
+  const messages = (await nudgeIfDue(plan, members, options, votes)) ? await store.listMessages(plan.id, 50) : firstMessages;
   const voteRows = options.map((o) => ({ ...o, votes: votes.filter((v) => v.option_id === o.id).length, mine: Boolean(me && votes.some((v) => v.option_id === o.id && v.member_id === me.id)) }));
   const started = plan.starts_at ? Date.parse(plan.starts_at) < Date.now() : false;
 
@@ -132,6 +137,16 @@ export default async function PlanPage({ params }: Props) {
               </Suspense>
             )}
           </ul>
+          {me && canAddToCalendar(plan) && plan.status === "locked" && (
+            <AddToCalendar
+              links={{
+                ics: `/p/${slug}/calendar`,
+                google: googleCalendarLink(plan, `${siteUrl()}/p/${slug}`),
+                outlook: outlookCalendarLink(plan, `${siteUrl()}/p/${slug}`),
+                office: outlookCalendarLink(plan, `${siteUrl()}/p/${slug}`, true),
+              }}
+            />
+          )}
           {(cancelled || plan.updated_note) && (
             <p className={`label-sm plan-card__note${cancelled ? " plan-card__note--off" : ""}`} role="status">
               <i className={`${cancelled ? "ri-close-circle-line" : "ri-refresh-line"} db-icon`} aria-hidden="true" />

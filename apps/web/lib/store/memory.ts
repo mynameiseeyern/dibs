@@ -14,6 +14,7 @@ interface Db {
   bills: Map<string, Bill>;
   shares: BillShare[];
   recap: RecapAnswer[];
+  nudges: { plan_id: string; kind: string; key: string; at: number }[];
 }
 
 const g = globalThis as unknown as { __dibsDb?: Db };
@@ -28,7 +29,9 @@ const db: Db = (g.__dibsDb ??= {
   bills: new Map(),
   shares: [],
   recap: [],
+  nudges: [],
 });
+db.nudges ??= [];
 
 db.recap ??= [];
 
@@ -219,5 +222,15 @@ export const memoryStore: Store = {
   async saveRecap(a) {
     db.recap = db.recap.filter((r) => !(r.plan_id === a.plan_id && r.member_id === a.member_id));
     db.recap.push(a);
+  },
+
+  async claimNudge(planId, kind, key) {
+    if (db.nudges.some((n) => n.plan_id === planId && n.kind === kind && n.key === key)) return false;
+    db.nudges.push({ plan_id: planId, kind, key, at: Date.now() });
+    return true;
+  },
+  async countNudgesSince(planId, sinceIso) {
+    const since = Date.parse(sinceIso);
+    return db.nudges.filter((n) => n.plan_id === planId && n.at >= since).length;
   },
 };

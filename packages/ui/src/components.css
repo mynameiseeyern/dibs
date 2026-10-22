@@ -99,6 +99,11 @@
 .db-avatar--sun { background: var(--away-light); color: var(--away-dark); }
 .db-avatar--mint { background: var(--success-light); color: var(--success-dark); }
 .db-avatar--tangerine { background: var(--highlighted-light); color: var(--highlighted-dark); }
+.db-avatar--sky { background: var(--information-light); color: var(--information-dark); }
+.db-avatar--coral { background: var(--error-light); color: var(--error-dark); }
+.db-avatar--rose { background: var(--feature-light); color: var(--feature-dark); }
+.db-avatar--aqua { background: var(--verified-light); color: var(--verified-dark); }
+.db-avatar--ivory { background: var(--stable-light); color: var(--stable-dark); }
 .db-avatar--online::after { content: ""; position: absolute; right: 0; bottom: 0; width: 25%; height: 25%; border-radius: 50%; background: var(--success-base); box-shadow: 0 0 0 2px var(--stroke-white-0); }
 .db-avatar-group { display: flex; }
 .db-avatar-group .db-avatar { box-shadow: 0 0 0 2px var(--stroke-white-0); }

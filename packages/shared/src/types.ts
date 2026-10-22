@@ -95,6 +95,6 @@ export interface BillShare {
   confirmed_at: string | null;
 }
 
-export const MONOGRAM_COLOURS = ["violet", "lime", "sun", "mint", "tangerine"] as const;
+export const MONOGRAM_COLOURS = ["violet", "lime", "sun", "mint", "tangerine", "sky", "coral", "rose", "aqua", "ivory"] as const;
 export type MonogramColour = (typeof MONOGRAM_COLOURS)[number];
 

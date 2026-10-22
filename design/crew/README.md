@@ -1,4 +1,8 @@
-# The Dibs crew — avatar brief for Higgsfield
+# The Dibs crew — clay art from Higgsfield
+
+**Status: done.** Generated 22 Oct 2026 with Nano Banana Pro on Higgsfield (four sheets, 8 credits), keyed and cut in Higgsfield's sandbox (`cut.py` logic: hue/saturation chroma key, background = green connected to the frame edge, per-figure crops padded to 1024 square with feet at the bottom, then 512px for the web). The brief below is kept for regenerating or extending the set.
+
+In the repo (`apps/web/public/crew/`, 512px, transparent): crew `violet lime sun mint tangerine sky coral rose aqua ivory`; props `flag coin tick confetti trophy`; `wheel-frame` (rim, hub and pointer, empty centre, wedges drawn underneath).
 
 Five crew members, one per monogram colour. They replace the plain 3D capsules in the
 Three.js moments (pop-up, flag planting, paid, everyone's square) and can also stand in

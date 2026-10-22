@@ -216,4 +216,20 @@ export const supabaseStore: Store = {
   async saveRecap(a) {
     must(await admin().from("recap_answers").upsert(a));
   },
+
+  async claimNudge(planId, kind, key) {
+    const { error } = await admin().from("dibby_nudges").insert({ plan_id: planId, kind, key });
+    if (!error) return true;
+    if (error.code === "23505") return false; // already claimed
+    throw new Error(error.message);
+  },
+  async countNudgesSince(planId, sinceIso) {
+    const { count, error } = await admin()
+      .from("dibby_nudges")
+      .select("*", { count: "exact", head: true })
+      .eq("plan_id", planId)
+      .gte("created_at", sinceIso);
+    if (error) throw new Error(error.message);
+    return count ?? 0;
+  },
 };

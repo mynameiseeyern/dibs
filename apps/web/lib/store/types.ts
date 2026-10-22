@@ -87,6 +87,11 @@ export interface Store {
 
   listRecap(planId: string): Promise<RecapAnswer[]>;
   saveRecap(a: RecapAnswer): Promise<void>;
+
+  /** Claim one of Dibby's automatic nudges. True only for the first caller; false if already sent. */
+  claimNudge(planId: string, kind: string, key: string): Promise<boolean>;
+  /** How many automatic nudges a plan has had since a time, for the daily cap. */
+  countNudgesSince(planId: string, sinceIso: string): Promise<number>;
 }
 
 export interface RecapAnswer {

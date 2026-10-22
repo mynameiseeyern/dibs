@@ -85,19 +85,34 @@ export function stage(canvas: HTMLCanvasElement, size: number): Stage {
   };
 }
 
-const CREW = ["violet", "lime", "sun", "mint", "tangerine"] as const;
+const CREW = ["violet", "lime", "sun", "mint", "tangerine", "sky", "coral", "rose", "aqua", "ivory"] as const;
 export type CrewName = (typeof CREW)[number];
-const textures = new Map<string, Promise<THREE.Texture | null>>();
 
 /** The Higgsfield-made crew art in /public/crew, if it's been added. Null when it hasn't. */
 export function crewTexture(name: string): Promise<THREE.Texture | null> {
   if (!CREW.includes(name as CrewName)) return Promise.resolve(null);
-  if (!textures.has(name)) {
-    textures.set(
-      name,
+  return loadTexture(`/crew/${name}.png`);
+}
+
+/** A clay prop from /public/crew as a camera-facing billboard, `h` units tall, base at y=0. Null if the art isn't there. */
+export async function prop(name: string, h: number): Promise<THREE.Mesh | null> {
+  const tex = await loadTexture(`/crew/${name}.png`);
+  if (!tex) return null;
+  const img = tex.image as { width: number; height: number };
+  const w = h * (img.width / img.height);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: 0.02 }));
+  m.position.y = h / 2;
+  return m;
+}
+
+const loaded = new Map<string, Promise<THREE.Texture | null>>();
+function loadTexture(url: string): Promise<THREE.Texture | null> {
+  if (!loaded.has(url)) {
+    loaded.set(
+      url,
       new Promise((resolve) => {
         new THREE.TextureLoader().load(
-          `/crew/${name}.png`,
+          url,
           (t) => {
             t.colorSpace = THREE.SRGBColorSpace;
             resolve(t);
@@ -108,7 +123,7 @@ export function crewTexture(name: string): Promise<THREE.Texture | null> {
       })
     );
   }
-  return textures.get(name)!;
+  return loaded.get(url)!;
 }
 
 /**
