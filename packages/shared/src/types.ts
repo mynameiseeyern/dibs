@@ -8,6 +8,8 @@ export type Rsvp = "in" | "maybe" | "out";
 export type SplitMode = "even" | "amount" | "percent" | "exclude" | "roulette";
 export type ShareStatus = "owed" | "says_paid" | "confirmed";
 
+export type DibbyVolume = "quiet" | "normal" | "loud";
+
 export interface Plan {
   id: string;
   slug: string;
@@ -25,6 +27,8 @@ export interface Plan {
   version: number;
   updated_note: string | null;
   expires_at: string | null;
+  /** How chatty Dibby's automatic messages are on this plan. Set by the organiser. */
+  dibby_volume: DibbyVolume;
   created_at: string;
 }
 
@@ -40,6 +44,8 @@ export interface PlanMember {
   plus_one: boolean;
   waitlisted: boolean;
   attended: boolean | null;
+  /** Hide Dibby's automatic nudges for this member. */
+  dibby_muted: boolean;
   joined_at: string;
 }
 
@@ -66,6 +72,8 @@ export interface Message {
   kind: "text" | "dibby" | "system";
   body: string;
   mentions_dibby: boolean;
+  /** Dibby posted this on its own (a nudge), not in reply to a tag. Hidden for muted members. */
+  auto: boolean;
   created_at: string;
 }
 

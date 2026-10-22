@@ -209,3 +209,4 @@ a { color: var(--primary-dark); }
 .add-to-calendar__list { display: flex; flex-direction: column; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
 .add-to-calendar__option { justify-content: flex-start; }
 .thread__plan-link { margin-top: var(--space-2); }
+.dibby-mute { display: flex; justify-content: center; margin-top: var(--space-2); }

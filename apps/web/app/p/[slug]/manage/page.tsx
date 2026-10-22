@@ -1,10 +1,17 @@
 import { notFound, redirect } from "next/navigation";
 import { TZ } from "@/lib/time";
 import { loadPlan } from "@/lib/viewer";
-import { cancelPlan, updateDetails } from "./actions";
+import { cancelPlan, setDibbyVolume, updateDetails } from "./actions";
 import { ManageForm } from "./ManageForm";
 
 export const metadata = { title: "Edit plan" };
+
+const VOLUME_LABEL = { quiet: "Quiet", normal: "Normal", loud: "Loud" } as const;
+const VOLUME_HINT = {
+  quiet: "Just the useful stuff: vote closing, the day before, and wrapping up. One a day at most.",
+  normal: "Also chases replies and maybes, and says when someone pulls out. Up to three a day.",
+  loud: "Everything Normal does, up to five a day.",
+} as const;
 export const dynamic = "force-dynamic";
 
 /** ISO -> "2026-10-23T19:00" in Sydney time, for the datetime-local input. */
@@ -48,6 +55,19 @@ export default async function Manage({ params }: { params: Promise<{ slug: strin
         placeLabel={locked ? "Where" : "Where-ish"}
         initial={{ title: plan.title, startsAt: toLocalInput(plan.starts_at), place: (locked ? plan.venue_name : plan.area) ?? "" }}
       />
+      <section className="db-card section" aria-labelledby="dibby-volume-h">
+        <h2 id="dibby-volume-h" className="title-h4">How chatty is Dibby?</h2>
+        <p className="paragraph-sm muted">{VOLUME_HINT[plan.dibby_volume ?? "normal"]}</p>
+        <div className="rsvp" role="group" aria-label="How chatty is Dibby?">
+          {(["quiet", "normal", "loud"] as const).map((v) => (
+            <form key={v} action={setDibbyVolume.bind(null, slug, v)}>
+              <button className={`db-btn ${plan.dibby_volume === v ? "db-btn--primary" : "db-btn--secondary"}`} aria-pressed={plan.dibby_volume === v}>
+                {VOLUME_LABEL[v]}
+              </button>
+            </form>
+          ))}
+        </div>
+      </section>
     </main>
   );
 }

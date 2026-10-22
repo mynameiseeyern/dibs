@@ -21,7 +21,7 @@ import { nudgeIfDue } from "@/lib/nudges";
 import { store } from "@/lib/store";
 import { formatShort, formatWhen } from "@/lib/time";
 import { loadPlan } from "@/lib/viewer";
-import { addOption, joinPlan, lockPlan, postMessage, removeMe, setRsvp, vote } from "./actions";
+import { addOption, joinPlan, lockPlan, postMessage, removeMe, setRsvp, toggleDibbyMute, vote } from "./actions";
 import { JoinForm } from "./JoinForm";
 import { ShareButton } from "./ShareButton";
 import { Thread } from "./Thread";
@@ -289,7 +289,25 @@ export default async function PlanPage({ params }: Props) {
                 id: "chat",
                 label: "Chat",
                 count: messages.filter((m) => m.kind !== "system").length || undefined,
-                panel: <Thread messages={messages} members={members} meId={me?.id ?? null} canPost={Boolean(me?.user_id)} post={postMessage.bind(null, slug)} />,
+                panel: (
+                  <>
+                    <Thread
+                      messages={me?.dibby_muted ? messages.filter((m) => !m.auto) : messages}
+                      members={members}
+                      meId={me?.id ?? null}
+                      canPost={Boolean(me?.user_id)}
+                      post={postMessage.bind(null, slug)}
+                    />
+                    {me && (
+                      <form action={toggleDibbyMute.bind(null, slug)} className="dibby-mute">
+                        <button className="db-btn db-btn--ghost" aria-pressed={me.dibby_muted}>
+                          <i className={`${me.dibby_muted ? "ri-notification-3-line" : "ri-notification-off-line"} db-icon`} aria-hidden="true" />
+                          {me.dibby_muted ? "Show Dibby's nudges" : "Mute Dibby's nudges"}
+                        </button>
+                      </form>
+                    )}
+                  </>
+                ),
               },
               {
                 id: "who",

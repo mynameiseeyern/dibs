@@ -8,6 +8,7 @@ import { BRB, mentionsDibby, replyInThread, type PlanDraft } from "@/lib/dibby";
 import { clearGuestSession, createGuestSession } from "@/lib/guest";
 import { store } from "@/lib/store";
 import { closeVote } from "@/lib/plan-ops";
+import { nudgeOnBail } from "@/lib/nudges";
 import { loadPlan } from "@/lib/viewer";
 import { localToIso } from "@/lib/time";
 import { DIBBY_HEADS_UP, planLinkLine } from "@/lib/thread-links";
@@ -62,6 +63,8 @@ export async function setRsvp(slug: string, rsvp: Rsvp, form: FormData): Promise
     waitlisted = !holding && !hasRoom(others, view.plan.capacity, plusOne);
   }
   await store.updateMember(view.me.id, { rsvp, plus_one: rsvp === "in" ? plusOne : false, waitlisted });
+  // Was in, now can't go: Dibby gives the crew a heads-up (respects mute volume and the cap).
+  if (rsvp === "out" && view.me.rsvp === "in" && !view.me.waitlisted) await nudgeOnBail(view.plan, view.me);
   revalidatePath(`/p/${slug}`);
 }
 
@@ -164,6 +167,14 @@ async function createFromThread(draft: PlanDraft, asker: PlanMember, crew: PlanM
   await store.addMessage({ planId: plan.id, memberId: null, kind: "dibby", body: `${draft.reply}${unchecked} Vote's open for 24 hours.` });
   revalidatePath(`/p/${plan.slug}`);
   return plan;
+}
+
+/** Hide or show Dibby's automatic nudges for yourself. Replies to tags always show. */
+export async function toggleDibbyMute(slug: string): Promise<void> {
+  const view = await loadPlan(slug);
+  if (!view?.me) return;
+  await store.updateMember(view.me.id, { dibby_muted: !view.me.dibby_muted });
+  revalidatePath(`/p/${slug}`);
 }
 
 // ---------- Voting ----------

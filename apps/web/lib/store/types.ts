@@ -62,11 +62,11 @@ export interface Store {
   /** Plans this device has joined as a guest. */
   listPlansForGuest(guestId: string): Promise<{ plan: Plan; member: PlanMember }[]>;
 
-  updatePlan(planId: string, patch: Partial<Pick<Plan, "status" | "venue_name" | "venue_place_id" | "starts_at" | "vote_deadline" | "version" | "updated_note" | "title" | "area">>): Promise<Plan>;
+  updatePlan(planId: string, patch: Partial<Pick<Plan, "status" | "venue_name" | "venue_place_id" | "starts_at" | "vote_deadline" | "version" | "updated_note" | "title" | "area" | "dibby_volume">>): Promise<Plan>;
 
   listMembers(planId: string): Promise<PlanMember[]>;
   addMember(m: NewMember): Promise<PlanMember>;
-  updateMember(memberId: string, patch: Partial<Pick<PlanMember, "rsvp" | "plus_one" | "waitlisted" | "display_name" | "attended">>): Promise<void>;
+  updateMember(memberId: string, patch: Partial<Pick<PlanMember, "rsvp" | "plus_one" | "waitlisted" | "display_name" | "attended" | "dibby_muted">>): Promise<void>;
 
   listOptions(planId: string): Promise<PlanOption[]>;
   addOption(o: { planId: string; label: string; placeId?: string | null; note?: string | null; addedBy?: string | null }): Promise<PlanOption>;
@@ -75,7 +75,7 @@ export interface Store {
   castVote(planId: string, optionId: string, memberId: string): Promise<void>;
 
   listMessages(planId: string, limit?: number): Promise<Message[]>;
-  addMessage(m: { planId: string; memberId: string | null; kind: Message["kind"]; body: string; mentionsDibby?: boolean }): Promise<Message>;
+  addMessage(m: { planId: string; memberId: string | null; kind: Message["kind"]; body: string; mentionsDibby?: boolean; auto?: boolean }): Promise<Message>;
 
   listBills(planId: string): Promise<Bill[]>;
   createBill(b: Omit<Bill, "id" | "created_at" | "seed" | "roulette_entrants" | "roulette_loser_id"> & { seed: string }, shares: Omit<BillShare, "bill_id" | "says_paid_at" | "confirmed_at">[]): Promise<Bill>;

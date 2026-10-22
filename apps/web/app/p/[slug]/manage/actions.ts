@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import type { DibbyVolume } from "@dibs/shared/types";
 import { store } from "@/lib/store";
 import { formatWhen, localToIso } from "@/lib/time";
 import { loadPlan } from "@/lib/viewer";
@@ -64,4 +65,13 @@ export async function cancelPlan(slug: string): Promise<void> {
   await store.addMessage({ planId: view.plan.id, memberId: null, kind: "system", body: `${who} called this one off.` });
   revalidatePath(`/p/${slug}`);
   redirect(`/p/${slug}`);
+}
+
+/** The organiser (or a co-host) sets how chatty Dibby's automatic messages are on this plan. */
+export async function setDibbyVolume(slug: string, volume: DibbyVolume): Promise<void> {
+  const view = await loadPlan(slug);
+  if (!view?.isHost || !["quiet", "normal", "loud"].includes(volume)) return;
+  await store.updatePlan(view.plan.id, { dibby_volume: volume });
+  revalidatePath(`/p/${slug}`);
+  revalidatePath(`/p/${slug}/manage`);
 }

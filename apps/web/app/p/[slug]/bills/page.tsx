@@ -11,6 +11,7 @@ import { AddBill } from "./AddBill";
 import { Wheel } from "./Wheel";
 import { RouletteResult } from "./RouletteResult";
 import { Once } from "@/components/moments/Once";
+import { OWE_REMIND_AFTER_MS, OWE_REMIND_AGAIN_MS, TELL_PAYER_AFTER_MS, oweReminder, tellPayer } from "@/lib/nudges";
 
 export const metadata = { title: "Square up" };
 export const dynamic = "force-dynamic";
@@ -73,6 +74,18 @@ export default async function Bills({ params, searchParams }: Props) {
   const myPayids = await Promise.all(myOwing.map(async (s) => ({ share: s, bill: bills.find((b) => b.id === s.bill_id)!, pay: await payidFor(bills.find((b) => b.id === s.bill_id)!) })));
   const ref = `Dibs ${plan.title}`.slice(0, 35);
 
+  // Private money reminders (ARV-24): shown only to the person they're about, never posted.
+  const now = Date.now();
+  const ageOf = (bill: Bill) => now - Date.parse(bill.created_at);
+  const reminderFor = (bill: Bill, share: BillShare) =>
+    share.status === "owed" && ageOf(bill) >= OWE_REMIND_AFTER_MS
+      ? oweReminder(plan.vibe, formatAud(share.amount_cents), first(bill.payer_member_id), bill.title, ageOf(bill) >= OWE_REMIND_AGAIN_MS)
+      : null;
+  const stillOwedToMe = iPaid
+    .filter((b) => ageOf(b) >= TELL_PAYER_AFTER_MS)
+    .flatMap((b) => owedShares.filter((x) => x.bill_id === b.id && x.status === "owed").map((x) => first(x.member_id)));
+  const payerNote = stillOwedToMe.length > 0 ? tellPayer(plan.vibe, [...new Set(stillOwedToMe)]) : null;
+
   if (add) {
     const profile = me.user_id ? await store.getProfile(me.user_id) : null;
     return (
@@ -125,10 +138,23 @@ export default async function Bills({ params, searchParams }: Props) {
           </section>
         )}
 
+        {payerNote && (
+          <div className="db-alert db-alert--information" role="status">
+            <i className="ri-eye-off-line db-icon" aria-hidden="true" />
+            <div>{payerNote}</div>
+          </div>
+        )}
+
         {myPayids.map(({ share, bill, pay }) => (
           <section key={bill.id} className="db-card section" aria-label={`You owe ${first(bill.payer_member_id)}`}>
             <span className="db-plan__eyebrow">{bill.title}</span>
             <h2 className="title-h4">You owe {first(bill.payer_member_id)} <span className="money">{formatAud(share.amount_cents)}</span></h2>
+            {reminderFor(bill, share) && (
+              <div className="db-alert db-alert--information" role="status">
+                <i className="ri-notification-3-line db-icon" aria-hidden="true" />
+                <div>{reminderFor(bill, share)}</div>
+              </div>
+            )}
             {share.status === "says_paid" ? (
               <>
                 <Once id={`paid:${bill.id}:${me.id}`} kind="paid" size={120} label="Paid" />
