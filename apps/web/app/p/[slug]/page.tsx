@@ -112,7 +112,7 @@ export default async function PlanPage({ params }: Props) {
                 )}
               </li>
             )}
-            {!cancelled && plan.status !== "wrapped" && (
+            {!cancelled && (
               <Suspense fallback={null}>
                 <Weather plan={plan} />
               </Suspense>
