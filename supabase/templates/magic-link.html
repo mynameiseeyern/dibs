@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en-AU" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="x-apple-disable-message-reformatting">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
+<title>Here's your sign-in link</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; padding: 0; width: 100% !important; -webkit-text-size-adjust: 100%; }
+  table { border-collapse: collapse; }
+  img { border: 0; display: block; outline: none; }
+  a { color: #4a2fd6; }
+  .db-body a { color: #4a2fd6; }
+  @media (max-width: 600px) {
+    .db-pad { padding-left: 20px !important; padding-right: 20px !important; }
+    .db-outer { padding: 12px 8px 24px !important; }
+  }
+  @media (prefers-color-scheme: dark) {
+    .db-page { background: #141216 !important; }
+    .db-card { background: #1d1a22 !important; border-color: #2c2832 !important; }
+    .db-text { color: #ffffff !important; }
+    .db-sub, .db-link-sub { color: #c2bdc8 !important; }
+    .db-rule { border-color: #2c2832 !important; }
+    .db-body a { color: #b3a3ff !important; }
+    .db-body a.db-button { color: #ffffff !important; }
+    .db-code { background: #2a2631 !important; color: #ffffff !important; }
+    .db-callout { background: #2f2553 !important; }
+  }
+  [data-ogsc] .db-page { background: #141216 !important; }
+  [data-ogsc] .db-card { background: #1d1a22 !important; }
+  [data-ogsc] .db-text { color: #ffffff !important; }
+  [data-ogsc] .db-sub, [data-ogsc] .db-link-sub { color: #c2bdc8 !important; }
+</style>
+</head>
+<body class="db-page" style="margin:0;padding:0;background:#f7f6f9;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all;">Tap to sign in. The link works once and runs out in an hour.&#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; </div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="db-page" style="background:#f7f6f9;">
+<tr><td align="center" class="db-outer" style="padding:24px 16px 40px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">
+    <tr><td style="background:#6d4aff;border-radius:24px 24px 0 0;padding:24px 32px;" class="db-pad">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+        <td valign="middle"><a href="{{ .SiteURL }}" style="text-decoration:none;"><img src="{{ .SiteURL }}/email/dibs-header@2x.png" width="96" height="32" alt="dibs" style="width:96px;height:32px;color:#ffffff;font:800 26px 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;"></a></td>
+        
+      </tr></table>
+    </td></tr>
+    <tr><td class="db-card db-pad db-body" style="background:#ffffff;border:1px solid #e8e5ec;border-top:0;border-radius:0 0 24px 24px;padding:32px 32px 36px;font:400 16px/26px Figtree, -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;color:#141216;">
+      <div class="db-text" style="color:#141216;">
+<h1 class="db-text" style="margin:0 0 12px;font:800 30px/36px 'Bricolage Grotesque', 'Helvetica Neue', Arial, sans-serif;letter-spacing:-0.01em;color:#141216;">Here's your sign-in link</h1>
+<p style="margin:0 0 16px;">Tap the button and you're in. Your plans will be waiting.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 24px;"><tr>
+<td style="border-radius:999px;background:#6d4aff;">
+<a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&amp;type=email" class="db-button" style="display:inline-block;padding:14px 28px;font:600 16px/22px Figtree, -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;color:#ffffff;text-decoration:none;border-radius:999px;">Sign in to dibs</a>
+</td></tr></table>
+<p class="db-sub" style="margin:0 0 16px;font-size:14px;line-height:22px;color:#57525c;">The link works once and runs out in an hour. Open it on the phone or laptop you want to use dibs on.</p>
+<p class="db-sub" style="margin:0 0 16px;font-size:14px;line-height:22px;color:#57525c;">Didn't ask for this? You can ignore it. Nobody can sign in without this email.</p>
+      </div>
+    </td></tr>
+    <tr><td class="db-pad" style="padding:24px 32px 0;font:400 13px/20px Figtree, -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;color:#57525c;" align="center">
+      <p class="db-sub" style="margin:0 0 8px;color:#57525c;">You're getting this because someone asked to sign in to dibs with this email.</p>
+      
+      <p class="db-sub" style="margin:0 0 8px;color:#57525c;">dibs never asks for your password or bank details by email.</p>
+      <p class="db-sub" style="margin:0;color:#57525c;">dibs, Sydney NSW &nbsp;·&nbsp; <a href="mailto:hello@dibby.social" class="db-link-sub" style="color:#57525c;text-decoration:underline;">hello@dibby.social</a></p>
+    </td></tr>
+  </table>
+</td></tr>
+</table>
+</body>
+</html>

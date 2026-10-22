@@ -6,7 +6,8 @@
   "exports": {
     "./tokens.css": "./src/tokens.css",
     "./components.css": "./src/components.css",
-    "./fonts/*": "./fonts/*"
+    "./fonts/*": "./fonts/*",
+    "./tokens.json": "./tokens.json"
   },
   "scripts": {
     "build": "node scripts/build-tokens.mjs",

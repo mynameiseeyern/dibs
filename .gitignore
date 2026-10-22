@@ -6,3 +6,6 @@ coverage
 *.log
 .DS_Store
 *.tsbuildinfo
+
+# Email previews from `pnpm release-notes preview`
+release-notes/.preview/

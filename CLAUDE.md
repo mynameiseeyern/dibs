@@ -29,6 +29,12 @@ Open `packages/ui/design-system/index.html` in a browser to see every component 
 - Copy: Australian spelling, sentence case, lowercase **dibs**, sounds like a mate in the group chat. Never pushy about money.
 - Logos are in `packages/ui/assets/logos/`. `dibs-ai-member.svg` is only for Dibby.
 
+## Email
+
+- Every email uses the shell in `packages/email` (header, card, footer). Don't hand-roll email HTML.
+- Release notes: `release-notes/*.md`, sent with `pnpm release-notes` (see `packages/email/README.md`).
+- Beta updates are opt-in only (unticked at sign-up, switch on `/account`). Every non-sign-in email carries the unsubscribe link and `List-Unsubscribe` headers, and unsubscribing never needs a sign-in.
+
 ## Rules that must not break
 
 - Dibs never holds or moves money. Settle-up is PayID details only.

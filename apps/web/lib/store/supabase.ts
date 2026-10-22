@@ -1,7 +1,7 @@
 import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { makeSlug, pickColour } from "@dibs/shared/plans";
-import type { Bill, BillShare, Message, NewMember, NewPlan, Plan, PlanMember, PlanOption, Store, Vote, RecapAnswer, Reaction } from "./types";
+import type { Bill, BillShare, Message, NewMember, NewPlan, Plan, PlanMember, PlanOption, Store, Subscription, Vote, RecapAnswer, Reaction } from "./types";
 
 // Server-side Supabase store using the service key. Every caller checks access first
 // (lib/viewer.ts); row-level security still protects anything the browser reads directly.
@@ -32,6 +32,16 @@ async function plansFor(column: "user_id" | "guest_id", id: string) {
     .sort((a, b) => (a.plan.starts_at ?? a.plan.created_at).localeCompare(b.plan.starts_at ?? b.plan.created_at));
 }
 
+type ListRow = { email: string; token: string; unsubscribed_at: string | null };
+const asSubscription = (r: ListRow | null): Subscription | null =>
+  r ? { email: r.email, token: r.token, subscribed: r.unsubscribed_at === null } : null;
+
+async function findListRow(list: string, who: { userId: string } | { token: string }): Promise<ListRow | null> {
+  const q = admin().from("mailing_list").select("email, token, unsubscribed_at").eq("list", list);
+  const rows = must(await ("userId" in who ? q.eq("user_id", who.userId) : q.eq("token", who.token)).order("created_at", { ascending: false }).limit(1)) as ListRow[];
+  return rows[0] ?? null;
+}
+
 export const supabaseStore: Store = {
   kind: "supabase",
 
@@ -59,6 +69,33 @@ export const supabaseStore: Store = {
 
   async setGuestEmail(guestId, email) {
     must(await admin().from("guests").update({ email: email.toLowerCase(), email_requested_at: new Date().toISOString() }).eq("id", guestId));
+  },
+
+  async getSubscription(list, who) {
+    return asSubscription(await findListRow(list, who));
+  },
+
+  async subscribe(list, { email, userId, source }) {
+    const row = must(
+      await admin()
+        .from("mailing_list")
+        .upsert(
+          { list, email: email.toLowerCase(), ...(userId ? { user_id: userId } : {}), consent_source: source, consented_at: new Date().toISOString(), unsubscribed_at: null },
+          { onConflict: "list,email" },
+        )
+        .select("email, token, unsubscribed_at")
+        .single(),
+    ) as ListRow;
+    return asSubscription(row)!;
+  },
+
+  async unsubscribe(list, who) {
+    const row = await findListRow(list, who);
+    if (!row) return null;
+    if (row.unsubscribed_at === null) {
+      must(await admin().from("mailing_list").update({ unsubscribed_at: new Date().toISOString() }).eq("list", list).eq("token", row.token));
+    }
+    return { email: row.email, token: row.token, subscribed: false };
   },
 
   async claimGuests(userId, email, guestId) {

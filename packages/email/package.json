@@ -1,0 +1,24 @@
+{
+  "name": "@dibs/email",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "release-notes": "tsx scripts/release-notes.ts",
+    "auth-templates": "tsx scripts/auth-templates.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@dibs/ui": "workspace:*",
+    "@supabase/supabase-js": "2.117.2",
+    "marked": "18.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.18.0",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3"
+  }
+}

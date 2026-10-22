@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { makeSlug, pickColour } from "@dibs/shared/plans";
-import type { Bill, BillShare, Guest, Message, NewMember, NewPlan, Plan, PlanMember, PlanOption, Profile, Store, Vote, RecapAnswer, Reaction } from "./types";
+import type { Bill, BillShare, Guest, Message, NewMember, NewPlan, Plan, PlanMember, PlanOption, Profile, Store, Subscription, Vote, RecapAnswer, Reaction } from "./types";
 
 // In-memory store for local runs without Supabase. Lost on restart.
 interface Db {
@@ -16,6 +16,7 @@ interface Db {
   recap: RecapAnswer[];
   nudges: { plan_id: string; kind: string; key: string; at: number }[];
   reactions: (Reaction & { plan_id: string })[];
+  lists: { list: string; email: string; userId: string | null; token: string; unsubscribed: boolean; source: string }[];
 }
 
 const g = globalThis as unknown as { __dibsDb?: Db };
@@ -32,11 +33,13 @@ const db: Db = (g.__dibsDb ??= {
   recap: [],
   nudges: [],
   reactions: [],
+  lists: [],
 });
 db.nudges ??= [];
 db.reactions ??= [];
 
 db.recap ??= [];
+db.lists ??= [];
 
 const now = () => new Date().toISOString();
 
@@ -109,6 +112,29 @@ export const memoryStore: Store = {
   async setGuestEmail(guestId, email) {
     const g = db.guests.get(guestId);
     if (g) Object.assign(g, { email: email.toLowerCase(), email_requested_at: Date.now() });
+  },
+
+  async getSubscription(list, who) {
+    const row = [...db.lists].reverse().find((r) => r.list === list && ("userId" in who ? r.userId === who.userId : r.token === who.token));
+    return row ? ({ email: row.email, token: row.token, subscribed: !row.unsubscribed } satisfies Subscription) : null;
+  },
+
+  async subscribe(list, { email, userId, source }) {
+    const e = email.toLowerCase();
+    let row = db.lists.find((r) => r.list === list && r.email === e);
+    if (!row) {
+      row = { list, email: e, userId, token: randomUUID().replace(/-/g, ""), unsubscribed: false, source };
+      db.lists.push(row);
+    }
+    Object.assign(row, { userId: userId ?? row.userId, unsubscribed: false, source });
+    return { email: row.email, token: row.token, subscribed: true };
+  },
+
+  async unsubscribe(list, who) {
+    const row = [...db.lists].reverse().find((r) => r.list === list && ("userId" in who ? r.userId === who.userId : r.token === who.token));
+    if (!row) return null;
+    row.unsubscribed = true;
+    return { email: row.email, token: row.token, subscribed: false };
   },
 
   async claimGuests(userId, email, guestId) {
