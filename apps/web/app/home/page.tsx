@@ -77,34 +77,37 @@ export default async function Home() {
         </a>
       )}
 
-      {rows.length > 0 && (
+      {/* Only when there's money in play. Nothing owed either way: say nothing. */}
+      {(iOwe > 0 || owedToMe > 0) && (
         <section className="balance" aria-label="Your money across plans">
-          {iOwe === 0 && owedToMe === 0 ? (
+          {iOwe > 0 && (
             <div className="db-card balance__item">
-              <span className="db-badge db-badge--success db-badge--dot">All square</span>
-              <span className="paragraph-sm muted">Nobody owes anybody. Love to see it.</span>
+              <span className="paragraph-sm muted">You owe</span>
+              <span className="balance__amount">{formatAud(iOwe)}</span>
             </div>
-          ) : (
-            <>
-              <div className="db-card balance__item">
-                <span className="paragraph-sm muted">You owe</span>
-                <span className="balance__amount">{formatAud(iOwe)}</span>
-              </div>
-              <div className="db-card balance__item">
-                <span className="paragraph-sm muted">Owed to you</span>
-                <span className="balance__amount">{formatAud(owedToMe)}</span>
-              </div>
-            </>
+          )}
+          {owedToMe > 0 && (
+            <div className="db-card balance__item">
+              <span className="paragraph-sm muted">Owed to you</span>
+              <span className="balance__amount">{formatAud(owedToMe)}</span>
+            </div>
           )}
         </section>
       )}
 
       {upcoming.length === 0 && squareUp.length === 0 ? (
-        <section className="empty">
-          <CrewWave />
-          <h1 className="title-h3">Nothing on. Suss.</h1>
-          <p className="muted">Start something and drop it in the group chat.</p>
-        </section>
+        past.length > 0 ? (
+          <section className="section">
+            <h1 className="title-h3">Nothing on. Suss.</h1>
+            <p className="muted">Start something and drop it in the group chat.</p>
+          </section>
+        ) : (
+          <section className="empty">
+            <CrewWave />
+            <h1 className="title-h3">Nothing on. Suss.</h1>
+            <p className="muted">Start something and drop it in the group chat.</p>
+          </section>
+        )
       ) : null}
 
       {upcoming.length > 0 && (
