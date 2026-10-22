@@ -1,3 +1,4 @@
+import { owedToYou, youOwe } from "@/lib/copy";
 import { redirect } from "next/navigation";
 import { formatAud } from "@dibs/shared/bills";
 import { countIn } from "@dibs/shared/plans";
@@ -155,9 +156,9 @@ function PlanRow({ row, quiet }: { row: Row; quiet?: boolean }) {
   // The one thing to do next on this plan, if there is one.
   const nudge =
     iOwe > 0
-      ? `You owe ${formatAud(iOwe)}`
+      ? youOwe(plan.vibe, formatAud(iOwe))
       : owedToMe > 0
-        ? `${formatAud(owedToMe)} still to come back to you`
+        ? owedToYou(plan.vibe, formatAud(owedToMe))
         : plan.status === "locked" && me.role === "organiser" && plan.starts_at && Date.parse(plan.starts_at) < Date.now()
           ? "Wrap it up: who came?"
           : !me.rsvp && plan.status !== "cancelled" && plan.status !== "wrapped"

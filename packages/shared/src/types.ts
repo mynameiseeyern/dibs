@@ -74,6 +74,8 @@ export interface Message {
   mentions_dibby: boolean;
   /** Dibby posted this on its own (a nudge), not in reply to a tag. Hidden for muted members. */
   auto: boolean;
+  /** For Dibby's templated messages: what to re-render in the plan's current vibe. */
+  template: unknown | null;
   created_at: string;
 }
 

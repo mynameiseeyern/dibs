@@ -18,6 +18,7 @@ import { LiveRefresh } from "@/components/LiveRefresh";
 import { mapsLink } from "@/lib/places";
 import { closeIfDue } from "@/lib/plan-ops";
 import { nudgeIfDue } from "@/lib/nudges";
+import { owedToYou, youOwe } from "@/lib/copy";
 import { store } from "@/lib/store";
 import { formatShort, formatWhen } from "@/lib/time";
 import { loadPlan } from "@/lib/viewer";
@@ -179,9 +180,9 @@ export default async function PlanPage({ params }: Props) {
               <strong className="title-h4">Square up</strong>
               <span>
                 {iOwe > 0
-                  ? `You owe ${formatAud(iOwe)}.`
+                  ? youOwe(plan.vibe, formatAud(iOwe))
                   : owedToMe > 0
-                    ? `${formatAud(owedToMe)} still to come back to you.`
+                    ? owedToYou(plan.vibe, formatAud(owedToMe))
                     : bills.length === 0
                       ? "Paid for something? Add it and dibs does the maths."
                       : `${owed.length - open.length} of ${owed.length} settled.`}
@@ -238,6 +239,7 @@ export default async function PlanPage({ params }: Props) {
               plusOne={me.plus_one}
               plusOnes={plan.plus_ones}
               setRsvp={setRsvp.bind(null, slug)}
+              vibe={plan.vibe}
             />
             {me.rsvp === "in" && !me.waitlisted && me.role === "guest" && (
               <p className="paragraph-sm muted">Get the dibs app to see all your plans in one place. Coming soon to the App Store.</p>
@@ -293,6 +295,7 @@ export default async function PlanPage({ params }: Props) {
                   <>
                     <Thread
                       messages={me?.dibby_muted ? messages.filter((m) => !m.auto) : messages}
+                      vibe={plan.vibe}
                       members={members}
                       meId={me?.id ?? null}
                       canPost={Boolean(me?.user_id)}

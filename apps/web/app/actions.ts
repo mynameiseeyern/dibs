@@ -160,7 +160,7 @@ export async function createWithDibby(_prev: FormState, form: FormData): Promise
 
   let draft;
   try {
-    draft = await draftPlan(ask, "chill");
+    draft = await draftPlan(ask, (["chill", "extra", "straight"].includes(String(form.get("vibe"))) ? form.get("vibe") : "chill") as Vibe);
   } catch (e) {
     console.error("[dibby draft]", e);
     return { error: "brb, Dibby's having a moment. Try again, or fill in the form below." };

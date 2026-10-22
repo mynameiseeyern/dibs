@@ -187,8 +187,8 @@ export const memoryStore: Store = {
   async listMessages(planId, limit = 100) {
     return db.messages.filter((m) => m.plan_id === planId).slice(-limit);
   },
-  async addMessage({ planId, memberId, kind, body, mentionsDibby, auto }) {
-    const m: Message = { id: randomUUID(), plan_id: planId, member_id: memberId, kind, body, mentions_dibby: Boolean(mentionsDibby), auto: Boolean(auto), created_at: now() };
+  async addMessage({ planId, memberId, kind, body, mentionsDibby, auto, template }) {
+    const m: Message = { id: randomUUID(), plan_id: planId, member_id: memberId, kind, body, mentions_dibby: Boolean(mentionsDibby), auto: Boolean(auto), template: template ?? null, created_at: now() };
     db.messages.push(m);
     return m;
   },

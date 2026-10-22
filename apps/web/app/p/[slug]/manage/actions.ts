@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import type { DibbyVolume } from "@dibs/shared/types";
+import type { DibbyVolume, Vibe } from "@dibs/shared/types";
 import { store } from "@/lib/store";
 import { formatWhen, localToIso } from "@/lib/time";
 import { loadPlan } from "@/lib/viewer";
@@ -72,6 +72,15 @@ export async function setDibbyVolume(slug: string, volume: DibbyVolume): Promise
   const view = await loadPlan(slug);
   if (!view?.isHost || !["quiet", "normal", "loud"].includes(volume)) return;
   await store.updatePlan(view.plan.id, { dibby_volume: volume });
+  revalidatePath(`/p/${slug}`);
+  revalidatePath(`/p/${slug}/manage`);
+}
+
+/** Hosts switch the plan's vibe. Dibby's templated messages re-render in the new one. */
+export async function setVibe(slug: string, vibe: Vibe): Promise<void> {
+  const view = await loadPlan(slug);
+  if (!view?.isHost || !["chill", "extra", "straight"].includes(vibe)) return;
+  await store.updatePlan(view.plan.id, { vibe });
   revalidatePath(`/p/${slug}`);
   revalidatePath(`/p/${slug}/manage`);
 }

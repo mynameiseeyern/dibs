@@ -1,6 +1,6 @@
 "use server";
 
-import { rouletteResult } from "@/lib/nudges";
+import { renderTemplate, type Template } from "@/lib/copy";
 import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -117,7 +117,8 @@ export async function spin(slug: string, billId: string): Promise<void> {
     await store.replaceShares(billId, [{ member_id: loser, amount_cents: r.bill.total_cents, status: "owed" }]);
   }
   const name = r.view.members.find((m) => m.id === loser)?.display_name.split(" ")[0] ?? "Someone";
-  await store.addMessage({ planId: r.view.plan.id, memberId: null, kind: "dibby", body: rouletteResult(r.view.plan.vibe, r.bill.title, name, loser === r.bill.payer_member_id) });
+  const template: Template = { k: "roulette", bill: r.bill.title, name, payerSpun: loser === r.bill.payer_member_id };
+  await store.addMessage({ planId: r.view.plan.id, memberId: null, kind: "dibby", body: renderTemplate(template, r.view.plan.vibe), template });
   redirect(path(slug));
 }
 

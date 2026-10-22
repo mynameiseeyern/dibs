@@ -2,6 +2,7 @@ import "server-only";
 import { seededPick } from "@dibs/shared/bills";
 import type { Plan } from "@dibs/shared/types";
 import { store } from "./store";
+import { renderTemplate, type Template } from "./copy";
 
 /**
  * Closes the vote: the option with the most votes wins; a tie is settled by a seeded spin
@@ -31,8 +32,8 @@ export async function closeVote(plan: Plan, why: "host" | "deadline"): Promise<b
     version: plan.version + 1,
     updated_note: note,
   });
-  const lead = why === "deadline" ? "Voting's closed. " : "";
-  await store.addMessage({ planId: plan.id, memberId: null, kind: "dibby", body: `${lead}${note}. See you there.` });
+  const template: Template = { k: "locked", winner: winner.label, tie: tied.length > 1, deadline: why === "deadline" };
+  await store.addMessage({ planId: plan.id, memberId: null, kind: "dibby", body: renderTemplate(template, plan.vibe), template });
   return true;
 }
 

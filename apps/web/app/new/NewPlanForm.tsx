@@ -3,12 +3,8 @@
 import { useActionState } from "react";
 import { createPlan } from "../actions";
 import { Field, FormError } from "@/components/Field";
+import { VibePick } from "@/components/VibePick";
 
-const VIBES = [
-  { id: "chill", name: "Chill", note: "Easygoing" },
-  { id: "extra", name: "Extra", note: "Emoji, hype" },
-  { id: "straight", name: "Straight up", note: "No banter" },
-] as const;
 
 export function NewPlanForm() {
   const [state, action, pending] = useActionState(createPlan, undefined);
@@ -22,17 +18,7 @@ export function NewPlanForm() {
         <legend className="db-label">
           Vibe
         </legend>
-        <div className="vibe-pick">
-          {VIBES.map((v, i) => (
-            <label key={v.id}>
-              <input type="radio" name="vibe" value={v.id} defaultChecked={i === 0} />
-              <span>
-                {v.name}
-                <small>{v.note}</small>
-              </span>
-            </label>
-          ))}
-        </div>
+        <VibePick />
       </fieldset>
 
       <label className="db-switch">

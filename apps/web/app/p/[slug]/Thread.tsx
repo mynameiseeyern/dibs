@@ -1,4 +1,4 @@
-import type { Message, PlanMember } from "@dibs/shared/types";
+import type { Message, PlanMember, Vibe } from "@dibs/shared/types";
 import { DibbyMark } from "@/components/Logo";
 import { Monogram } from "@/components/Monogram";
 import { TZ } from "@/lib/time";
@@ -6,6 +6,7 @@ import { Composer } from "./Composer";
 import { Fresh } from "@/components/moments/Fresh";
 import type { FormState } from "./actions";
 import { splitPlanLink } from "@/lib/thread-links";
+import { asTemplate, renderTemplate } from "@/lib/copy";
 
 const time = (iso: string) => new Intl.DateTimeFormat("en-AU", { timeZone: TZ, weekday: "short", hour: "numeric", minute: "2-digit" }).format(new Date(iso));
 
@@ -15,7 +16,9 @@ export function Thread({
   meId,
   canPost,
   post,
+  vibe,
 }: {
+  vibe: Vibe;
   messages: Message[];
   members: PlanMember[];
   meId: string | null;
@@ -57,7 +60,7 @@ export function Thread({
                         <div className="db-msg__name">
                           Dibby <span className="db-badge db-badge--accent ai-tag">AI</span>
                         </div>
-                        <DibbyBody body={m.body} />
+                        <DibbyBody body={dibbyText(m, vibe)} />
                       </div>
                     </div>
                   </div>
@@ -105,4 +108,10 @@ function DibbyBody({ body }: { body: string }) {
       )}
     </>
   );
+}
+
+/** Templated messages re-render in the plan's current vibe; the rest show as posted. */
+function dibbyText(m: Message, vibe: Vibe): string {
+  const t = asTemplate(m.template);
+  return t ? renderTemplate(t, vibe) : m.body;
 }

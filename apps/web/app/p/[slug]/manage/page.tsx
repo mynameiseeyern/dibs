@@ -1,7 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import { TZ } from "@/lib/time";
 import { loadPlan } from "@/lib/viewer";
-import { cancelPlan, setDibbyVolume, updateDetails } from "./actions";
+import { cancelPlan, setDibbyVolume, setVibe, updateDetails } from "./actions";
+import { VibePick } from "@/components/VibePick";
 import { ManageForm } from "./ManageForm";
 
 export const metadata = { title: "Edit plan" };
@@ -55,6 +56,11 @@ export default async function Manage({ params }: { params: Promise<{ slug: strin
         placeLabel={locked ? "Where" : "Where-ish"}
         initial={{ title: plan.title, startsAt: toLocalInput(plan.starts_at), place: (locked ? plan.venue_name : plan.area) ?? "" }}
       />
+      <section className="db-card section" aria-labelledby="vibe-h">
+        <h2 id="vibe-h" className="title-h4">Vibe</h2>
+        <p className="paragraph-sm muted">Changes how Dibby and the app talk on this plan, straight away. Dibby&rsquo;s reminders already in the chat change too.</p>
+        <VibePick value={plan.vibe} onChange={setVibe.bind(null, slug)} />
+      </section>
       <section className="db-card section" aria-labelledby="dibby-volume-h">
         <h2 id="dibby-volume-h" className="title-h4">How chatty is Dibby?</h2>
         <p className="paragraph-sm muted">{VOLUME_HINT[plan.dibby_volume ?? "normal"]}</p>

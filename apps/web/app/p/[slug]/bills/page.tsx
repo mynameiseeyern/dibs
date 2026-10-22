@@ -11,7 +11,8 @@ import { AddBill } from "./AddBill";
 import { Wheel } from "./Wheel";
 import { RouletteResult } from "./RouletteResult";
 import { Once } from "@/components/moments/Once";
-import { OWE_REMIND_AFTER_MS, OWE_REMIND_AGAIN_MS, TELL_PAYER_AFTER_MS, oweReminder, tellPayer } from "@/lib/nudges";
+import { OWE_REMIND_AFTER_MS, OWE_REMIND_AGAIN_MS, TELL_PAYER_AFTER_MS } from "@/lib/nudges";
+import { allSquare, oweReminder, tellPayer } from "@/lib/copy";
 
 export const metadata = { title: "Square up" };
 export const dynamic = "force-dynamic";
@@ -133,7 +134,7 @@ export default async function Bills({ params, searchParams }: Props) {
           <section className="moment">
             <Once id={`square:${plan.id}`} kind="square" size={220} label="Everyone's square. The crew celebrates." />
             <span className="db-badge db-badge--success"><i className="ri-checkbox-circle-fill db-icon" aria-hidden="true" />All squared up</span>
-            <p className="muted">Everyone&rsquo;s paid back. Nice work, crew.</p>
+            <p className="muted">{allSquare(plan.vibe)}</p>
             <a className="db-btn db-btn--secondary" href={`/p/${slug}/recap`}><i className="ri-star-smile-line db-icon" aria-hidden="true" />On to the recap</a>
           </section>
         )}

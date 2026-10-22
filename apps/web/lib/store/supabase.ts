@@ -169,9 +169,9 @@ export const supabaseStore: Store = {
     const rows = must(await admin().from("messages").select("*").eq("plan_id", planId).order("created_at", { ascending: false }).limit(limit)) as Message[];
     return rows.reverse();
   },
-  async addMessage({ planId, memberId, kind, body, mentionsDibby, auto }) {
+  async addMessage({ planId, memberId, kind, body, mentionsDibby, auto, template }) {
     return must(
-      await admin().from("messages").insert({ plan_id: planId, member_id: memberId, kind, body, mentions_dibby: Boolean(mentionsDibby), auto: Boolean(auto) }).select().single()
+      await admin().from("messages").insert({ plan_id: planId, member_id: memberId, kind, body, mentions_dibby: Boolean(mentionsDibby), auto: Boolean(auto), template: template ?? null }).select().single()
     ) as Message;
   },
 

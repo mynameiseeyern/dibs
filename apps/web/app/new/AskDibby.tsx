@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { DibbyMark } from "@/components/Logo";
 import { FormError } from "@/components/Field";
 import { createWithDibby } from "../actions";
+import { VibePick } from "@/components/VibePick";
 
 export function AskDibby() {
   const [state, action, pending] = useActionState(createWithDibby, undefined);
@@ -17,6 +18,10 @@ export function AskDibby() {
         <label htmlFor="ask" className="sr-only">What are you after?</label>
         <input id="ask" name="ask" placeholder="dinner Friday in Surry Hills, cheap-ish" maxLength={500} autoComplete="off" />
       </div>
+      <fieldset className="db-field">
+        <legend className="db-label">Vibe</legend>
+        <VibePick />
+      </fieldset>
       {pending ? (
         <p className="paragraph-sm muted typing" aria-live="polite">
           Dibby&rsquo;s on it<span className="dots" aria-hidden="true"><i /><i /><i /></span>

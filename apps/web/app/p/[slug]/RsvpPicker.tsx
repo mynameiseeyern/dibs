@@ -2,7 +2,8 @@
 
 import { useOptimistic, useTransition } from "react";
 import { RSVP_LABEL } from "@dibs/shared/plans";
-import type { Rsvp } from "@dibs/shared/types";
+import type { Rsvp, Vibe } from "@dibs/shared/types";
+import { rsvpHeading } from "@/lib/copy";
 
 /**
  * RSVP buttons that answer the tap straight away. The choice shows immediately
@@ -15,7 +16,9 @@ export function RsvpPicker({
   plusOne,
   plusOnes,
   setRsvp,
+  vibe = "chill",
 }: {
+  vibe?: Vibe;
   rsvp: Rsvp | null;
   waitlisted: boolean;
   plusOne: boolean;
@@ -37,15 +40,7 @@ export function RsvpPicker({
     });
   }
 
-  const heading = showWaitlist
-    ? "You're on the waitlist"
-    : shown === "in"
-      ? "You're in. Nice."
-      : shown === "maybe"
-        ? "You're a maybe"
-        : shown === "out"
-          ? "You can't make it"
-          : "Are you in?";
+  const heading = rsvpHeading(vibe, showWaitlist ? "waitlist" : shown ?? "none");
 
   return (
     <>
