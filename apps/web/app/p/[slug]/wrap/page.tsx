@@ -25,16 +25,16 @@ export default async function Wrap({ params }: { params: Promise<{ slug: string 
           </a>
         </header>
         <div className="section">
-          <span className="eyebrow">{plan.title} · wrap-up</span>
+          <span className="subheading-sm eyebrow">{plan.title} · wrap-up</span>
           <h1 className="title-h3">Who actually came?</h1>
           <p className="muted">Only people you tick can be added to bills or see your PayID.</p>
         </div>
         <div className="db-card">
           <div className="people">
             {listed.map((m) => (
-              <label key={m.id} className="tick">
+              <label key={m.id} className="db-check tick">
                 <Monogram name={m.display_name} colour={m.colour} />
-                <span className="person__name">
+                <span className="label-md person__name">
                   {m.display_name}
                   <small>
                     {m.role === "organiser" ? "Organiser · " : ""}

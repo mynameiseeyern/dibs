@@ -18,7 +18,7 @@ export default async function NewPlan() {
       </header>
       <h1 className="title-h3">What's the plan?</h1>
       <AskDibby />
-      <p className="eyebrow">Or set it up yourself</p>
+      <p className="subheading-sm eyebrow">Or set it up yourself</p>
       <NewPlanForm />
     </main>
   );

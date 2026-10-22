@@ -31,7 +31,7 @@ export function JoinForm({ action, signedIn }: { action: (s: FormState, f: FormD
       <button className="db-btn db-btn--primary db-btn--lg db-btn--block" disabled={pending}>
         {pending ? "Joining…" : "Join the plan"}
       </button>
-      {!signedIn && <p className="small muted">No app or account needed. We just remember you on this device.</p>}
+      {!signedIn && <p className="paragraph-sm muted">No app or account needed. We just remember you on this device.</p>}
     </form>
   );
 }

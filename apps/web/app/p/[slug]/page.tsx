@@ -91,7 +91,7 @@ export default async function PlanPage({ params }: Props) {
 
         <article className={`db-card db-plan${cancelled ? "" : " db-card--sticker"}`}>
           <span className="db-plan__eyebrow">{plan.status === "voting" ? "Plan · voting open" : plan.status === "locked" ? "Plan · locked in" : "Plan"}</span>
-          <h1 className="db-plan__title plan-title">{plan.title}</h1>
+          <h1 className="title-h3 plan-title">{plan.title}</h1>
           <ul className="db-plan__facts">
             {when && (
               <li>
@@ -131,7 +131,7 @@ export default async function PlanPage({ params }: Props) {
 
         {me && !cancelled && (
           <section className="section" aria-labelledby="rsvp-h">
-            <h2 id="rsvp-h" className="eyebrow">You</h2>
+            <h2 id="rsvp-h" className="subheading-sm eyebrow">You</h2>
             <div className="rsvp" role="group" aria-label="Are you in?">
               {(["in", "maybe", "out"] as const).map((r) => (
                 <form key={r} action={setRsvp.bind(null, slug, r)}>
@@ -146,7 +146,7 @@ export default async function PlanPage({ params }: Props) {
               ))}
             </div>
             {me.waitlisted && (
-              <p className="notice muted" role="status">
+              <p className="paragraph-sm muted" role="status">
                 It's full, so you're on the waitlist. The host will let you know if a spot opens up.
               </p>
             )}
@@ -164,12 +164,12 @@ export default async function PlanPage({ params }: Props) {
 
         {plan.status === "wrapped" && (
           <div className="wrap-links">
-            <a className="db-card db-card--violet section" href={`/p/${slug}/bills`} style={{ textDecoration: "none" }}>
-              <strong className="title-h4" style={{ color: "inherit" }}>Square up</strong>
+            <a className="db-card db-card--violet section link-card" href={`/p/${slug}/bills`}>
+              <strong className="title-h4">Square up</strong>
               <span>{me?.attended ? "See what you owe, or add what you paid." : "Bills are for people who came."}</span>
             </a>
             {me?.attended && (
-              <a className="db-card section" href={`/p/${slug}/recap`} style={{ textDecoration: "none", color: "inherit" }}>
+              <a className="db-card section link-card" href={`/p/${slug}/recap`}>
                 <strong className="title-h4">The recap</strong>
                 <span className="muted">Rate the night, best moment, MVP.</span>
               </a>
@@ -185,8 +185,8 @@ export default async function PlanPage({ params }: Props) {
         {(plan.status === "voting" || options.length > 0) && !cancelled && (
           <section className="section" aria-labelledby="vote-h">
             <div className="section__head">
-              <h2 id="vote-h" className="eyebrow">{plan.status === "voting" ? "What's the move?" : "The vote"}</h2>
-              {plan.status === "voting" && <span className="small muted">{new Set(votes.map((v) => v.member_id)).size} of {members.length} voted</span>}
+              <h2 id="vote-h" className="subheading-sm eyebrow">{plan.status === "voting" ? "What's the move?" : "The vote"}</h2>
+              {plan.status === "voting" && <span className="paragraph-sm muted">{new Set(votes.map((v) => v.member_id)).size} of {members.length} voted</span>}
             </div>
             <VoteList rows={voteRows} canVote={Boolean(me)} open={plan.status === "voting"} vote={vote.bind(null, slug)} add={addOption.bind(null, slug)} />
             {isHost && plan.status === "voting" && options.length > 0 && (
@@ -203,8 +203,8 @@ export default async function PlanPage({ params }: Props) {
 
         <section className="section" aria-labelledby="who-h">
           <div className="section__head">
-            <h2 id="who-h" className="eyebrow">Who's coming</h2>
-            <span className="small muted">
+            <h2 id="who-h" className="subheading-sm eyebrow">Who's coming</h2>
+            <span className="paragraph-sm muted">
               {inCount} of {plan.capacity}
             </span>
           </div>
@@ -216,7 +216,7 @@ export default async function PlanPage({ params }: Props) {
                   .map((m) => (
                     <li key={m.id} className="person">
                       <Monogram name={m.display_name} colour={m.colour} />
-                      <span className="person__name">
+                      <span className="label-md person__name">
                         {m.display_name}
                         {m.id === me?.id ? " (you)" : ""}
                         <small>

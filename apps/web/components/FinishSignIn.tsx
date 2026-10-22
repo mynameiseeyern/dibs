@@ -37,7 +37,7 @@ export function FinishSignIn() {
   if (!busy) return null;
   return (
     <div className="signin-overlay" role="status" aria-live="polite">
-      <span className="small muted typing">
+      <span className="paragraph-sm muted typing">
         Signing you in<span className="dots" aria-hidden="true"><i /><i /><i /></span>
       </span>
     </div>

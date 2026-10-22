@@ -19,7 +19,7 @@ export function RecapForm({
   const [stars, setStars] = useState(initial.stars ?? 0);
 
   return (
-    <form action={formAction} className="db-card section recap-form">
+    <form action={formAction} className="db-card section">
       <h2 className="title-h4">How was it?</h2>
 
       <fieldset className="stars" aria-label="Rate the night out of 5">
@@ -39,8 +39,8 @@ export function RecapForm({
       </div>
 
       {people.length > 0 && (
-        <fieldset className="db-field" style={{ border: 0, margin: 0, padding: 0 }}>
-          <legend className="db-label" style={{ marginBottom: 8 }}>MVP</legend>
+        <fieldset className="db-field">
+          <legend className="db-label">MVP</legend>
           <div className="mvp">
             {people.map((p) => (
               <label key={p.id} className="mvp__pick">

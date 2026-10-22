@@ -75,7 +75,7 @@ export default async function Bills({ params, searchParams }: Props) {
     return (
       <main className="page">
         {back}
-        <div className="section"><span className="eyebrow">{plan.title}</span><h1 className="title-h3">Add a bill</h1></div>
+        <div className="section"><span className="subheading-sm eyebrow">{plan.title}</span><h1 className="title-h3">Add a bill</h1></div>
         <AddBill action={addBill.bind(null, slug)} people={attendees.map((m) => ({ id: m.id, name: m.display_name }))} needsPayid={!profile?.payid} />
       </main>
     );
@@ -87,15 +87,15 @@ export default async function Bills({ params, searchParams }: Props) {
       <main className="page">
         {back}
         <div className="section">
-          <span className="eyebrow">{plan.title} · square up</span>
+          <span className="subheading-sm eyebrow">{plan.title} · square up</span>
           <h1 className="title-h3">{owedShares.length > 0 && settled === owedShares.length ? "Money square." : "Bills"}</h1>
         </div>
 
         {justSpun && (
           <section className="moment">
-            <span className="eyebrow">Card roulette · {justSpun.title}</span>
+            <span className="subheading-sm eyebrow">Card roulette · {justSpun.title}</span>
             <Wheel names={justSpun.roulette_entrants.map(first)} loserIndex={justSpun.roulette_entrants.indexOf(justSpun.roulette_loser_id!)} spin />
-            <h2 className="hero-title">{first(justSpun.roulette_loser_id)}&rsquo;s shout.</h2>
+            <h2 className="title-h2">{first(justSpun.roulette_loser_id)}&rsquo;s shout.</h2>
             <p className="muted">{first(justSpun.roulette_loser_id)} covers {formatAud(justSpun.total_cents)}. Everyone else is square on this one.</p>
           </section>
         )}
@@ -131,11 +131,11 @@ export default async function Bills({ params, searchParams }: Props) {
                   <div className="payid__row"><div><span>Amount</span><strong>{(share.amount_cents / 100).toFixed(2)}</strong></div><CopyButton value={(share.amount_cents / 100).toFixed(2)} label="amount" /></div>
                   <div className="payid__row"><div><span>Reference</span><strong className="payid__name">{ref}</strong></div><CopyButton value={ref} label="reference" /></div>
                 </div>
-                <p className="small muted">Pay from your banking app. dibs never touches the money.</p>
+                <p className="paragraph-sm muted">Pay from your banking app. dibs never touches the money.</p>
                 <form action={saysPaid.bind(null, slug, bill.id)}><button className="db-btn db-btn--primary db-btn--block"><i className="ri-check-line db-icon" aria-hidden="true" />I&rsquo;ve paid {first(bill.payer_member_id)}</button></form>
               </>
             ) : (
-              <p className="small muted">{first(bill.payer_member_id)} hasn&rsquo;t added a PayID yet.</p>
+              <p className="paragraph-sm muted">{first(bill.payer_member_id)} hasn&rsquo;t added a PayID yet.</p>
             )}
           </section>
         ))}
@@ -148,7 +148,7 @@ export default async function Bills({ params, searchParams }: Props) {
               <span className="db-plan__eyebrow">Card roulette · {b.title}</span>
               <h2 className="title-h4">Loser pays the lot: <span className="money">{formatAud(b.total_cents)}</span></h2>
               <Wheel names={b.roulette_entrants.map(first)} loserIndex={null} spin={false} />
-              <p className="small muted" style={{ textAlign: "center" }}>
+              <p className="paragraph-sm muted center">
                 {b.roulette_entrants.length === 0 ? "Nobody's in yet." : `${b.roulette_entrants.length} in: ${b.roulette_entrants.map(first).join(", ")}`}
               </p>
               <form action={toggleSpin.bind(null, slug, b.id)}>
@@ -197,7 +197,7 @@ function PayerCard({ slug, bill, shares, byId }: { slug: string; bill: Bill; sha
         </div>
         <span className="db-badge db-badge--success db-badge--dot">{square} of {shares.length} square</span>
       </div>
-      {shares.length === 0 && <p className="small muted">Nobody owes you on this one.</p>}
+      {shares.length === 0 && <p className="paragraph-sm muted">Nobody owes you on this one.</p>}
       {shares.map((s) => {
         const m = byId.get(s.member_id);
         return (

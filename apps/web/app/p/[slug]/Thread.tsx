@@ -24,10 +24,10 @@ export function Thread({
   let lastStamp = 0;
   return (
     <section className="section" aria-labelledby="thread-h">
-      <h2 id="thread-h" className="eyebrow">Plan chat</h2>
+      <h2 id="thread-h" className="subheading-sm eyebrow">Plan chat</h2>
       <div className="db-card thread">
         {messages.length === 0 ? (
-          <p className="small muted">Nothing yet. {canPost ? "Try “@dibby find us somewhere cheap”." : ""}</p>
+          <p className="paragraph-sm muted">Nothing yet. {canPost ? "Try “@dibby find us somewhere cheap”." : ""}</p>
         ) : (
           <div className="db-chat" role="log" aria-live="polite">
             {messages.map((m) => {
@@ -80,7 +80,7 @@ export function Thread({
         {canPost ? (
           <Composer action={post} />
         ) : (
-          <p className="small muted thread__readonly">Get the dibs app to chat here. You can still vote and RSVP.</p>
+          <p className="paragraph-sm muted thread__readonly">Get the dibs app to chat here. You can still vote and RSVP.</p>
         )}
       </div>
     </section>

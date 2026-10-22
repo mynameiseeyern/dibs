@@ -80,16 +80,16 @@ export default async function Home() {
           {iOwe === 0 && owedToMe === 0 ? (
             <div className="db-card balance__item">
               <span className="db-badge db-badge--success db-badge--dot">All square</span>
-              <span className="small muted">Nobody owes anybody. Love to see it.</span>
+              <span className="paragraph-sm muted">Nobody owes anybody. Love to see it.</span>
             </div>
           ) : (
             <>
               <div className="db-card balance__item">
-                <span className="small muted">You owe</span>
+                <span className="paragraph-sm muted">You owe</span>
                 <span className="balance__amount">{formatAud(iOwe)}</span>
               </div>
               <div className="db-card balance__item">
-                <span className="small muted">Owed to you</span>
+                <span className="paragraph-sm muted">Owed to you</span>
                 <span className="balance__amount">{formatAud(owedToMe)}</span>
               </div>
             </>
@@ -116,7 +116,7 @@ export default async function Home() {
 
       {squareUp.length > 0 && (
         <section className="section" aria-labelledby="sq-h">
-          <h2 id="sq-h" className="eyebrow">To sort out</h2>
+          <h2 id="sq-h" className="subheading-sm eyebrow">To sort out</h2>
           {squareUp.map((r) => (
             <PlanRow key={r.plan.id} row={r} />
           ))}
@@ -125,7 +125,7 @@ export default async function Home() {
 
       {past.length > 0 && (
         <section className="section" aria-labelledby="past-h">
-          <h2 id="past-h" className="eyebrow">Been and done</h2>
+          <h2 id="past-h" className="subheading-sm eyebrow">Been and done</h2>
           {past.map((r) => (
             <PlanRow key={r.plan.id} row={r} quiet />
           ))}
@@ -166,7 +166,7 @@ function PlanRow({ row, quiet }: { row: Row; quiet?: boolean }) {
           <i className={`${s.icon} db-icon`} aria-hidden="true" />
           {s.label}
         </span>
-        <span className="small muted">{me.role === "organiser" ? "Hosting" : me.role === "cohost" ? "Co-hosting" : "Going"}</span>
+        <span className="paragraph-sm muted">{me.role === "organiser" ? "Hosting" : me.role === "cohost" ? "Co-hosting" : "Going"}</span>
       </div>
       <h2 className="db-plan__title">{plan.title}</h2>
       <ul className="db-plan__facts">
@@ -183,7 +183,7 @@ function PlanRow({ row, quiet }: { row: Row; quiet?: boolean }) {
       </ul>
       <div className="db-plan__foot">
         <MonogramStack people={going} />
-        <span className="small muted">{inCount} in</span>
+        <span className="paragraph-sm muted">{inCount} in</span>
       </div>
       {nudge && (
         <p className="plan-row__nudge">

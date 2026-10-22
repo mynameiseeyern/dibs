@@ -49,13 +49,13 @@ export function AddBill({ action, people, needsPayid }: { action: (s: FormState,
       </div>
 
       {mode === "roulette" ? (
-        <p className="small muted">Card roulette: people opt in, you spin, the loser pays the lot. Nobody's on the wheel unless they tap in.</p>
+        <p className="paragraph-sm muted">Card roulette: people opt in, you spin, the loser pays the lot. Nobody's on the wheel unless they tap in.</p>
       ) : (
         <div className="db-card">
           <div className="people">
             {people.map((p) => (
-              <label key={p.id} className="tick">
-                <span className="person__name">{p.name}</span>
+              <label key={p.id} className="db-check tick">
+                <span className="label-md person__name">{p.name}</span>
                 <span className="money">{mode === "exclude" && !on.has(p.id) ? "—" : cents(total) ? aud(each) : ""}</span>
                 {mode === "exclude" && (
                   <input
@@ -73,7 +73,7 @@ export function AddBill({ action, people, needsPayid }: { action: (s: FormState,
         </div>
       )}
       {mode !== "roulette" && cents(total) % Math.max(count, 1) !== 0 && (
-        <p className="small muted">Doesn't split evenly, so one person picks up the extra cent or two.</p>
+        <p className="paragraph-sm muted">Doesn't split evenly, so one person picks up the extra cent or two.</p>
       )}
 
       {needsPayid && (

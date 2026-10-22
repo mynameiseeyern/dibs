@@ -56,7 +56,7 @@ export default async function Recap({ params }: { params: Promise<{ slug: string
     <main className="page">
       {back}
       <div className="section">
-        <span className="eyebrow">{plan.title} · {formatWhen(plan.starts_at) ?? "recap"}</span>
+        <span className="subheading-sm eyebrow">{plan.title} · {formatWhen(plan.starts_at) ?? "recap"}</span>
         <h1 className="title-h3">The recap</h1>
         <p className="muted">{answers.length} of {came.length} have chimed in. Only people who came can see this.</p>
       </div>
@@ -69,18 +69,18 @@ export default async function Recap({ params }: { params: Promise<{ slug: string
 
       {answers.length > 0 && (
         <section className="section" aria-labelledby="crew-h">
-          <h2 id="crew-h" className="eyebrow">What the crew said</h2>
+          <h2 id="crew-h" className="subheading-sm eyebrow">What the crew said</h2>
           <div className="recap-stats">
             {avg !== null && (
               <div className="db-card recap-stat">
                 <span className="recap-stat__big">{avg.toFixed(1)}<i className="ri-star-fill" aria-hidden="true" /></span>
-                <span className="small muted">from {rated.length} {rated.length === 1 ? "rating" : "ratings"}</span>
+                <span className="paragraph-sm muted">from {rated.length} {rated.length === 1 ? "rating" : "ratings"}</span>
               </div>
             )}
             {topMvp && (
               <div className="db-card recap-stat">
                 <span className="recap-stat__big">{first(topMvp[0])}</span>
-                <span className="small muted">MVP · {topMvp[1]} {topMvp[1] === 1 ? "vote" : "votes"}</span>
+                <span className="paragraph-sm muted">MVP · {topMvp[1]} {topMvp[1] === 1 ? "vote" : "votes"}</span>
               </div>
             )}
           </div>
@@ -92,7 +92,7 @@ export default async function Recap({ params }: { params: Promise<{ slug: string
                   return (
                     <li key={a.member_id} className="person">
                       {m && <Monogram name={m.display_name} colour={m.colour} />}
-                      <span className="person__name">
+                      <span className="label-md person__name">
                         &ldquo;{a.best_moment}&rdquo;
                         <small>{first(a.member_id)}{a.stars ? ` · ${a.stars}/5` : ""}</small>
                       </span>

@@ -20,7 +20,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
         <a className="db-btn db-btn--ghost db-btn--sm" href="/">
           Back to dibs
         </a>
-        {error.digest && <p className="small muted">Ref {error.digest}</p>}
+        {error.digest && <p className="paragraph-sm muted">Ref {error.digest}</p>}
       </section>
     </main>
   );

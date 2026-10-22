@@ -18,8 +18,8 @@ export function NewPlanForm() {
       <Field label="Where-ish" name="area" placeholder="Surry Hills" icon="ri-map-pin-line" maxLength={80} autoComplete="off" />
       <Field label="When" name="starts_at" type="datetime-local" hint="Sydney and Melbourne time. Leave it blank to sort it out later." />
 
-      <fieldset className="db-field" style={{ border: 0, margin: 0, padding: 0 }}>
-        <legend className="db-label" style={{ marginBottom: 8 }}>
+      <fieldset className="db-field">
+        <legend className="db-label">
           Vibe
         </legend>
         <div className="vibe-pick">

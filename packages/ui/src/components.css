@@ -66,6 +66,7 @@
 .db-check input:checked { background: var(--primary-base); border-color: var(--primary-base); transform: scale(1.06); }
 .db-check input[type=checkbox]:checked::after { content: ""; width: 10px; height: 6px; border: solid var(--static-white); border-width: 0 0 2.5px 2.5px; transform: translateY(-1px) rotate(-45deg); }
 .db-check input[type=radio]:checked::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--static-white); }
+.db-check input:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .db-check input:disabled { background: var(--bg-soft-200); border-color: var(--stroke-soft-200); }
 .db-check:has(input:disabled) { color: var(--text-disabled-300); cursor: not-allowed; }
 
@@ -101,6 +102,7 @@
 .db-avatar-group { display: flex; }
 .db-avatar-group .db-avatar { box-shadow: 0 0 0 2px var(--stroke-white-0); }
 .db-avatar-group .db-avatar + .db-avatar { margin-left: -10px; }
+.db-avatar-group .db-avatar--sm + .db-avatar--sm { margin-left: -6px; }
 .db-avatar--more { background: var(--bg-soft-200); color: var(--text-sub-600); }
 
 /* ---------- Alert ---------- */
@@ -132,6 +134,8 @@
 /* ---------- Vote option ---------- */
 .db-vote { all: unset; box-sizing: border-box; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: var(--space-2) var(--space-3); width: 100%; min-height: 64px; padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); border: 1.5px solid var(--stroke-soft-200); background: var(--bg-white-0); cursor: pointer; position: relative; overflow: hidden; transition: transform 160ms cubic-bezier(.34,1.56,.64,1); }
 .db-vote:active { transform: scale(0.98); }
+.db-vote:disabled { cursor: default; }
+.db-vote:disabled:active { transform: none; }
 .db-vote:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .db-vote__title { font: 600 16px/22px var(--font-sans); color: var(--text-strong-950); }
 .db-vote__meta { font: 400 14px/20px var(--font-sans); color: var(--text-sub-600); grid-column: 1; }
@@ -187,3 +191,9 @@
 .db-split__owe { font: 500 16px/22px var(--font-mono); }
 
 @media (prefers-reduced-motion: reduce) { .db-btn, .db-vote, .db-check input, .db-switch input::after { transition: none; } .db-btn:active, .db-vote:active { transform: none; } }
+
+/* Additions from the app build (Oct 2026). Mirror these in the claude.ai design system. */
+.db-input { min-width: 0; }
+.db-input input { width: 100%; }
+fieldset.db-field { border: 0; margin: 0; padding: 0; min-width: 0; }
+fieldset.db-field > legend { padding: 0; margin-bottom: var(--space-2); }

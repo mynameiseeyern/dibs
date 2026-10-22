@@ -11,7 +11,7 @@ export default async function Landing({ searchParams }: { searchParams: Promise<
   return (
     <main className="page page--center">
       <LogoMark size={88} title="dibs" />
-      <h1 className="hero-title">
+      <h1 className="title-h2">
         Plans sorted,
         <br />
         money square.

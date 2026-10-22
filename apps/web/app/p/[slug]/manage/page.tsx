@@ -39,7 +39,7 @@ export default async function Manage({ params }: { params: Promise<{ slug: strin
         </a>
       </header>
       <div className="section">
-        <span className="eyebrow">{plan.title}</span>
+        <span className="subheading-sm eyebrow">{plan.title}</span>
         <h1 className="title-h3">Edit the plan</h1>
       </div>
       <ManageForm

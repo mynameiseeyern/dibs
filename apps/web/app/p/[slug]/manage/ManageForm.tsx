@@ -28,7 +28,7 @@ export function ManageForm({
         <button className="db-btn db-btn--primary db-btn--lg db-btn--block" disabled={pending}>
           {pending ? "Saving…" : "Save changes"}
         </button>
-        <p className="small muted">Everyone sees an &ldquo;Updated&rdquo; note on the plan. Share it to the group chat again so the card refreshes.</p>
+        <p className="paragraph-sm muted">Everyone sees an &ldquo;Updated&rdquo; note on the plan. Share it to the group chat again so the card refreshes.</p>
       </form>
 
       <section className="db-card section" aria-labelledby="cancel-h">

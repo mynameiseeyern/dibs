@@ -28,7 +28,7 @@ export function VoteList({
 
   return (
     <div className="db-stack">
-      {rows.length === 0 && <p className="small muted">No options yet. Add one, or ask Dibby.</p>}
+      {rows.length === 0 && <p className="paragraph-sm muted">No options yet. Add one, or ask Dibby.</p>}
       {rows.map((r) => {
         const share = total ? Math.round((r.votes / total) * 100) : 0;
         const winning = top > 0 && r.votes === top;
