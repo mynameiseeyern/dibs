@@ -93,7 +93,7 @@ function localParts(iso: string) {
 async function hourly(point: Point, start: number, key: string): Promise<Forecast | null> {
   const q = new URLSearchParams({ key, "location.latitude": point.lat.toFixed(4), "location.longitude": point.lng.toFixed(4), hours: "24", pageSize: "24" });
   const res = await fetch(`${WEATHER}/v1/forecast/hours:lookup?${q}`, { signal: AbortSignal.timeout(4000), next: { revalidate: 1800 } });
-  if (!res.ok) throw new Error(`hours ${res.status}`);
+  if (!res.ok) throw new Error(`hours ${res.status} ${(await res.text().catch(() => "")).slice(0, 200)}`);
   const d = (await res.json()) as {
     forecastHours?: { interval?: { startTime?: string }; isDaytime?: boolean; weatherCondition?: Condition; temperature?: { degrees?: number }; precipitation?: { probability?: { percent?: number } } }[];
   };
@@ -113,7 +113,7 @@ async function hourly(point: Point, start: number, key: string): Promise<Forecas
 async function daily(point: Point, startIso: string, key: string): Promise<Forecast | null> {
   const q = new URLSearchParams({ key, "location.latitude": point.lat.toFixed(4), "location.longitude": point.lng.toFixed(4), days: String(FORECAST_DAYS), pageSize: String(FORECAST_DAYS) });
   const res = await fetch(`${WEATHER}/v1/forecast/days:lookup?${q}`, { signal: AbortSignal.timeout(4000), next: { revalidate: 3600 } });
-  if (!res.ok) throw new Error(`days ${res.status}`);
+  if (!res.ok) throw new Error(`days ${res.status} ${(await res.text().catch(() => "")).slice(0, 200)}`);
   type Part = { weatherCondition?: Condition; precipitation?: { probability?: { percent?: number } } };
   const d = (await res.json()) as {
     forecastDays?: { displayDate?: { year: number; month: number; day: number }; daytimeForecast?: Part; nighttimeForecast?: Part; maxTemperature?: { degrees?: number }; minTemperature?: { degrees?: number } }[];
