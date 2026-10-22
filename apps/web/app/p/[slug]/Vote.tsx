@@ -120,11 +120,11 @@ export function VoteList({
           >
             <span className="db-vote__title">{r.label}</span>
             <span className="db-vote__meta">
-              {r.votes} {r.votes === 1 ? "vote" : "votes"}
-              {r.mine ? " · you voted" : ""}
-              {r.note ? ` · ${r.note}` : ""}
+              {[r.mine ? "Your pick" : null, r.note].filter(Boolean).join(" · ") || `${r.votes} ${r.votes === 1 ? "vote" : "votes"}`}
             </span>
-            <span className="db-vote__count">{r.votes}</span>
+            <span className="db-vote__count" aria-label={`${r.votes} ${r.votes === 1 ? "vote" : "votes"}`}>
+              {r.votes}
+            </span>
             <span className="db-vote__bar">
               <span style={{ width: `${share}%` }} />
             </span>
