@@ -2,6 +2,7 @@
 @import "@dibs/ui/components.css";
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
@@ -163,3 +164,13 @@ a { color: var(--primary-dark); }
 .account-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .account-who { flex-direction: row; align-items: center; gap: var(--space-4); }
 .account-who h1, .account-who p { margin: 0; overflow-wrap: anywhere; }
+
+/* ---------- Plan page ---------- */
+.plan-card__top { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.plan-card__note { display: flex; align-items: flex-start; gap: var(--space-2); margin: 0; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); background: var(--information-lighter); color: var(--information-dark); }
+.plan-card__note--off { background: var(--warning-lighter); color: var(--warning-dark); }
+.plan-card__note .db-icon { margin-top: 2px; }
+.plan-tabs__count { display: inline-grid; place-content: center; min-width: 20px; height: 20px; margin-left: 6px; padding: 0 6px; border-radius: var(--radius-full); background: var(--bg-white-0); color: var(--text-sub-600); font: 600 12px/1 var(--font-sans); }
+.db-segmented [aria-selected=true] .plan-tabs__count { background: var(--primary-lighter); color: var(--primary-dark); }
+.plan-foot { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); padding-top: var(--space-2); }
+.plan-foot a { display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--size-tap); color: var(--primary-dark); text-decoration: none; }

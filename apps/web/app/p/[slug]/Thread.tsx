@@ -24,7 +24,7 @@ export function Thread({
   let lastStamp = 0;
   return (
     <section className="section" aria-labelledby="thread-h">
-      <h2 id="thread-h" className="subheading-sm eyebrow">Plan chat</h2>
+      <h2 id="thread-h" className="sr-only">Plan chat</h2>
       <div className="db-card thread">
         {messages.length === 0 ? (
           <p className="paragraph-sm muted">Nothing yet. {canPost ? "Try “@dibby find us somewhere cheap”." : ""}</p>

@@ -6,8 +6,9 @@ import { CrewWave, Wordmark } from "@/components/Logo";
 import { MonogramStack } from "@/components/Monogram";
 import { AccountButton } from "@/components/AccountButton";
 import { store } from "@/lib/store";
-import { formatShort, formatWhen } from "@/lib/time";
+import { formatWhen } from "@/lib/time";
 import { whoIsHere } from "@/lib/viewer";
+import { planStatus } from "@/lib/status";
 
 export const metadata = { title: "Your plans" };
 export const dynamic = "force-dynamic";
@@ -22,19 +23,6 @@ type Row = {
 };
 
 const SIX_HOURS = 6 * 3600 * 1000;
-
-function status(plan: Plan): { label: string; tone: string; icon: string } {
-  switch (plan.status) {
-    case "voting":
-      return { label: plan.vote_deadline ? `Voting · closes ${formatShort(plan.vote_deadline)}` : "Voting", tone: "warning", icon: "ri-time-line" };
-    case "locked":
-      return { label: "Locked in", tone: "success", icon: "ri-lock-2-line" };
-    case "wrapped":
-      return { label: "Wrapped", tone: "primary", icon: "ri-flag-line" };
-    default:
-      return { label: "Called off", tone: "faded", icon: "ri-close-line" };
-  }
-}
 
 export default async function Home() {
   const here = await whoIsHere();
@@ -159,7 +147,7 @@ export default async function Home() {
 
 function PlanRow({ row, quiet }: { row: Row; quiet?: boolean }) {
   const { plan, me, going, inCount, iOwe, owedToMe } = row;
-  const s = status(plan);
+  const s = planStatus(plan);
   const where = plan.venue_name ?? plan.area;
   // The one thing to do next on this plan, if there is one.
   const nudge =

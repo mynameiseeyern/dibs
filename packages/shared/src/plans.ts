@@ -40,7 +40,7 @@ export function hasRoom(members: Parameters<typeof countIn>[0], capacity: number
   return countIn(members) + 1 + (plusOne ? 1 : 0) <= capacity;
 }
 
-export const RSVP_LABEL: Record<Rsvp, string> = { in: "I'm in", maybe: "Maybe", out: "Can't make it" };
+export const RSVP_LABEL: Record<Rsvp, string> = { in: "I'm in", maybe: "Maybe", out: "Can't go" };
 
 /** Prefilled WhatsApp message. Short, then the link. */
 export function shareText(opts: { title: string; deadline?: string | null; url: string }): string {
