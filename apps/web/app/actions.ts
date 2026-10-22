@@ -6,7 +6,7 @@ import type { Vibe } from "@dibs/shared/types";
 import { currentOrganiser, demoSignIn, signOut } from "@/lib/auth";
 import { clearGuestSession, currentGuest } from "@/lib/guest";
 import { store, usingSupabase } from "@/lib/store";
-import { draftPlan } from "@/lib/dibby";
+import { draftPlan, type DraftPicks } from "@/lib/dibby";
 import { localToIso } from "@/lib/time";
 import { siteUrl } from "@/lib/site";
 import { BETA_LIST } from "@dibs/email";
@@ -168,6 +168,30 @@ export async function createPlan(_prev: FormState, form: FormData): Promise<Form
   redirect(`/p/${plan.slug}`);
 }
 
+/** The Ask Dibby chips. Anything malformed is dropped rather than guessed at. */
+function readPicks(form: FormData): DraftPicks {
+  const date = String(form.get("pick_date") ?? "");
+  const time = String(form.get("pick_time") ?? "");
+  const spend = Number(form.get("pick_spend"));
+  const lat = Number(form.get("near_lat"));
+  const lng = Number(form.get("near_lng"));
+  return {
+    date: /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null,
+    time: /^([01]\d|2[0-3]):[0-5]\d$/.test(time) ? time : null,
+    spend: spend === 1 || spend === 2 || spend === 3 ? spend : null,
+    near: form.get("near_lat") && Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180 ? { lat, lng } : null,
+  };
+}
+
+/** "Fri 24 Oct · 7pm · $$ · near me", so the thread shows what was asked. */
+function picksLabel(p: DraftPicks): string {
+  const day = p.date ? new Intl.DateTimeFormat("en-AU", { timeZone: "UTC", weekday: "short", day: "numeric", month: "short" }).format(new Date(`${p.date}T00:00:00Z`)) : null;
+  const time = p.time
+    ? new Intl.DateTimeFormat("en-AU", { timeZone: "UTC", hour: "numeric", minute: p.time.endsWith(":00") ? undefined : "2-digit" }).format(new Date(`2000-01-01T${p.time}:00Z`)).replace(/\s/g, "")
+    : null;
+  return [day, time, p.spend ? "$".repeat(p.spend) : null, p.near ? "near me" : null].filter(Boolean).join(" · ");
+}
+
 /** "@dibby dinner friday in surry hills, cheap-ish": Dibby drafts the plan and the vote. */
 export async function createWithDibby(_prev: FormState, form: FormData): Promise<FormState> {
   const me = await currentOrganiser();
@@ -175,12 +199,13 @@ export async function createWithDibby(_prev: FormState, form: FormData): Promise
   const profile = await store.getProfile(me.id);
   if (!profile) redirect("/onboarding?next=/new");
   const ask = String(form.get("ask") ?? "").replace(/^\s*@dibby\s*/i, "").trim().slice(0, 500);
-  if (!ask) return { error: "Tell Dibby what you're after, like “dinner Friday in Surry Hills”." };
+  const picks = readPicks(form);
+  if (!ask && !picks.date && !picks.time && !picks.spend) return { error: "Tell Dibby what you're after, like “dumplings”, or tap a day and a time." };
   if (!process.env.ANTHROPIC_API_KEY) return { error: "Dibby isn't switched on yet. Fill in the form below for now." };
 
   let draft;
   try {
-    draft = await draftPlan(ask, (["chill", "extra", "straight"].includes(String(form.get("vibe"))) ? form.get("vibe") : "chill") as Vibe);
+    draft = await draftPlan(ask, (["chill", "extra", "straight"].includes(String(form.get("vibe"))) ? form.get("vibe") : "chill") as Vibe, picks);
   } catch (e) {
     console.error("[dibby draft]", e);
     return { error: "brb, Dibby's having a moment. Try again, or fill in the form below." };
@@ -199,14 +224,14 @@ export async function createWithDibby(_prev: FormState, form: FormData): Promise
   }
   const members = await store.listMembers(plan.id);
   const organiser = members.find((m) => m.user_id === me.id) ?? null;
-  await store.addMessage({ planId: plan.id, memberId: organiser?.id ?? null, kind: "text", body: `@dibby ${ask}`, mentionsDibby: true });
+  await store.addMessage({ planId: plan.id, memberId: organiser?.id ?? null, kind: "text", body: `@dibby ${[ask, picksLabel(picks)].filter(Boolean).join(" · ")}`, mentionsDibby: true });
   await store.addMessage({
     planId: plan.id,
     memberId: null,
     kind: "system",
     body: "Heads up: messages that tag @dibby are sent to an AI provider so Dibby can reply. Dibby only reads messages it's tagged in.",
   });
-  const unchecked = draft.checked ? "" : " (I couldn't check these on Maps, so give them a once-over.)";
-  await store.addMessage({ planId: plan.id, memberId: null, kind: "dibby", body: `${draft.reply}${unchecked} Vote's open for 24 hours.` });
+  const tail = draft.venues.length ? "Vote's open for 24 hours." : "Couldn't find spots for that on Maps, so add a few from the map and the vote opens.";
+  await store.addMessage({ planId: plan.id, memberId: null, kind: "dibby", body: `${draft.reply} ${tail}` });
   redirect(`/p/${plan.slug}`);
 }

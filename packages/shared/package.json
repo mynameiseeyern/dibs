@@ -6,7 +6,8 @@
   "exports": {
     "./bills": "./src/bills/index.ts",
     "./types": "./src/types.ts",
-    "./plans": "./src/plans.ts"
+    "./plans": "./src/plans.ts",
+    "./when": "./src/when.ts"
   },
   "scripts": {
     "test": "vitest run",

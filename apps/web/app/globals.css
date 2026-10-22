@@ -268,3 +268,8 @@
 .place-card { display: flex; align-items: center; gap: var(--space-3); }
 .place-card > .db-icon { color: var(--primary-base); flex: none; }
 .place-card__text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+/* ---------- Ask Dibby chips ---------- */
+.chip-group { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.chip-row { display: flex; gap: var(--space-2); overflow-x: auto; scrollbar-width: none; margin: 0 calc(var(--space-4) * -1); padding: 2px var(--space-4); scroll-padding: 0 var(--space-4); }
+.chip-row::-webkit-scrollbar { display: none; }

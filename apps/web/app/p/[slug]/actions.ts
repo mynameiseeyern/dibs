@@ -165,8 +165,8 @@ async function createFromThread(draft: PlanDraft, asker: PlanMember, crew: PlanM
   const organiser = members.find((m) => m.user_id === asker.user_id) ?? null;
   await store.addMessage({ planId: plan.id, memberId: organiser?.id ?? null, kind: "text", body: ask, mentionsDibby: true });
   await store.addMessage({ planId: plan.id, memberId: null, kind: "system", body: DIBBY_HEADS_UP });
-  const unchecked = draft.checked ? "" : " (I couldn't check these on Maps, so give them a once-over.)";
-  await store.addMessage({ planId: plan.id, memberId: null, kind: "dibby", body: `${draft.reply}${unchecked} Vote's open for 24 hours.` });
+  const tail = draft.venues.length ? "Vote's open for 24 hours." : "Couldn't find spots for that on Maps, so add a few from the map and the vote opens.";
+  await store.addMessage({ planId: plan.id, memberId: null, kind: "dibby", body: `${draft.reply} ${tail}` });
   revalidatePath(`/p/${plan.slug}`);
   return plan;
 }
