@@ -249,6 +249,7 @@ create policy "hosts edit members" on plan_members for update using (is_host(pla
 create policy "members read options" on options for select using (my_member_id(plan_id) is not null);
 create policy "members add options" on options for insert with check (added_by = my_member_id(plan_id));
 create policy "hosts remove options" on options for delete using (is_host(plan_id));
+create policy "members remove own options" on options for delete using (added_by = my_member_id(plan_id));
 
 create policy "members read votes" on votes for select
   using (exists (select 1 from options o where o.id = option_id and my_member_id(o.plan_id) is not null));
