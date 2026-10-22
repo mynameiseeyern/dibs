@@ -19,10 +19,10 @@ def tok(name, light, dark, usage):
     T.append({"name": name, "value": {"light": light, "dark": dark}, "usage": usage})
 
 # ---- Neutrals (from the Dibs V3 logo board: ink #141216, sub #57525C, muted #6B6570) ----
-tok('bg-white-0', '#ffffff', '#141216', 'Page background, cards, inputs, sheets.')
-tok('bg-weak-50', '#f7f6f9', '#1b1820', 'Grouped-list background, hover fill on white rows, chat thread background.')
-tok('bg-soft-200', '#eeecf2', '#26222c', 'Secondary button fill, switch and progress tracks, other people\'s chat bubbles, skeletons.')
-tok('bg-sub-300', '#dcd8e3', '#3a3541', 'Pressed neutral fills; heavy dividers.')
+tok('bg-white-0', '#ffffff', '#1d1a22', 'Cards, inputs, sheets. In Dark this is a step lighter than the page, so cards still read as raised.')
+tok('bg-weak-50', '#f7f6f9', '#141216', 'Page background, grouped-list background, chat thread background. The darkest surface in Dark.')
+tok('bg-soft-200', '#eeecf2', '#2a2631', 'Secondary button fill, switch and progress tracks, other people\'s chat bubbles, skeletons.')
+tok('bg-sub-300', '#dcd8e3', '#3d3846', 'Pressed neutral fills; heavy dividers.')
 tok('bg-surface-800', '#2a2630', '#e8e5ec', 'Tooltips and toasts.')
 tok('bg-strong-950', '#141216', '#ffffff', 'Inverse surface: the ink lockup card, neutral solid buttons.')
 tok('text-strong-950', '#141216', '#ffffff', 'Headings and body copy on bg-white-0, bg-weak-50, bg-soft-200.')
@@ -36,6 +36,9 @@ tok('stroke-soft-200', '#e8e5ec', '#2c2832', 'Hairline dividers and card borders
 tok('stroke-white-0', '#ffffff', '#141216', 'Ring around stacked avatars.')
 tok('static-black', '#141216', '#141216', 'Ink that never flips: text and icons on accent-base (lime) and away-base.')
 tok('static-white', '#ffffff', '#ffffff', 'White that never flips: text on primary-base, switch thumbs, the friends in the logo.')
+# The crew: ten fixed pastels matching the clay figures. Never flip; ink text on top.
+for n, v in [('violet', '#DCD3FF'), ('lime', '#C8F03C'), ('sun', '#FFE7A8'), ('mint', '#BDF2D5'), ('tangerine', '#FFD1BD'), ('sky', '#C9E0FF'), ('coral', '#FFC4CF'), ('rose', '#FFD0E6'), ('aqua', '#BFF0F5'), ('ivory', '#F3EEE4')]:
+    tok(f'crew-{n}', v, v, f'The {n} crew member: roulette wedges, share-card faces, anything that must match the clay art in both themes. Ink text on top.')
 tok('overlay', 'rgba(20, 18, 22, 0.40)', 'rgba(0, 0, 0, 0.64)', 'Scrim behind bottom sheets and modals.')
 
 # ---- Primary: Dibs violet ----

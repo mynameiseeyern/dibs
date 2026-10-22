@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-const FILLS = ["var(--accent-base)", "var(--primary-light)", "var(--away-light)", "var(--success-light)", "var(--highlighted-light)", "var(--information-light)"];
+const FILLS = ["lime", "violet", "sun", "mint", "tangerine", "sky", "coral", "rose", "aqua", "ivory"].map((c) => `var(--crew-${c})`);
 const SPIN_MS = 4000;
 
 /**

@@ -48,6 +48,16 @@
   --stroke-white-0: #ffffff;
   --static-black: #141216;
   --static-white: #ffffff;
+  --crew-violet: #DCD3FF;
+  --crew-lime: #C8F03C;
+  --crew-sun: #FFE7A8;
+  --crew-mint: #BDF2D5;
+  --crew-tangerine: #FFD1BD;
+  --crew-sky: #C9E0FF;
+  --crew-coral: #FFC4CF;
+  --crew-rose: #FFD0E6;
+  --crew-aqua: #BFF0F5;
+  --crew-ivory: #F3EEE4;
   --overlay: rgba(20, 18, 22, 0.40);
   --primary-base: #6d4aff;
   --primary-dark: #4a2fd6;
@@ -108,10 +118,10 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg-white-0: #141216;
-    --bg-weak-50: #1b1820;
-    --bg-soft-200: #26222c;
-    --bg-sub-300: #3a3541;
+    --bg-white-0: #1d1a22;
+    --bg-weak-50: #141216;
+    --bg-soft-200: #2a2631;
+    --bg-sub-300: #3d3846;
     --bg-surface-800: #e8e5ec;
     --bg-strong-950: #ffffff;
     --text-strong-950: #ffffff;
@@ -125,6 +135,16 @@
     --stroke-white-0: #141216;
     --static-black: #141216;
     --static-white: #ffffff;
+    --crew-violet: #DCD3FF;
+    --crew-lime: #C8F03C;
+    --crew-sun: #FFE7A8;
+    --crew-mint: #BDF2D5;
+    --crew-tangerine: #FFD1BD;
+    --crew-sky: #C9E0FF;
+    --crew-coral: #FFC4CF;
+    --crew-rose: #FFD0E6;
+    --crew-aqua: #BFF0F5;
+    --crew-ivory: #F3EEE4;
     --overlay: rgba(0, 0, 0, 0.64);
     --primary-base: #6d4aff;
     --primary-dark: #b3a3ff;
@@ -184,10 +204,10 @@
   }
 }
 :root[data-theme="dark"] {
-  --bg-white-0: #141216;
-  --bg-weak-50: #1b1820;
-  --bg-soft-200: #26222c;
-  --bg-sub-300: #3a3541;
+  --bg-white-0: #1d1a22;
+  --bg-weak-50: #141216;
+  --bg-soft-200: #2a2631;
+  --bg-sub-300: #3d3846;
   --bg-surface-800: #e8e5ec;
   --bg-strong-950: #ffffff;
   --text-strong-950: #ffffff;
@@ -201,6 +221,16 @@
   --stroke-white-0: #141216;
   --static-black: #141216;
   --static-white: #ffffff;
+  --crew-violet: #DCD3FF;
+  --crew-lime: #C8F03C;
+  --crew-sun: #FFE7A8;
+  --crew-mint: #BDF2D5;
+  --crew-tangerine: #FFD1BD;
+  --crew-sky: #C9E0FF;
+  --crew-coral: #FFC4CF;
+  --crew-rose: #FFD0E6;
+  --crew-aqua: #BFF0F5;
+  --crew-ivory: #F3EEE4;
   --overlay: rgba(0, 0, 0, 0.64);
   --primary-base: #6d4aff;
   --primary-dark: #b3a3ff;

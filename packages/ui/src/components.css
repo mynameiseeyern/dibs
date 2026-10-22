@@ -82,6 +82,13 @@
 .db-segmented button { all: unset; flex: 1; text-align: center; min-height: 36px; padding: 0 var(--space-3); border-radius: 12px; font: 600 14px/36px var(--font-sans); color: var(--text-sub-600); cursor: pointer; }
 .db-segmented button[aria-pressed=true] { background: var(--bg-white-0); color: var(--text-strong-950); box-shadow: var(--shadow-xs); }
 .db-segmented [role=tab][aria-selected=true] { background: var(--bg-white-0); color: var(--text-strong-950); box-shadow: var(--shadow-xs); }
+/* Dark: the selected pill is a step lighter than the track, not darker. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .db-segmented button[aria-pressed=true],
+  :root:not([data-theme="light"]) .db-segmented [role=tab][aria-selected=true] { background: var(--bg-sub-300); }
+}
+:root[data-theme="dark"] .db-segmented button[aria-pressed=true],
+:root[data-theme="dark"] .db-segmented [role=tab][aria-selected=true] { background: var(--bg-sub-300); }
 .db-segmented button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
 /* ---------- Tab menu ---------- */
