@@ -76,6 +76,8 @@ export default async function PlanPage({ params }: Props) {
   const cancelled = plan.status === "cancelled";
   const full = inCount >= plan.capacity;
   const wrapped = plan.status === "wrapped";
+  // After the night, Who came is just the people ticked at wrap-up.
+  const came = members.filter((m) => m.attended);
 
   // After the night: where the money's at, and what the crew said.
   const [bills, shares, recap] = wrapped ? await Promise.all([store.listBills(plan.id), store.listShares(plan.id), store.listRecap(plan.id)]) : [[], [], []];
@@ -158,7 +160,7 @@ export default async function PlanPage({ params }: Props) {
               }}
             />
           )}
-          {(cancelled || plan.updated_note) && (
+          {(cancelled || (plan.updated_note && !wrapped)) && (
             <p className={`label-sm plan-card__note${cancelled ? " plan-card__note--off" : ""}`} role="status">
               <i className={`${cancelled ? "ri-close-circle-line" : "ri-refresh-line"} db-icon`} aria-hidden="true" />
               <span>
@@ -166,12 +168,14 @@ export default async function PlanPage({ params }: Props) {
               </span>
             </p>
           )}
+          {!wrapped && (
           <div className="db-plan__foot">
             <MonogramStack people={going} />
             <Badge.Root color="accent">
               {inCount} in{full ? " · full" : ""}
             </Badge.Root>
           </div>
+          )}
         </article>
 
         {/* Your move: the one thing to do now. */}
@@ -311,7 +315,7 @@ export default async function PlanPage({ params }: Props) {
               storageKey={`dibs:tab:${plan.id}`}
               initial={plan.status === "voting" ? "vote" : wrapped ? "chat" : "who"}
               tabs={[
-                ...(plan.status === "voting" || options.length > 0
+                ...(!wrapped && (plan.status === "voting" || options.length > 0)
                   ? [
                       {
                         id: "vote",
@@ -371,7 +375,7 @@ export default async function PlanPage({ params }: Props) {
                         readOnly={readOnly}
                         post={postMessage.bind(null, slug)}
                       />
-                      {me && (
+                      {me && !wrapped && (
                         <form action={toggleDibbyMute.bind(null, slug)} className="dibby-mute">
                           <Button.Root mode="ghost" aria-pressed={me.dibby_muted}>
                             <i className={`${me.dibby_muted ? "ri-notification-3-line" : "ri-notification-off-line"} db-icon`} aria-hidden="true" />
@@ -385,16 +389,28 @@ export default async function PlanPage({ params }: Props) {
                 {
                   id: "who",
                   label: wrapped ? "Who came" : "Who's in",
-                  count: inCount || undefined,
+                  count: (wrapped ? came.length : inCount) || undefined,
                   panel: (
                     <>
                       <h2 className="sr-only">Who's coming</h2>
-                      <p className="paragraph-sm muted">
-                        {inCount} of {plan.capacity} spots taken
-                      </p>
+                      {!wrapped && (
+                        <p className="paragraph-sm muted">
+                          {inCount} of {plan.capacity} spots taken
+                        </p>
+                      )}
                       <div className="db-card">
                         <ul className="people">
-                          {ORDER.flatMap((g) =>
+                          {wrapped && came.map((m) => (
+                            <li key={m.id} className="person">
+                              <Monogram name={m.display_name} colour={m.colour} />
+                              <span className="label-md person__name">
+                                {m.display_name}
+                                {m.id === me?.id ? " (you)" : ""}
+                                <small>{m.role === "organiser" ? "Organiser" : m.role === "cohost" ? "Co-host" : "Came"}</small>
+                              </span>
+                            </li>
+                          ))}
+                          {!wrapped && ORDER.flatMap((g) =>
                             members
                               .filter((m) => groupOf(m) === g)
                               .map((m) => (
