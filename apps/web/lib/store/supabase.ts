@@ -1,7 +1,7 @@
 import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { makeSlug, pickColour } from "@dibs/shared/plans";
-import type { Bill, BillShare, Message, NewMember, NewPlan, Plan, PlanMember, PlanOption, Store, Vote, RecapAnswer } from "./types";
+import type { Bill, BillShare, Message, NewMember, NewPlan, Plan, PlanMember, PlanOption, Store, Vote, RecapAnswer, Reaction } from "./types";
 
 // Server-side Supabase store using the service key. Every caller checks access first
 // (lib/viewer.ts); row-level security still protects anything the browser reads directly.
@@ -215,6 +215,21 @@ export const supabaseStore: Store = {
   },
   async saveRecap(a) {
     must(await admin().from("recap_answers").upsert(a));
+  },
+
+  async listReactions(planId) {
+    return must(await admin().from("message_reactions").select("message_id, member_id, emoji").eq("plan_id", planId)) as Reaction[];
+  },
+  async toggleReaction({ planId, message_id, member_id, emoji }) {
+    const { data, error } = await admin()
+      .from("message_reactions")
+      .delete()
+      .match({ message_id, member_id, emoji })
+      .select("message_id");
+    if (error) throw new Error(error.message);
+    if (data && data.length > 0) return; // it was there: now it's off
+    const ins = await admin().from("message_reactions").insert({ plan_id: planId, message_id, member_id, emoji });
+    if (ins.error && ins.error.code !== "23505") throw new Error(ins.error.message);
   },
 
   async claimNudge(planId, kind, key) {

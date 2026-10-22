@@ -7,6 +7,7 @@ import type { PlanMember, Rsvp } from "@dibs/shared/types";
 import { BRB, mentionsDibby, replyInThread, type PlanDraft } from "@/lib/dibby";
 import { clearGuestSession, createGuestSession } from "@/lib/guest";
 import { store } from "@/lib/store";
+import { REACTIONS, type Reaction } from "@/lib/store/types";
 import { closeVote } from "@/lib/plan-ops";
 import { nudgeOnBail } from "@/lib/nudges";
 import { loadPlan } from "@/lib/viewer";
@@ -174,6 +175,16 @@ export async function toggleDibbyMute(slug: string): Promise<void> {
   const view = await loadPlan(slug);
   if (!view?.me) return;
   await store.updateMember(view.me.id, { dibby_muted: !view.me.dibby_muted });
+  revalidatePath(`/p/${slug}`);
+}
+
+/** React to a message in the thread. Signed-in members only, like posting. */
+export async function toggleReaction(slug: string, messageId: string, emoji: string): Promise<void> {
+  const view = await loadPlan(slug);
+  if (!view?.me?.user_id || !(REACTIONS as readonly string[]).includes(emoji)) return;
+  const messages = await store.listMessages(view.plan.id, 200);
+  if (!messages.some((m) => m.id === messageId)) return;
+  await store.toggleReaction({ planId: view.plan.id, message_id: messageId, member_id: view.me.id, emoji: emoji as Reaction["emoji"] });
   revalidatePath(`/p/${slug}`);
 }
 

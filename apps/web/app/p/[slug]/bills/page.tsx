@@ -1,18 +1,20 @@
 import { notFound, redirect } from "next/navigation";
-import { formatAud } from "@dibs/shared/bills";
+import { formatAud, netDebts } from "@dibs/shared/bills";
 import type { Bill, BillShare, PlanMember } from "@dibs/shared/types";
 import { CopyButton } from "@/components/CopyButton";
 import { LiveRefresh } from "@/components/LiveRefresh";
 import { Monogram } from "@/components/Monogram";
 import { store } from "@/lib/store";
 import { loadPlan } from "@/lib/viewer";
-import { addBill, confirmPaid, saysPaid, spin, toggleSpin } from "./actions";
+import { addBill, confirmPaid, saysPaid, settleNet, spin, toggleSpin } from "./actions";
 import { AddBill } from "./AddBill";
 import { Wheel } from "./Wheel";
 import { RouletteResult } from "./RouletteResult";
 import { OptIn } from "./OptIn";
 import { rouletteTally } from "@dibs/shared/bills";
 import { Once } from "@/components/moments/Once";
+import { ShareButton } from "../ShareButton";
+import { siteUrl } from "@/lib/site";
 import { OWE_REMIND_AFTER_MS, OWE_REMIND_AGAIN_MS, TELL_PAYER_AFTER_MS } from "@/lib/nudges";
 import { allSquare, oweReminder, tellPayer } from "@/lib/copy";
 
@@ -78,7 +80,36 @@ export default async function Bills({ params, searchParams }: Props) {
     const profile = payer?.user_id ? await store.getProfile(payer.user_id) : null;
     return profile?.payid ? { name: `${profile.first_name} ${profile.last_name}`, payid: profile.payid } : null;
   };
-  const myPayids = await Promise.all(myOwing.map(async (s) => ({ share: s, bill: bills.find((b) => b.id === s.bill_id)!, pay: await payidFor(bills.find((b) => b.id === s.bill_id)!) })));
+  // Netting (ARV-25): when I owe someone and they owe me on different bills, it's one payment.
+  const payerOfBill = new Map(bills.map((b) => [b.id, b.payer_member_id]));
+  const openShares = owedShares.filter((s) => s.status === "owed");
+  const iOweTo = (id: string) => openShares.filter((s) => s.member_id === me.id && payerOfBill.get(s.bill_id) === id);
+  const theyOweMe = (id: string) => openShares.filter((s) => s.member_id === id && payerOfBill.get(s.bill_id) === me.id);
+  const nettedWith = new Set(
+    [...new Set(openShares.filter((s) => s.member_id === me.id).map((s) => payerOfBill.get(s.bill_id)!))].filter((id) => theyOweMe(id).length > 0)
+  );
+  const billTitle = (id: string) => bills.find((b) => b.id === id)?.title ?? "a bill";
+  const netCards = await Promise.all(
+    [...nettedWith].map(async (id) => {
+      const mine = iOweTo(id);
+      const theirs = theyOweMe(id);
+      const [d] = netDebts([
+        ...mine.map((x) => ({ from: me.id, to: id, cents: x.amount_cents })),
+        ...theirs.map((x) => ({ from: id, to: me.id, cents: x.amount_cents })),
+      ]);
+      const net = !d ? 0 : d.from === me.id ? d.cents : -d.cents;
+      return { id, mine, theirs, net, pay: net > 0 ? await payidFor(bills.find((b) => b.id === mine[0]!.bill_id)!) : null };
+    })
+  );
+  // Their confirm row shows the net amount: shares squared off at the moment I said I'd paid.
+  const offsetFor = (memberId: string, at: string | null) =>
+    at ? shares.filter((x) => x.member_id === me.id && payerOfBill.get(x.bill_id) === memberId && x.confirmed_at === at).reduce((n, x) => n + x.amount_cents, 0) : 0;
+
+  const myPayids = await Promise.all(
+    myOwing
+      .filter((s) => !nettedWith.has(payerOfBill.get(s.bill_id)!))
+      .map(async (s) => ({ share: s, bill: bills.find((b) => b.id === s.bill_id)!, pay: await payidFor(bills.find((b) => b.id === s.bill_id)!) }))
+  );
   const ref = `Dibs ${plan.title}`.slice(0, 35);
 
   // Private money reminders (ARV-24): shown only to the person they're about, never posted.
@@ -169,12 +200,57 @@ export default async function Bills({ params, searchParams }: Props) {
           </section>
         )}
 
+        {me.role === "organiser" && owedShares.length > 0 && settled < owedShares.length && (
+          <ShareButton
+            quiet
+            label="Update the group"
+            title={plan.title}
+            url={`${siteUrl()}/p/${slug}/bills`}
+            text={`${plan.title}: ${settled} of ${owedShares.length} settled. If you still owe, your amount and the PayID are here 👉 ${siteUrl()}/p/${slug}/bills`}
+          />
+        )}
+
         {payerNote && (
           <div className="db-alert db-alert--information" role="status">
             <i className="ri-eye-off-line db-icon" aria-hidden="true" />
             <div>{payerNote}</div>
           </div>
         )}
+
+        {netCards.map(({ id, mine, theirs, net, pay }) => (
+          <section key={id} className="db-card section" aria-label={`Settling up with ${first(id)}`}>
+            <span className="db-plan__eyebrow">You and {first(id)} · netted</span>
+            <h2 className="title-h4">
+              {net > 0 ? <>Pay {first(id)} <span className="money">{formatAud(net)}</span></> : net < 0 ? <>{first(id)} pays you <span className="money">{formatAud(-net)}</span></> : <>You and {first(id)} are square</>}
+            </h2>
+            <ul className="netting">
+              {mine.map((x) => (
+                <li key={x.bill_id}><span>You owe {first(id)} for {billTitle(x.bill_id)}</span><span className="money">{formatAud(x.amount_cents)}</span></li>
+              ))}
+              {theirs.map((x) => (
+                <li key={x.bill_id}><span>{first(id)} owes you for {billTitle(x.bill_id)}</span><span className="money">−{formatAud(x.amount_cents)}</span></li>
+              ))}
+            </ul>
+            {net > 0 && pay ? (
+              <>
+                <div className="payid">
+                  <div className="payid__row"><div><span>Pay to</span><strong className="payid__name">{pay.name}</strong></div><CopyButton value={pay.name} label="name" /></div>
+                  <div className="payid__row"><div><span>PayID</span><strong>{pay.payid}</strong></div><CopyButton value={pay.payid} label="PayID" /></div>
+                  <div className="payid__row"><div><span>Amount</span><strong>{(net / 100).toFixed(2)}</strong></div><CopyButton value={(net / 100).toFixed(2)} label="amount" /></div>
+                  <div className="payid__row"><div><span>Reference</span><strong className="payid__name">{ref}</strong></div><CopyButton value={ref} label="reference" /></div>
+                </div>
+                <p className="paragraph-sm muted">You each paid for something, so it&rsquo;s one payment instead of two. dibs never touches the money.</p>
+                <form action={settleNet.bind(null, slug, id)}><button className="db-btn db-btn--primary db-btn--block"><i className="ri-check-line db-icon" aria-hidden="true" />I&rsquo;ve paid {first(id)} {formatAud(net)}</button></form>
+              </>
+            ) : net > 0 ? (
+              <p className="paragraph-sm muted">{first(id)} hasn&rsquo;t added a PayID yet.</p>
+            ) : net === 0 ? (
+              <form action={settleNet.bind(null, slug, id)}><button className="db-btn db-btn--primary db-btn--block"><i className="ri-check-double-line db-icon" aria-hidden="true" />It cancels out. Call it square</button></form>
+            ) : (
+              <p className="paragraph-sm muted">{first(id)} sees the same thing and pays you the difference.</p>
+            )}
+          </section>
+        ))}
 
         {myPayids.map(({ share, bill, pay }) => (
           <section key={bill.id} className="db-card section" aria-label={`You owe ${first(bill.payer_member_id)}`}>
@@ -233,7 +309,7 @@ export default async function Bills({ params, searchParams }: Props) {
         })}
 
         {iPaid.filter((b) => !(b.split_mode === "roulette" && !b.roulette_loser_id)).map((b) => (
-          <PayerCard key={b.id} slug={slug} bill={b} shares={shares.filter((s) => s.bill_id === b.id && s.member_id !== me.id)} byId={byId} />
+          <PayerCard key={b.id} slug={slug} bill={b} shares={shares.filter((s) => s.bill_id === b.id && s.member_id !== me.id)} byId={byId} offsetFor={offsetFor} />
         ))}
 
         {bills.length === 0 && (
@@ -253,7 +329,19 @@ export default async function Bills({ params, searchParams }: Props) {
   );
 }
 
-function PayerCard({ slug, bill, shares, byId }: { slug: string; bill: Bill; shares: BillShare[]; byId: Map<string, PlanMember> }) {
+function PayerCard({
+  slug,
+  bill,
+  shares,
+  byId,
+  offsetFor,
+}: {
+  slug: string;
+  bill: Bill;
+  shares: BillShare[];
+  byId: Map<string, PlanMember>;
+  offsetFor: (memberId: string, at: string | null) => number;
+}) {
   const square = shares.filter((s) => s.status === "confirmed").length;
   return (
     <section className="db-card db-split" aria-label={`Your bill: ${bill.title}`}>
@@ -272,7 +360,15 @@ function PayerCard({ slug, bill, shares, byId }: { slug: string; bill: Bill; sha
             {m && <Monogram name={m.display_name} colour={m.colour} size="sm" />}
             <span className="db-split__who">
               {m?.display_name ?? "Someone"}
-              <small>{s.status === "says_paid" ? "Says they've paid" : s.status === "confirmed" ? "Paid" : "Owes"}</small>
+              <small>
+                {s.status === "says_paid"
+                  ? offsetFor(s.member_id, s.says_paid_at) > 0
+                    ? `Says they've paid ${formatAud(s.amount_cents - offsetFor(s.member_id, s.says_paid_at))}, net of the ${formatAud(offsetFor(s.member_id, s.says_paid_at))} you owed them`
+                    : "Says they've paid"
+                  : s.status === "confirmed"
+                    ? "Paid"
+                    : "Owes"}
+              </small>
             </span>
             {s.status === "confirmed" ? (
               <span className="db-badge db-badge--success"><i className="ri-check-line db-icon" aria-hidden="true" />Square</span>

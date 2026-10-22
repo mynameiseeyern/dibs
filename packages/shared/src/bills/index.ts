@@ -188,6 +188,37 @@ export function owedToPayer(shares: readonly Share[], payerId: string): Share[] 
   return shares.filter((s) => s.personId !== payerId && s.cents > 0);
 }
 
+export interface Debt {
+  from: string;
+  to: string;
+  cents: number;
+}
+
+/**
+ * Nets debts between each pair of people, across all their bills: if Ee owes Sam $20 for
+ * dinner and Sam owes Ee $5 for drinks, Ee pays Sam $15 and that's it. Pairwise only:
+ * money never routes through a third person, so nobody pays someone they didn't owe.
+ * Returns one debt per pair that still owes something, in a stable order.
+ */
+export function netDebts(debts: readonly Debt[]): Debt[] {
+  const pairs = new Map<string, { a: string; b: string; aToB: number }>();
+  for (const d of debts) {
+    assertCents(d.cents, "Each debt");
+    if (d.from === d.to || d.cents === 0) continue;
+    const [a, b] = d.from < d.to ? [d.from, d.to] : [d.to, d.from];
+    const key = `${a}|${b}`;
+    const p = pairs.get(key) ?? { a, b, aToB: 0 };
+    p.aToB += d.from === a ? d.cents : -d.cents;
+    pairs.set(key, p);
+  }
+  const out: Debt[] = [];
+  for (const p of [...pairs.values()].sort((x, y) => `${x.a}|${x.b}`.localeCompare(`${y.a}|${y.b}`))) {
+    if (p.aToB > 0) out.push({ from: p.a, to: p.b, cents: p.aToB });
+    else if (p.aToB < 0) out.push({ from: p.b, to: p.a, cents: -p.aToB });
+  }
+  return out;
+}
+
 export function formatAud(cents: number, currency = "AUD"): string {
   return new Intl.NumberFormat("en-AU", { style: "currency", currency }).format(cents / 100);
 }

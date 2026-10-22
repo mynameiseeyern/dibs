@@ -4,7 +4,7 @@ import { renderTemplate, type Template } from "@/lib/copy";
 import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { BillError, rouletteAllowed, spinRoulette, splitBill } from "@dibs/shared/bills";
+import { BillError, formatAud, netDebts, rouletteAllowed, spinRoulette, splitBill } from "@dibs/shared/bills";
 import { store } from "@/lib/store";
 import { loadPlan } from "@/lib/viewer";
 
@@ -71,12 +71,39 @@ export async function addBill(slug: string, _prev: FormState, form: FormData): P
     await store.createBill({ ...base, split_mode: "roulette" }, []);
   } else {
     try {
+      const splitMode = mode === "exclude" || mode === "amount" || mode === "percent" ? mode : "even";
+      // "$" and "%": one field per person, blank means nothing.
+      const amounts: Record<string, number> = {};
+      const basisPoints: Record<string, number> = {};
+      for (const m of attendees) {
+        const raw = clean(form.get(`${splitMode}:${m.id}`), 20);
+        if (!raw) continue;
+        if (splitMode === "amount") {
+          const c = toCents(raw);
+          if (c === null) return { error: `${m.display_name.split(" ")[0]}'s amount doesn't look right.` };
+          if (c > 0) amounts[m.id] = c;
+        } else if (splitMode === "percent") {
+          const pct = Number(raw.replace(/[%\s]/g, ""));
+          if (!Number.isFinite(pct) || pct < 0) return { error: `${m.display_name.split(" ")[0]}'s percentage doesn't look right.` };
+          if (pct > 0) basisPoints[m.id] = Math.round(pct * 100);
+        }
+      }
+      const added = Object.values(amounts).reduce((n, c) => n + c, 0);
+      if (splitMode === "amount" && added !== total) return { error: `The amounts add up to ${formatAud(added)}, but the bill is ${formatAud(total)}.` };
       const shares = splitBill(
-        { totalCents: total, payerId: view.me.id, mode: mode === "exclude" ? "exclude" : "even", seed: base.seed, excludedIds: attendees.filter((m) => !on.includes(m)).map((m) => m.id) },
+        {
+          totalCents: total,
+          payerId: view.me.id,
+          mode: splitMode,
+          seed: base.seed,
+          excludedIds: attendees.filter((m) => !on.includes(m)).map((m) => m.id),
+          amounts,
+          basisPoints,
+        },
         attendees.map((m) => ({ id: m.id, plusOnes: m.plus_one ? 1 : 0 }))
       ).filter((s) => s.cents > 0);
       await store.createBill(
-        { ...base, split_mode: mode === "exclude" ? "exclude" : "even" },
+        { ...base, split_mode: splitMode },
         shares.map((s) => ({ member_id: s.personId, amount_cents: s.cents, status: s.status }))
       );
     } catch (e) {
@@ -156,5 +183,34 @@ export async function confirmPaid(slug: string, billId: string, memberId: string
   const r = await billFor(slug, billId);
   if (!r || r.bill.payer_member_id !== r.me.id) return;
   await store.updateShare(billId, memberId, { status: "confirmed", confirmed_at: new Date().toISOString() });
+  revalidatePath(path(slug));
+}
+
+/**
+ * Settle up with someone you each owe across different bills (netting, ARV-25).
+ * Net owed by me: my shares to them go to "says paid", and theirs to me are squared off
+ * against it. Both get the same timestamp, so their confirm row can show the net amount.
+ * Net zero: both sides are square straight away.
+ */
+export async function settleNet(slug: string, otherId: string): Promise<void> {
+  const view = await loadPlan(slug);
+  if (!view?.me?.attended) return;
+  const me = view.me;
+  const [bills, shares] = await Promise.all([store.listBills(view.plan.id), store.listShares(view.plan.id)]);
+  const payer = new Map(bills.map((b) => [b.id, b.payer_member_id]));
+  const mine = shares.filter((x) => x.status === "owed" && x.amount_cents > 0 && x.member_id === me.id && payer.get(x.bill_id) === otherId);
+  const theirs = shares.filter((x) => x.status === "owed" && x.amount_cents > 0 && x.member_id === otherId && payer.get(x.bill_id) === me.id);
+  if (mine.length === 0 || theirs.length === 0) return;
+  const [d] = netDebts([
+    ...mine.map((x) => ({ from: me.id, to: otherId, cents: x.amount_cents })),
+    ...theirs.map((x) => ({ from: otherId, to: me.id, cents: x.amount_cents })),
+  ]);
+  const net = !d ? 0 : d.from === me.id ? d.cents : -d.cents;
+  if (net < 0) return; // they owe me after netting: theirs to settle
+  const at = new Date().toISOString();
+  for (const x of mine) {
+    await store.updateShare(x.bill_id, me.id, net === 0 ? { status: "confirmed", confirmed_at: at } : { status: "says_paid", says_paid_at: at });
+  }
+  for (const x of theirs) await store.updateShare(x.bill_id, otherId, { status: "confirmed", confirmed_at: at });
   revalidatePath(path(slug));
 }

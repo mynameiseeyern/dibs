@@ -22,7 +22,7 @@ import { owedToYou, youOwe } from "@/lib/copy";
 import { store } from "@/lib/store";
 import { formatShort, formatWhen } from "@/lib/time";
 import { loadPlan } from "@/lib/viewer";
-import { addOption, joinPlan, lockPlan, postMessage, removeMe, setRsvp, toggleDibbyMute, vote } from "./actions";
+import { addOption, joinPlan, lockPlan, postMessage, removeMe, setRsvp, toggleDibbyMute, toggleReaction, vote } from "./actions";
 import { JoinForm } from "./JoinForm";
 import { ShareButton } from "./ShareButton";
 import { Thread } from "./Thread";
@@ -57,6 +57,7 @@ export default async function PlanPage({ params }: Props) {
   const [options, votes, firstMessages] = await Promise.all([store.listOptions(plan.id), store.listVotes(plan.id), store.listMessages(plan.id, 50)]);
   // Dibby's automatic nudges are checked on page load (we're on Vercel Hobby: no frequent cron).
   const messages = (await nudgeIfDue(plan, members, options, votes)) ? await store.listMessages(plan.id, 50) : firstMessages;
+  const reactions = await store.listReactions(plan.id);
   const voteRows = options.map((o) => ({ ...o, votes: votes.filter((v) => v.option_id === o.id).length, mine: Boolean(me && votes.some((v) => v.option_id === o.id && v.member_id === me.id)) }));
   const started = plan.starts_at ? Date.parse(plan.starts_at) < Date.now() : false;
 
@@ -241,6 +242,15 @@ export default async function PlanPage({ params }: Props) {
               setRsvp={setRsvp.bind(null, slug)}
               vibe={plan.vibe}
             />
+            {me.rsvp === "in" && !me.waitlisted && !isHost && (
+              <ShareButton
+                quiet
+                label="Tell the group"
+                title={plan.title}
+                url={url}
+                text={`I'm in for ${plan.title}! ${inCount} going so far 👉 ${url}`}
+              />
+            )}
             {me.rsvp === "in" && !me.waitlisted && me.role === "guest" && (
               <p className="paragraph-sm muted">Get the dibs app to see all your plans in one place. Coming soon to the App Store.</p>
             )}
@@ -296,6 +306,9 @@ export default async function PlanPage({ params }: Props) {
                     <Thread
                       messages={me?.dibby_muted ? messages.filter((m) => !m.auto) : messages}
                       vibe={plan.vibe}
+                      reactions={reactions}
+                      react={me?.user_id ? toggleReaction.bind(null, slug) : undefined}
+                      summary={[plan.title, when, plan.venue_name ?? plan.area, `${inCount} going`].filter(Boolean).join(" · ")}
                       members={members}
                       meId={me?.id ?? null}
                       canPost={Boolean(me?.user_id)}

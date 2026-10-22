@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { makeSlug, pickColour } from "@dibs/shared/plans";
-import type { Bill, BillShare, Guest, Message, NewMember, NewPlan, Plan, PlanMember, PlanOption, Profile, Store, Vote, RecapAnswer } from "./types";
+import type { Bill, BillShare, Guest, Message, NewMember, NewPlan, Plan, PlanMember, PlanOption, Profile, Store, Vote, RecapAnswer, Reaction } from "./types";
 
 // In-memory store for local runs without Supabase. Lost on restart.
 interface Db {
@@ -15,6 +15,7 @@ interface Db {
   shares: BillShare[];
   recap: RecapAnswer[];
   nudges: { plan_id: string; kind: string; key: string; at: number }[];
+  reactions: (Reaction & { plan_id: string })[];
 }
 
 const g = globalThis as unknown as { __dibsDb?: Db };
@@ -30,8 +31,10 @@ const db: Db = (g.__dibsDb ??= {
   shares: [],
   recap: [],
   nudges: [],
+  reactions: [],
 });
 db.nudges ??= [];
+db.reactions ??= [];
 
 db.recap ??= [];
 
@@ -224,6 +227,15 @@ export const memoryStore: Store = {
   async saveRecap(a) {
     db.recap = db.recap.filter((r) => !(r.plan_id === a.plan_id && r.member_id === a.member_id));
     db.recap.push(a);
+  },
+
+  async listReactions(planId) {
+    return db.reactions.filter((r) => r.plan_id === planId).map(({ message_id, member_id, emoji }) => ({ message_id, member_id, emoji }));
+  },
+  async toggleReaction({ planId, message_id, member_id, emoji }) {
+    const i = db.reactions.findIndex((r) => r.message_id === message_id && r.member_id === member_id && r.emoji === emoji);
+    if (i >= 0) db.reactions.splice(i, 1);
+    else db.reactions.push({ plan_id: planId, message_id, member_id, emoji });
   },
 
   async claimNudge(planId, kind, key) {

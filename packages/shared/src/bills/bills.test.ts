@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BillError, owedToPayer, rouletteAllowed, rouletteTally, spinRoulette, splitBill, type BillPerson } from "./index";
+import { BillError, netDebts, owedToPayer, rouletteAllowed, rouletteTally, spinRoulette, splitBill, type BillPerson } from "./index";
 
 const crew: BillPerson[] = [{ id: "ana" }, { id: "ben" }, { id: "cam" }];
 const sum = (xs: { cents: number }[]) => xs.reduce((s, x) => s + x.cents, 0);
@@ -130,5 +130,35 @@ describe("roulette rules", () => {
       ["a", 3, 1, 20_00],
       ["c", 2, 0, 0],
     ]);
+  });
+});
+
+describe("netting across bills", () => {
+  it("nets two people who each paid for something into one payment", () => {
+    expect(netDebts([{ from: "ee", to: "sam", cents: 2000 }, { from: "sam", to: "ee", cents: 500 }])).toEqual([{ from: "ee", to: "sam", cents: 1500 }]);
+  });
+  it("adds up several bills between the same pair", () => {
+    expect(netDebts([{ from: "ee", to: "sam", cents: 1000 }, { from: "ee", to: "sam", cents: 250 }, { from: "sam", to: "ee", cents: 300 }])).toEqual([{ from: "ee", to: "sam", cents: 950 }]);
+  });
+  it("drops a pair that cancels out exactly", () => {
+    expect(netDebts([{ from: "ee", to: "sam", cents: 700 }, { from: "sam", to: "ee", cents: 700 }])).toEqual([]);
+  });
+  it("never routes money through a third person", () => {
+    const out = netDebts([{ from: "a", to: "b", cents: 1000 }, { from: "b", to: "c", cents: 1000 }]);
+    expect(out).toEqual([{ from: "a", to: "b", cents: 1000 }, { from: "b", to: "c", cents: 1000 }]);
+  });
+  it("conserves what everyone is owed overall", () => {
+    const debts = [
+      { from: "a", to: "b", cents: 1234 },
+      { from: "b", to: "a", cents: 999 },
+      { from: "c", to: "a", cents: 500 },
+      { from: "a", to: "c", cents: 1 },
+    ];
+    const balance = (ds: { from: string; to: string; cents: number }[], who: string) => ds.reduce((n, d) => n + (d.to === who ? d.cents : 0) - (d.from === who ? d.cents : 0), 0);
+    const out = netDebts(debts);
+    for (const who of ["a", "b", "c"]) expect(balance(out, who)).toBe(balance(debts, who));
+  });
+  it("rejects fractions of a cent", () => {
+    expect(() => netDebts([{ from: "a", to: "b", cents: 1.5 }])).toThrow(BillError);
   });
 });

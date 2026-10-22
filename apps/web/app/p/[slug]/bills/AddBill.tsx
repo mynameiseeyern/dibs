@@ -7,9 +7,11 @@ import { ROULETTE_CAP_CENTS, rouletteAllowed } from "@dibs/shared/bills";
 
 type Person = { id: string; name: string };
 const MODES = [
-  { id: "even", label: "Even" },
-  { id: "exclude", label: "Not all" },
-  { id: "roulette", label: "Spin" },
+  { id: "even", label: "Even", name: "Split evenly" },
+  { id: "exclude", label: "Not all", name: "Split evenly, not everyone" },
+  { id: "amount", label: "$", name: "Dollar amounts" },
+  { id: "percent", label: "%", name: "Percentages" },
+  { id: "roulette", label: "Spin", name: "Card roulette" },
 ] as const;
 
 const cents = (raw: string) => {
@@ -27,6 +29,13 @@ export function AddBill({ action, people, needsPayid }: { action: (s: FormState,
     if (mode === "roulette" && !rouletteAllowed(cents(v)) && cents(v) > 0) setMode("even");
   };
   const [on, setOn] = useState<Set<string>>(new Set(people.map((p) => p.id)));
+  const [parts, setParts] = useState<Record<string, string>>({});
+  const custom = mode === "amount" || mode === "percent";
+  const num = (raw: string | undefined) => {
+    const n = Number(String(raw ?? "").replace(/[$,%\s]/g, ""));
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  };
+  const partsSum = people.reduce((n, p) => n + num(parts[p.id]), 0);
   const count = mode === "exclude" ? on.size : people.length;
   const each = count ? Math.floor(cents(total) / count) : 0;
 
@@ -50,7 +59,15 @@ export function AddBill({ action, people, needsPayid }: { action: (s: FormState,
           {MODES.map((m) => {
             const tooBig = m.id === "roulette" && cents(total) > ROULETTE_CAP_CENTS;
             return (
-              <button key={m.id} type="button" aria-pressed={mode === m.id} disabled={tooBig} title={tooBig ? `Roulette is for bills up to ${aud(ROULETTE_CAP_CENTS)}` : undefined} onClick={() => setMode(m.id)}>
+              <button
+                key={m.id}
+                type="button"
+                aria-pressed={mode === m.id}
+                aria-label={m.name}
+                disabled={tooBig}
+                title={tooBig ? `Roulette is for bills up to ${aud(ROULETTE_CAP_CENTS)}` : m.name}
+                onClick={() => setMode(m.id)}
+              >
                 {m.label}
               </button>
             );
@@ -69,7 +86,23 @@ export function AddBill({ action, people, needsPayid }: { action: (s: FormState,
             {people.map((p) => (
               <label key={p.id} className="db-check tick">
                 <span className="label-md person__name">{p.name}</span>
-                <span className="money">{mode === "exclude" && !on.has(p.id) ? "—" : cents(total) ? aud(each) : ""}</span>
+                {custom ? (
+                  <span className="db-input split-part">
+                    {mode === "amount" && <span className="money muted" aria-hidden="true">$</span>}
+                    <input
+                      name={`${mode}:${p.id}`}
+                      inputMode="decimal"
+                      className="money"
+                      placeholder="0"
+                      value={parts[p.id] ?? ""}
+                      onChange={(e) => setParts((x) => ({ ...x, [p.id]: e.target.value }))}
+                      aria-label={`${p.name}'s ${mode === "amount" ? "amount" : "percentage"}`}
+                    />
+                    {mode === "percent" && <span className="money muted" aria-hidden="true">%</span>}
+                  </span>
+                ) : (
+                  <span className="money">{mode === "exclude" && !on.has(p.id) ? "—" : cents(total) ? aud(each) : ""}</span>
+                )}
                 {mode === "exclude" && (
                   <input
                     type="checkbox"
@@ -85,7 +118,17 @@ export function AddBill({ action, people, needsPayid }: { action: (s: FormState,
           </div>
         </div>
       )}
-      {mode !== "roulette" && cents(total) % Math.max(count, 1) !== 0 && (
+      {mode === "amount" && (
+        <p className={`paragraph-sm ${cents(total) && Math.round(partsSum * 100) !== cents(total) ? "" : "muted"}`} aria-live="polite">
+          Adds up to {aud(Math.round(partsSum * 100))}{cents(total) ? ` of ${aud(cents(total))}` : ""}. Leave anyone who isn&rsquo;t paying blank.
+        </p>
+      )}
+      {mode === "percent" && (
+        <p className={`paragraph-sm ${Math.round(partsSum * 100) !== 10000 ? "" : "muted"}`} aria-live="polite">
+          Adds up to {Number(partsSum.toFixed(2))}% of 100%. Any leftover cent goes to one person.
+        </p>
+      )}
+      {!custom && mode !== "roulette" && cents(total) % Math.max(count, 1) !== 0 && (
         <p className="paragraph-sm muted">Doesn't split evenly, so one person picks up the extra cent or two.</p>
       )}
 

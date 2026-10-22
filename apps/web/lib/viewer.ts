@@ -51,12 +51,14 @@ export async function whoIsHere(): Promise<Here> {
 export async function loadPlan(slug: string): Promise<PlanView | null> {
   const plan = await store.getPlanBySlug(slug);
   if (!plan) return null;
-  if (plan.expires_at && Date.parse(plan.expires_at) < Date.now()) return null;
+  // 30 days after the event the link stops working for anyone who isn't in the plan.
+  const expired = Boolean(plan.expires_at && Date.parse(plan.expires_at) < Date.now());
 
   const here = await whoIsHere();
   const { organiser, guest } = here;
   const members = await store.listMembers(plan.id);
   const me =
     members.find((m) => organiser && m.user_id === organiser.id) ?? members.find((m) => guest && m.guest_id === guest.id) ?? null;
+  if (expired && !me) return null;
   return { plan, members, me, organiser, guest, isHost: me?.role === "organiser" || me?.role === "cohost", here };
 }

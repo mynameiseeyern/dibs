@@ -51,7 +51,8 @@ Rules:
 - Banter is playful, never personal: you can tease about RSVPs and lateness only.
 - Never mention who owes money, amounts owed, looks, health, or anything sensitive.
 - If you can't find options, say so and ask one question (area or budget). Don't make up venues as if you checked them.
-- You can't book, pay, or message anyone outside this plan.`;
+- You can't book, pay, or message anyone outside this plan.
+- If someone asks what they missed or for a catch-up, sum up the recent messages and the plan's state in at most two sentences: decisions, changes, who's in. Never repeat money owed, private details, or anyone's exact words at length.`;
 
 // ---------- Draft a plan from one message ----------
 

@@ -88,6 +88,10 @@ export interface Store {
   listRecap(planId: string): Promise<RecapAnswer[]>;
   saveRecap(a: RecapAnswer): Promise<void>;
 
+  listReactions(planId: string): Promise<Reaction[]>;
+  /** Adds the reaction, or takes it off if this person already left it. */
+  toggleReaction(r: Reaction & { planId: string }): Promise<void>;
+
   /** Claim one of Dibby's automatic nudges. True only for the first caller; false if already sent. */
   claimNudge(planId: string, kind: string, key: string): Promise<boolean>;
   /** How many automatic nudges a plan has had since a time, for the daily cap. */
@@ -103,3 +107,10 @@ export interface RecapAnswer {
 }
 
 export type { Plan, PlanMember, Rsvp, PlanOption, Vote, Message, Bill, BillShare };
+
+export const REACTIONS = ["👍", "❤️", "😂", "🎉"] as const;
+export interface Reaction {
+  message_id: string;
+  member_id: string;
+  emoji: (typeof REACTIONS)[number];
+}
