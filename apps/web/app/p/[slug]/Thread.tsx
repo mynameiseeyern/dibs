@@ -5,6 +5,7 @@ import { Monogram } from "@/components/Monogram";
 import { TZ } from "@/lib/time";
 import { Composer, ReadOnlyComposer } from "./Composer";
 import { Fresh } from "@/components/moments/Fresh";
+import { StickToBottom } from "@/components/StickToBottom";
 import type { FormState } from "./actions";
 import { splitPlanLink } from "@/lib/thread-links";
 import { asTemplate, renderTemplate } from "@/lib/copy";
@@ -105,6 +106,7 @@ export function Thread({
               );
             })}
             </Fresh>
+            <StickToBottom />
           </div>
         )}
         {readOnly ? (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState, useTransition } from "react";
+import { useActionState, useOptimistic, useRef, useState, useTransition } from "react";
 import type { PlanOption } from "@dibs/shared/types";
 import type { FormState } from "./actions";
 import { Fresh } from "@/components/moments/Fresh";
@@ -42,10 +42,20 @@ export function VoteList({
   /** The plan's area, to start the map search near it. */
   area?: string | null;
 }) {
-  const total = rows.reduce((n, r) => n + r.votes, 0);
-  const top = Math.max(0, ...rows.map((r) => r.votes));
   const [state, addAction, adding] = useActionState(add, undefined);
   const [, startTransition] = useTransition();
+  // The tap moves your vote straight away: counts and bars update here, the server saves it behind,
+  // and the next refresh replaces this with the real numbers (one vote per plan, so it moves, not adds).
+  const [shownRows, moveVote] = useOptimistic(rows, (current: VoteRow[], optionId: string) =>
+    current.map((r) => {
+      if (r.id === optionId) return r.mine ? r : { ...r, mine: true, votes: r.votes + 1 };
+      if (r.mine) return { ...r, mine: false, votes: Math.max(0, r.votes - 1) };
+      return r;
+    })
+  );
+  const [voting, startVote] = useTransition();
+  const total = shownRows.reduce((n, r) => n + r.votes, 0);
+  const top = Math.max(0, ...shownRows.map((r) => r.votes));
   const [picking, setPicking] = useState(false);
   const [openRow, setOpenRow] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<VoteRow | null>(null);
@@ -70,7 +80,7 @@ export function VoteList({
       {anyRemovable && (
         <p className="paragraph-xs muted">{canRemoveAll ? "Swipe an option left to take it off." : "Swipe a place you added left to take it off."}</p>
       )}
-      {rows.map((r) => {
+      {shownRows.map((r) => {
         const share = total ? Math.round((r.votes / total) * 100) : 0;
         const winning = top > 0 && r.votes === top;
         const option = (
@@ -79,10 +89,15 @@ export function VoteList({
             className={`db-vote${winning ? " db-vote--winning" : ""}`}
             aria-pressed={r.mine}
             disabled={!canVote || !open}
+            aria-busy={voting && r.mine ? true : undefined}
             onClick={() => {
               if (openRow === r.id) return setOpenRow(null);
               if (readOnly) return void toast.info(readOnly);
-              void vote(r.id);
+              if (r.mine) return;
+              startVote(async () => {
+                moveVote(r.id);
+                await vote(r.id);
+              });
             }}
           >
             <span className="db-vote__title">{r.label}</span>
