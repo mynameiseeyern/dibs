@@ -6,7 +6,8 @@ import { useEffect, useState } from "react";
  * One "Add to calendar" button that opens the phone's own calendar.
  * iPhone, iPad and Mac open a .ics straight into Apple Calendar's add-event sheet;
  * Android has no equivalent for .ics, so it goes to Google Calendar's add-event screen.
- * Elsewhere the button uses the .ics, with Google Calendar as a fallback link.
+ * Everywhere but Android also gets a Google Calendar link. On iPhone it opens in the browser
+ * (the Google Calendar app doesn't take add-event links), then syncs to the app.
  */
 export function AddToCalendar({ icsHref, googleHref }: { icsHref: string; googleHref: string }) {
   const [platform, setPlatform] = useState<"apple" | "android" | "other">("other");
@@ -30,7 +31,7 @@ export function AddToCalendar({ icsHref, googleHref }: { icsHref: string; google
         <i className="ri-calendar-event-line db-icon" aria-hidden="true" />
         Add to calendar
       </a>
-      {platform === "other" && (
+      {platform !== "android" && (
         <a className="paragraph-sm muted" href={googleHref} target="_blank" rel="noreferrer">
           Use Google Calendar instead
         </a>
