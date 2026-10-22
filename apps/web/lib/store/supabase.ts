@@ -135,7 +135,10 @@ export const supabaseStore: Store = {
           starts_at: p.startsAt,
           vibe: p.vibe,
           plus_ones: p.plusOnes,
-          vote_deadline: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
+          status: p.venue ? "locked" : "voting",
+          venue_place_id: p.venue?.placeId ?? null,
+          venue_name: p.venue?.name ?? null,
+          vote_deadline: p.venue ? null : new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
           expires_at: p.startsAt ? new Date(Date.parse(p.startsAt) + 30 * 86400 * 1000).toISOString() : null,
         })
         .select()
@@ -191,6 +194,10 @@ export const supabaseStore: Store = {
     return must(
       await admin().from("options").insert({ plan_id: planId, label, place_id: placeId ?? null, note: note ?? null, added_by: addedBy ?? null }).select().single()
     ) as PlanOption;
+  },
+  async removeOption(planId, optionId) {
+    // Votes on it go too (votes.option_id cascades).
+    must(await admin().from("options").delete().eq("id", optionId).eq("plan_id", planId));
   },
   async listVotes(planId) {
     return must(await admin().from("votes").select("option_id, member_id, options!inner(plan_id)").eq("options.plan_id", planId)).map(

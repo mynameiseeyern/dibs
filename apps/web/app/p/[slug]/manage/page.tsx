@@ -1,7 +1,9 @@
 import { notFound, redirect } from "next/navigation";
 import { TZ } from "@/lib/time";
 import { loadPlan } from "@/lib/viewer";
-import { cancelPlan, setDibbyVolume, setVibe, updateDetails } from "./actions";
+import { cancelPlan, openVote, setDibbyVolume, setPlace, setVibe, updateDetails } from "./actions";
+import { PlaceSection } from "./PlaceSection";
+import { store } from "@/lib/store";
 import { VibePick } from "@/components/VibePick";
 import { ManageForm } from "./ManageForm";
 import * as Button from "@/components/ui/button";
@@ -39,6 +41,7 @@ export default async function Manage({ params }: { params: Promise<{ slug: strin
   const { plan, isHost } = view;
   if (!isHost || plan.status === "cancelled" || plan.status === "wrapped") redirect(`/p/${slug}`);
   const locked = plan.status === "locked";
+  const optionCount = (await store.listOptions(plan.id)).length;
 
   return (
     <main className="page">
@@ -53,11 +56,19 @@ export default async function Manage({ params }: { params: Promise<{ slug: strin
         <span className="subheading-sm eyebrow">{plan.title}</span>
         <h1 className="title-h3">Edit the plan</h1>
       </div>
+      <PlaceSection
+        status={locked ? "locked" : "voting"}
+        venue={plan.venue_name}
+        area={plan.area}
+        optionCount={optionCount}
+        setPlace={setPlace.bind(null, slug)}
+        openVote={openVote.bind(null, slug)}
+      />
       <ManageForm
         action={updateDetails.bind(null, slug)}
         cancel={cancelPlan.bind(null, slug)}
-        placeLabel={locked ? "Where" : "Where-ish"}
-        initial={{ title: plan.title, startsAt: toLocalInput(plan.starts_at), place: (locked ? plan.venue_name : plan.area) ?? "" }}
+        placeLabel={locked ? null : "Where-ish"}
+        initial={{ title: plan.title, startsAt: toLocalInput(plan.starts_at), place: plan.area ?? "" }}
       />
       <section className="db-card section" aria-labelledby="vibe-h">
         <h2 id="vibe-h" className="title-h4">Vibe</h2>

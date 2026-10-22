@@ -22,7 +22,7 @@ import { owedToYou, youOwe } from "@/lib/copy";
 import { store } from "@/lib/store";
 import { formatShort, formatWhen } from "@/lib/time";
 import { loadPlan } from "@/lib/viewer";
-import { addOption, joinPlan, lockPlan, postMessage, removeMe, setRsvp, toggleDibbyMute, toggleReaction, vote } from "./actions";
+import { addOption, joinPlan, lockPlan, postMessage, removeMe, removeOption, setRsvp, toggleDibbyMute, toggleReaction, vote } from "./actions";
 import { JoinForm } from "./JoinForm";
 import { ShareButton } from "./ShareButton";
 import { Thread } from "./Thread";
@@ -289,7 +289,15 @@ export default async function PlanPage({ params }: Props) {
                                 : `Locked in: ${plan.venue_name ?? "the winner"}`}
                             </span>
                           </div>
-                          <VoteList rows={voteRows} canVote={Boolean(me)} open={plan.status === "voting"} vote={vote.bind(null, slug)} add={addOption.bind(null, slug)} />
+                          <VoteList
+                            rows={voteRows}
+                            canVote={Boolean(me)}
+                            open={plan.status === "voting"}
+                            vote={vote.bind(null, slug)}
+                            add={addOption.bind(null, slug)}
+                            remove={isHost ? removeOption.bind(null, slug) : undefined}
+                            area={plan.area}
+                          />
                           {isHost && plan.status === "voting" && options.length > 0 && (
                             <form action={lockPlan.bind(null, slug)}>
                               <Button.Root mode="ghost" size="small">

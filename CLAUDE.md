@@ -48,6 +48,7 @@ Open `packages/ui/design-system/index.html` in a browser to see every component 
 - Guests have no account by default: signed device cookie (`lib/guest.ts`), every guest write goes through a server action or route.
 - A guest can add an email (`/account`). When someone signs in with it within an hour, or signs in on the browser holding the guest cookie, `store.claimGuests` moves those memberships onto the account (`lib/viewer.ts` `whoIsHere`). Signing out also clears the guest cookie.
 - Amounts are integer cents with a currency code (default AUD).
+- Every place on a plan (vote options, a set place) is a real, open business picked on the map (`components/PlacePicker.tsx`), and the server checks the place ID with `getPlace` before saving. No typed-in places.
 
 ## Layout
 
