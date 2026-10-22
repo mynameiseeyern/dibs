@@ -5,6 +5,7 @@ import { TZ } from "@/lib/time";
 import { Composer } from "./Composer";
 import { Fresh } from "@/components/moments/Fresh";
 import type { FormState } from "./actions";
+import { splitPlanLink } from "@/lib/thread-links";
 
 const time = (iso: string) => new Intl.DateTimeFormat("en-AU", { timeZone: TZ, weekday: "short", hour: "numeric", minute: "2-digit" }).format(new Date(iso));
 
@@ -56,7 +57,7 @@ export function Thread({
                         <div className="db-msg__name">
                           Dibby <span className="db-badge db-badge--accent ai-tag">AI</span>
                         </div>
-                        <div className="db-msg__bubble">{m.body}</div>
+                        <DibbyBody body={m.body} />
                       </div>
                     </div>
                   </div>
@@ -87,5 +88,21 @@ export function Thread({
         )}
       </div>
     </section>
+  );
+}
+
+/** Dibby's message, with a button when it points to another plan. */
+function DibbyBody({ body }: { body: string }) {
+  const { text, slug } = splitPlanLink(body);
+  return (
+    <>
+      <div className="db-msg__bubble">{text}</div>
+      {slug && (
+        <a className="db-btn db-btn--primary thread__plan-link" href={`/p/${slug}`}>
+          <i className="ri-arrow-right-up-line db-icon" aria-hidden="true" />
+          Open the new plan
+        </a>
+      )}
+    </>
   );
 }

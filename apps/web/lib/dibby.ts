@@ -90,23 +90,21 @@ const DRAFT_TOOL: Tool = {
   },
 };
 
-export async function draftPlan(prompt: string, vibe: Vibe): Promise<PlanDraft> {
-  const system = `${RULES}\nVoice: ${VOICE[vibe]}\nRight now in Sydney it is ${nowInSydney()}.`;
-  const res = await claude(system, [{ role: "user", content: prompt.slice(0, 500) }], [DRAFT_TOOL], { type: "tool", name: "draft_plan" });
-  const call = res.content.find((b): b is Extract<Block, { type: "tool_use" }> => b.type === "tool_use");
-  if (!call) throw new Error("Dibby didn't draft a plan");
-  const i = call.input as {
-    title: string;
-    area: string | null;
-    starts_at_local: string | null;
-    search_query: string;
-    suggestions: string[];
-    reply: string;
-  };
+interface DraftInput {
+  title: string;
+  area: string | null;
+  starts_at_local: string | null;
+  search_query: string;
+  suggestions: string[];
+  reply: string;
+}
+
+/** Search real venues for a draft, falling back to Dibby's suggestions when search is down. */
+async function finishDraft(i: DraftInput, vibe: Vibe): Promise<PlanDraft> {
   const found = await searchVenues(i.search_query, i.area);
   const venues: Venue[] =
     found && found.length > 0
-      ? found
+      ? found.slice(0, 3)
       : (i.suggestions ?? []).slice(0, 3).map((name) => ({ placeId: null, name, address: null, rating: null, priceLevel: null }));
   return {
     title: String(i.title).slice(0, 80),
@@ -117,6 +115,14 @@ export async function draftPlan(prompt: string, vibe: Vibe): Promise<PlanDraft> 
     checked: Boolean(found && found.length > 0),
     reply: i.reply,
   };
+}
+
+export async function draftPlan(prompt: string, vibe: Vibe): Promise<PlanDraft> {
+  const system = `${RULES}\nVoice: ${VOICE[vibe]}\nRight now in Sydney it is ${nowInSydney()}.`;
+  const res = await claude(system, [{ role: "user", content: prompt.slice(0, 500) }], [DRAFT_TOOL], { type: "tool", name: "draft_plan" });
+  const call = res.content.find((b): b is Extract<Block, { type: "tool_use" }> => b.type === "tool_use");
+  if (!call) throw new Error("Dibby didn't draft a plan");
+  return finishDraft(call.input as unknown as DraftInput, vibe);
 }
 
 // ---------- Reply when tagged in a plan thread ----------
@@ -132,6 +138,8 @@ export interface ThreadContext {
 export interface ThreadResult {
   reply: string;
   addOptions: Venue[];
+  /** A separate plan Dibby set up, for the action to create. At most one per ask. */
+  newPlan: PlanDraft | null;
 }
 
 const THREAD_TOOLS: Tool[] = [
@@ -153,6 +161,12 @@ const THREAD_TOOLS: Tool[] = [
       required: ["names"],
     },
   },
+  {
+    name: "create_plan",
+    description:
+      "Start a separate new plan for the same crew, with its own vote. Use only when someone asks for a new or different outing (another day, another activity). For more options on this plan, use search_venues and add_options instead. At most once per message.",
+    input_schema: { ...DRAFT_TOOL.input_schema, properties: { ...(DRAFT_TOOL.input_schema.properties as object) } },
+  },
 ];
 
 export async function replyInThread(ctx: ThreadContext, ask: string): Promise<ThreadResult> {
@@ -170,13 +184,14 @@ export async function replyInThread(ctx: ThreadContext, ask: string): Promise<Th
   const turns: Turn[] = [{ role: "user", content: ask.slice(0, 500) }];
   const found = new Map<string, Venue>();
   const toAdd: Venue[] = [];
+  let newPlan: PlanDraft | null = null;
 
   for (let step = 0; step < 4; step++) {
     const res = await claude(system, turns, THREAD_TOOLS);
     const calls = res.content.filter((b): b is Extract<Block, { type: "tool_use" }> => b.type === "tool_use");
     if (calls.length === 0) {
       const text = res.content.filter((b): b is Extract<Block, { type: "text" }> => b.type === "text").map((b) => b.text).join(" ").trim();
-      return { reply: text || "On it.", addOptions: toAdd };
+      return { reply: text || newPlan?.reply || "On it.", addOptions: toAdd, newPlan };
     }
     turns.push({ role: "assistant", content: res.content });
     const results: Block[] = [];
@@ -195,11 +210,23 @@ export async function replyInThread(ctx: ThreadContext, ask: string): Promise<Th
         const added = names.map((n) => found.get(n.toLowerCase())).filter((v): v is Venue => Boolean(v));
         toAdd.push(...added);
         results.push({ type: "tool_result", tool_use_id: c.id, content: added.length ? `Added ${added.map((a) => a.name).join(", ")}.` : "Nothing added: only venues from search can be added." });
+      } else if (c.name === "create_plan") {
+        if (newPlan) {
+          results.push({ type: "tool_result", tool_use_id: c.id, content: "Already set up one new plan for this message." });
+          continue;
+        }
+        newPlan = await finishDraft(c.input as unknown as DraftInput, plan.vibe);
+        const where = newPlan.venues.map((v) => v.name).join(", ") || "no venues yet";
+        results.push({
+          type: "tool_result",
+          tool_use_id: c.id,
+          content: `New plan "${newPlan.title}" is set up with a vote on: ${where}${newPlan.checked ? "" : " (not checked on Maps)"}. Everyone from this plan is invited. A button to open it appears under your reply, so don't paste a link. Reply in one short line.`,
+        });
       }
     }
     turns.push({ role: "user", content: results });
   }
-  return { reply: "Done. Have a look at the vote.", addOptions: toAdd };
+  return { reply: newPlan?.reply ?? "Done. Have a look at the vote.", addOptions: toAdd, newPlan };
 }
 
 export const mentionsDibby = (text: string) => /(^|\s)@dibby\b/i.test(text);

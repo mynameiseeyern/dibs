@@ -3,12 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { hasRoom } from "@dibs/shared/plans";
-import type { Rsvp } from "@dibs/shared/types";
-import { BRB, mentionsDibby, replyInThread } from "@/lib/dibby";
+import type { PlanMember, Rsvp } from "@dibs/shared/types";
+import { BRB, mentionsDibby, replyInThread, type PlanDraft } from "@/lib/dibby";
 import { clearGuestSession, createGuestSession } from "@/lib/guest";
 import { store } from "@/lib/store";
 import { closeVote } from "@/lib/plan-ops";
 import { loadPlan } from "@/lib/viewer";
+import { localToIso } from "@/lib/time";
+import { DIBBY_HEADS_UP, planLinkLine } from "@/lib/thread-links";
 
 export type FormState = { error?: string } | undefined;
 
@@ -92,16 +94,16 @@ export async function postMessage(slug: string, _prev: FormState, form: FormData
         planId: view.plan.id,
         memberId: null,
         kind: "system",
-        body: "Heads up: messages that tag @dibby are sent to an AI provider so Dibby can reply. Dibby only reads messages it's tagged in.",
+        body: DIBBY_HEADS_UP,
       });
     }
-    await runDibby(view.plan.id, slug, body);
+    await runDibby(view.plan.id, slug, body, view.me);
   }
   revalidatePath(`/p/${slug}`);
   return undefined;
 }
 
-async function runDibby(planId: string, slug: string, ask: string) {
+async function runDibby(planId: string, slug: string, ask: string, asker: PlanMember) {
   const view = await loadPlan(slug);
   if (!view) return;
   const [options, votes, recent] = await Promise.all([store.listOptions(planId), store.listVotes(planId), store.listMessages(planId, 20)]);
@@ -121,11 +123,47 @@ async function runDibby(planId: string, slug: string, ask: string) {
     for (const v of out.addOptions) {
       if (!existing.has(v.name.toLowerCase())) await store.addOption({ planId, label: v.name, placeId: v.placeId, note: v.address });
     }
-    await store.addMessage({ planId, memberId: null, kind: "dibby", body: out.reply });
+    let body = out.reply;
+    if (out.newPlan && asker.user_id) {
+      const created = await createFromThread(out.newPlan, asker, view.members, ask);
+      body = `${out.reply}\n${planLinkLine(created.slug)}`;
+    }
+    await store.addMessage({ planId, memberId: null, kind: "dibby", body });
   } catch (e) {
     console.error("[dibby]", e);
     await store.addMessage({ planId, memberId: null, kind: "dibby", body: BRB });
   }
+}
+
+/**
+ * A new plan Dibby set up from a thread: the asker organises it, everyone else from the
+ * current plan is invited without an RSVP, and the vote opens on Dibby's venues.
+ */
+async function createFromThread(draft: PlanDraft, asker: PlanMember, crew: PlanMember[], ask: string) {
+  const plan = await store.createPlan({
+    organiserUserId: asker.user_id!,
+    organiserName: asker.display_name,
+    title: draft.title,
+    area: draft.area,
+    startsAt: draft.startsAtLocal ? localToIso(draft.startsAtLocal) : null,
+    vibe: draft.vibe,
+    plusOnes: false,
+  });
+  for (const m of crew) {
+    if (m.id === asker.id || (!m.user_id && !m.guest_id)) continue;
+    await store.addMember({ planId: plan.id, userId: m.user_id ?? undefined, guestId: m.guest_id ?? undefined, name: m.display_name, role: "guest" });
+  }
+  for (const v of draft.venues) {
+    await store.addOption({ planId: plan.id, label: v.name, placeId: v.placeId, note: v.address });
+  }
+  const members = await store.listMembers(plan.id);
+  const organiser = members.find((m) => m.user_id === asker.user_id) ?? null;
+  await store.addMessage({ planId: plan.id, memberId: organiser?.id ?? null, kind: "text", body: ask, mentionsDibby: true });
+  await store.addMessage({ planId: plan.id, memberId: null, kind: "system", body: DIBBY_HEADS_UP });
+  const unchecked = draft.checked ? "" : " (I couldn't check these on Maps, so give them a once-over.)";
+  await store.addMessage({ planId: plan.id, memberId: null, kind: "dibby", body: `${draft.reply}${unchecked} Vote's open for 24 hours.` });
+  revalidatePath(`/p/${plan.slug}`);
+  return plan;
 }
 
 // ---------- Voting ----------
