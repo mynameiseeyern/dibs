@@ -8,6 +8,9 @@ import { Fresh } from "@/components/moments/Fresh";
 import type { FormState } from "./actions";
 import { splitPlanLink } from "@/lib/thread-links";
 import { asTemplate, renderTemplate } from "@/lib/copy";
+import * as Button from "@/components/ui/button";
+import * as Badge from "@/components/ui/badge";
+import * as Avatar from "@/components/ui/avatar";
 
 const time = (iso: string) => new Intl.DateTimeFormat("en-AU", { timeZone: TZ, weekday: "short", hour: "numeric", minute: "2-digit" }).format(new Date(iso));
 
@@ -68,12 +71,12 @@ export function Thread({
                   <div key={m.id} data-fresh-id={m.id}>
                     {stamp}
                     <div className="db-msg db-msg--ai">
-                      <span className="db-avatar db-avatar--sm" aria-hidden="true">
+                      <Avatar.Root size="32" className="bg-transparent" aria-hidden="true">
                         <DibbyMark size={32} />
-                      </span>
+                      </Avatar.Root>
                       <div>
                         <div className="db-msg__name">
-                          Dibby <span className="db-badge db-badge--accent ai-tag">AI</span>
+                          Dibby <Badge.Root color="accent" className="ai-tag">AI</Badge.Root>
                         </div>
                         <DibbyBody body={dibbyText(m, vibe)} />
                         <Reactions messageId={m.id} all={reactions} meId={meId} react={react} />
@@ -118,10 +121,12 @@ function DibbyBody({ body }: { body: string }) {
     <>
       <div className="db-msg__bubble">{text}</div>
       {slug && (
-        <a className="db-btn db-btn--primary thread__plan-link" href={`/p/${slug}`}>
-          <i className="ri-arrow-right-up-line db-icon" aria-hidden="true" />
-          Open the new plan
-        </a>
+        <Button.Root asChild>
+          <a className="thread__plan-link" href={`/p/${slug}`}>
+            <i className="ri-arrow-right-up-line db-icon" aria-hidden="true" />
+            Open the new plan
+          </a>
+        </Button.Root>
       )}
     </>
   );

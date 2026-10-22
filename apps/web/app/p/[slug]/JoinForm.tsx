@@ -2,6 +2,10 @@
 
 import { useActionState } from "react";
 import type { FormState } from "./actions";
+import * as Button from "@/components/ui/button";
+import * as Label from "@/components/ui/label";
+import * as Hint from "@/components/ui/hint";
+import * as Input from "@/components/ui/input";
 
 export function JoinForm({ action, signedIn, slug }: { action: (s: FormState, f: FormData) => Promise<FormState>; signedIn: boolean; slug: string }) {
   const [state, formAction, pending] = useActionState(action, undefined);
@@ -9,28 +13,32 @@ export function JoinForm({ action, signedIn, slug }: { action: (s: FormState, f:
     <form action={formAction} className="form" aria-describedby={state?.error ? "join-error" : undefined}>
       {!signedIn && (
         <div className="split2">
-          <div className="db-field">
-            <label className="db-label" htmlFor="first_name">First name</label>
-            <div className="db-input">
-              <input id="first_name" name="first_name" autoComplete="given-name" required maxLength={40} />
-            </div>
+          <div className="flex min-w-0 flex-col gap-2">
+            <Label.Root htmlFor="first_name">First name</Label.Root>
+            <Input.Root>
+              <Input.Wrapper>
+                <Input.Input id="first_name" name="first_name" autoComplete="given-name" required maxLength={40} />
+              </Input.Wrapper>
+            </Input.Root>
           </div>
-          <div className="db-field">
-            <label className="db-label" htmlFor="last_name">Last name</label>
-            <div className="db-input">
-              <input id="last_name" name="last_name" autoComplete="family-name" required maxLength={40} />
-            </div>
+          <div className="flex min-w-0 flex-col gap-2">
+            <Label.Root htmlFor="last_name">Last name</Label.Root>
+            <Input.Root>
+              <Input.Wrapper>
+                <Input.Input id="last_name" name="last_name" autoComplete="family-name" required maxLength={40} />
+              </Input.Wrapper>
+            </Input.Root>
           </div>
         </div>
       )}
       {state?.error && (
-        <p id="join-error" className="db-hint db-hint--error" role="alert">
-          <i className="ri-error-warning-fill" aria-hidden="true" /> {state.error}
-        </p>
+        <Hint.Root id="join-error" hasError role="alert">
+          <Hint.Icon as="i" className="ri-error-warning-fill" aria-hidden="true" /> {state.error}
+        </Hint.Root>
       )}
-      <button className="db-btn db-btn--primary db-btn--lg db-btn--block" disabled={pending}>
+      <Button.Root size="large" block disabled={pending}>
         {pending ? "Joining…" : "Join the plan"}
-      </button>
+      </Button.Root>
       {!signedIn && (
         <p className="paragraph-sm muted">
           No app or account needed. We just remember you on this browser.{" "}

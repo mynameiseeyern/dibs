@@ -10,6 +10,9 @@ import { store } from "@/lib/store";
 import { formatWhen } from "@/lib/time";
 import { whoIsHere } from "@/lib/viewer";
 import { planStatus } from "@/lib/status";
+import * as Button from "@/components/ui/button";
+import * as Badge from "@/components/ui/badge";
+import * as Alert from "@/components/ui/alert";
 
 export const metadata = { title: "Your plans" };
 export const dynamic = "force-dynamic";
@@ -69,12 +72,14 @@ export default async function Home() {
       </header>
 
       {guest && !organiser && rows.length > 0 && (
-        <a className="db-alert db-alert--information link-card" href="/account">
-          <i className="ri-smartphone-line db-icon" aria-hidden="true" />
-          <div>
-            <strong>Only on this browser for now</strong>
-            Add your email to see these plans on your other devices.
-          </div>
+        <a className="link-card" href="/account">
+          <Alert.Root status="information">
+            <Alert.Icon as="i" className="ri-smartphone-line" aria-hidden="true" />
+            <div>
+              <strong>Only on this browser for now</strong>
+              Add your email to see these plans on your other devices.
+            </div>
+          </Alert.Root>
         </a>
       )}
 
@@ -140,9 +145,11 @@ export default async function Home() {
 
       <div className="dock">
         <div className="dock__inner">
-          <a href="/new" className="db-btn db-btn--dibs db-btn--lg db-btn--block">
-            <i className="ri-add-line db-icon" aria-hidden="true" /> Start a plan
-          </a>
+          <Button.Root asChild variant="dibs" size="large" block>
+            <a href="/new">
+              <i className="ri-add-line db-icon" aria-hidden="true" /> Start a plan
+            </a>
+          </Button.Root>
         </div>
       </div>
     </main>
@@ -168,10 +175,10 @@ function PlanRow({ row, quiet }: { row: Row; quiet?: boolean }) {
   return (
     <a href={`/p/${plan.slug}`} className={`db-card db-plan plan-row${quiet ? " plan-row--quiet" : ""}`}>
       <div className="plan-row__top">
-        <span className={`db-badge db-badge--${s.tone}`}>
-          <i className={`${s.icon} db-icon`} aria-hidden="true" />
+        <Badge.Root color={s.tone}>
+          <Badge.Icon as="i" className={s.icon} aria-hidden="true" />
           {s.label}
-        </span>
+        </Badge.Root>
         <span className="paragraph-sm muted">{me.role === "organiser" ? "Hosting" : me.role === "cohost" ? "Co-hosting" : "Going"}</span>
       </div>
       <h2 className="db-plan__title">{plan.title}</h2>

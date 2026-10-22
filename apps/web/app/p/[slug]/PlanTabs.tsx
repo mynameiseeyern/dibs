@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import * as SegmentedControl from "@/components/ui/segmented-control";
 
 export type PlanTab = { id: string; label: string; count?: number; panel: ReactNode };
 
@@ -26,28 +27,23 @@ export function PlanTabs({ tabs, initial, storageKey }: { tabs: PlanTab[]; initi
   const active = tabs.some((t) => t.id === current) ? current : tabs[0]?.id;
 
   return (
-    <section className="section plan-tabs">
-      <div className="db-segmented" role="tablist" aria-label="Plan">
+    <SegmentedControl.Root asChild value={active} onValueChange={pick}>
+      <section className="section plan-tabs">
+        <SegmentedControl.List aria-label="Plan">
+          {tabs.map((t) => (
+            <SegmentedControl.Trigger key={t.id} value={t.id}>
+              {t.label}
+              {t.count ? <span className="plan-tabs__count">{t.count}</span> : null}
+            </SegmentedControl.Trigger>
+          ))}
+        </SegmentedControl.List>
         {tabs.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            role="tab"
-            id={`tab-${t.id}`}
-            aria-selected={active === t.id}
-            aria-controls={`panel-${t.id}`}
-            onClick={() => pick(t.id)}
-          >
-            {t.label}
-            {t.count ? <span className="plan-tabs__count">{t.count}</span> : null}
-          </button>
+          // Panels stay mounted (live chat, half-typed options) and are just hidden when not picked.
+          <SegmentedControl.Content key={t.id} value={t.id} forceMount hidden={active !== t.id} className="section">
+            {t.panel}
+          </SegmentedControl.Content>
         ))}
-      </div>
-      {tabs.map((t) => (
-        <div key={t.id} role="tabpanel" id={`panel-${t.id}`} aria-labelledby={`tab-${t.id}`} hidden={active !== t.id} className="section">
-          {t.panel}
-        </div>
-      ))}
-    </section>
+      </section>
+    </SegmentedControl.Root>
   );
 }

@@ -13,6 +13,7 @@ import "remixicon/fonts/remixicon.css";
 import "./globals.css";
 import { siteUrl } from "@/lib/site";
 import { FinishSignIn } from "@/components/FinishSignIn";
+import { Toaster } from "@/components/ui/toast";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
@@ -36,6 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         {children}
         <FinishSignIn />
+        <Toaster />
       </body>
     </html>
   );

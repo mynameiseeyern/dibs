@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import * as Button from "@/components/ui/button";
 
 export interface CalendarLinks {
   ics: string;
@@ -26,9 +27,11 @@ export function AddToCalendar({ links }: { links: CalendarLinks }) {
 
   return (
     <div className="add-to-calendar">
-      <button
+      <Button.Root
         type="button"
-        className="db-btn db-btn--secondary db-btn--block"
+        variant="neutral"
+        mode="lighter"
+        block
         aria-expanded={open}
         aria-controls="calendar-options"
         onClick={() => setOpen((o) => !o)}
@@ -36,20 +39,22 @@ export function AddToCalendar({ links }: { links: CalendarLinks }) {
         <i className="ri-calendar-event-line db-icon" aria-hidden="true" />
         Add to calendar
         <i className={`${open ? "ri-arrow-up-s-line" : "ri-arrow-down-s-line"} db-icon`} aria-hidden="true" />
-      </button>
+      </Button.Root>
       {open && (
         <ul id="calendar-options" className="add-to-calendar__list">
           {options.map((o) => (
             <li key={o.label}>
-              <a
-                className="db-btn db-btn--ghost db-btn--block add-to-calendar__option"
-                href={o.href}
-                {...(o.external ? { target: "_blank", rel: "noreferrer" } : {})}
-                onClick={() => setOpen(false)}
-              >
-                <i className={`${o.icon} db-icon`} aria-hidden="true" />
-                {o.label}
-              </a>
+              <Button.Root asChild mode="ghost" block>
+                <a
+                  className="add-to-calendar__option"
+                  href={o.href}
+                  {...(o.external ? { target: "_blank", rel: "noreferrer" } : {})}
+                  onClick={() => setOpen(false)}
+                >
+                  <i className={`${o.icon} db-icon`} aria-hidden="true" />
+                  {o.label}
+                </a>
+              </Button.Root>
             </li>
           ))}
         </ul>

@@ -2,6 +2,8 @@ import { notFound, redirect } from "next/navigation";
 import { Monogram } from "@/components/Monogram";
 import { loadPlan } from "@/lib/viewer";
 import { wrapUp } from "../bills/actions";
+import * as Button from "@/components/ui/button";
+import * as Checkbox from "@/components/ui/checkbox";
 
 export const metadata = { title: "Wrap-up" };
 export const dynamic = "force-dynamic";
@@ -20,9 +22,11 @@ export default async function Wrap({ params }: { params: Promise<{ slug: string 
     <form action={wrapUp.bind(null, slug)}>
       <main className="page">
         <header className="topbar">
-          <a className="db-btn db-btn--secondary db-btn--icon" href={`/p/${slug}`} aria-label="Back to the plan">
-            <i className="ri-arrow-left-line db-icon" aria-hidden="true" />
-          </a>
+          <Button.Root asChild variant="neutral" mode="lighter" iconOnly>
+            <a href={`/p/${slug}`} aria-label="Back to the plan">
+              <i className="ri-arrow-left-line db-icon" aria-hidden="true" />
+            </a>
+          </Button.Root>
         </header>
         <div className="section">
           <span className="subheading-sm eyebrow">{plan.title} · wrap-up</span>
@@ -32,7 +36,7 @@ export default async function Wrap({ params }: { params: Promise<{ slug: string 
         <div className="db-card">
           <div className="people">
             {listed.map((m) => (
-              <label key={m.id} className="db-check tick">
+              <label key={m.id} className="tick">
                 <Monogram name={m.display_name} colour={m.colour} />
                 <span className="label-md person__name">
                   {m.display_name}
@@ -42,7 +46,7 @@ export default async function Wrap({ params }: { params: Promise<{ slug: string 
                     {m.plus_one ? " · +1" : ""}
                   </small>
                 </span>
-                <input type="checkbox" name="came" value={m.id} defaultChecked={ticked(m)} aria-label={`${m.display_name} came`} />
+                <Checkbox.Root name="came" value={m.id} defaultChecked={ticked(m)} aria-label={`${m.display_name} came`} />
               </label>
             ))}
           </div>
@@ -50,7 +54,7 @@ export default async function Wrap({ params }: { params: Promise<{ slug: string 
       </main>
       <div className="dock">
         <div className="dock__inner">
-          <button className="db-btn db-btn--primary db-btn--lg db-btn--block">On to bills</button>
+          <Button.Root size="large" block>On to bills</Button.Root>
         </div>
       </div>
     </form>

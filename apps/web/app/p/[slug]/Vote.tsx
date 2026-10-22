@@ -4,6 +4,9 @@ import { useActionState } from "react";
 import type { PlanOption } from "@dibs/shared/types";
 import type { FormState } from "./actions";
 import { Fresh } from "@/components/moments/Fresh";
+import * as Button from "@/components/ui/button";
+import * as Hint from "@/components/ui/hint";
+import * as Input from "@/components/ui/input";
 
 export interface VoteRow extends PlanOption {
   votes: number;
@@ -58,22 +61,24 @@ export function VoteList({
       })}
       {canVote && open && (
         <form action={addAction} className="add-option">
-          <div className="db-input">
-            <label htmlFor="label" className="sr-only">
-              Add an option
-            </label>
-            <i className="ri-add-line db-icon" aria-hidden="true" />
-            <input id="label" name="label" placeholder="Add an option" maxLength={80} autoComplete="off" />
-          </div>
-          <button className="db-btn db-btn--secondary" disabled={adding}>
+          <label htmlFor="label" className="sr-only">
+            Add an option
+          </label>
+          <Input.Root className="flex-1">
+            <Input.Wrapper>
+              <Input.Icon as="i" className="ri-add-line" aria-hidden="true" />
+              <Input.Input id="label" name="label" placeholder="Add an option" maxLength={80} autoComplete="off" />
+            </Input.Wrapper>
+          </Input.Root>
+          <Button.Root variant="neutral" mode="lighter" disabled={adding}>
             Add
-          </button>
+          </Button.Root>
         </form>
       )}
       {state?.error && (
-        <p className="db-hint db-hint--error" role="alert">
+        <Hint.Root hasError role="alert">
           {state.error}
-        </p>
+        </Hint.Root>
       )}
     </Fresh>
   );

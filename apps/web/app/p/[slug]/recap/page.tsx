@@ -6,6 +6,8 @@ import { formatWhen } from "@/lib/time";
 import { loadPlan } from "@/lib/viewer";
 import { saveRecap } from "./actions";
 import { RecapForm } from "./RecapForm";
+import * as Button from "@/components/ui/button";
+import * as Alert from "@/components/ui/alert";
 
 export const metadata = { title: "Recap" };
 export const dynamic = "force-dynamic";
@@ -19,10 +21,14 @@ export default async function Recap({ params }: { params: Promise<{ slug: string
 
   const back = (
     <header className="topbar">
-      <a className="db-btn db-btn--secondary db-btn--icon" href={`/p/${slug}`} aria-label="Back to the plan">
-        <i className="ri-arrow-left-line db-icon" aria-hidden="true" />
-      </a>
-      <a className="db-btn db-btn--ghost db-btn--sm" href={`/p/${slug}/bills`}>Bills</a>
+      <Button.Root asChild variant="neutral" mode="lighter" iconOnly>
+        <a href={`/p/${slug}`} aria-label="Back to the plan">
+          <i className="ri-arrow-left-line db-icon" aria-hidden="true" />
+        </a>
+      </Button.Root>
+      <Button.Root asChild mode="ghost" size="small">
+        <a href={`/p/${slug}/bills`}>Bills</a>
+      </Button.Root>
     </header>
   );
 
@@ -31,10 +37,10 @@ export default async function Recap({ params }: { params: Promise<{ slug: string
     return (
       <main className="page">
         {back}
-        <div className="db-alert db-alert--information" role="status">
-          <i className="ri-lock-2-fill db-icon" aria-hidden="true" />
+        <Alert.Root status="information" role="status">
+          <Alert.Icon as="i" className="ri-lock-2-fill" aria-hidden="true" />
           <div><strong>The recap is just for people who came</strong>Catch you at the next one.</div>
-        </div>
+        </Alert.Root>
       </main>
     );
   }

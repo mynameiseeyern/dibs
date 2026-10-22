@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Wheel, type WheelMode } from "./Wheel";
+import * as Button from "@/components/ui/button";
 
 const seenKey = (billId: string) => `dibs:spin-seen:${billId}`;
 
@@ -67,10 +68,10 @@ export function RouletteResult({
             <p className="muted">
               {loserName} covers <span className="money">{amount}</span>. Everyone else is square on this one.
             </p>
-            <button type="button" className="db-btn db-btn--ghost db-btn--sm" onClick={replay}>
+            <Button.Root type="button" mode="ghost" size="small" onClick={replay}>
               <i className="ri-replay-line db-icon" aria-hidden="true" />
               Watch it again
-            </button>
+            </Button.Root>
           </>
         ) : (
           <p className="paragraph-sm muted typing">

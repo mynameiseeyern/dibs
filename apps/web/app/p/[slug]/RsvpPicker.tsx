@@ -4,6 +4,7 @@ import { useOptimistic, useTransition } from "react";
 import { RSVP_LABEL } from "@dibs/shared/plans";
 import type { Rsvp, Vibe } from "@dibs/shared/types";
 import { rsvpHeading } from "@/lib/copy";
+import * as Button from "@/components/ui/button";
 
 /**
  * RSVP buttons that answer the tap straight away. The choice shows immediately
@@ -49,15 +50,17 @@ export function RsvpPicker({
       </h2>
       <div className="rsvp" role="group" aria-label="Are you in?" aria-busy={pending}>
         {(["in", "maybe", "out"] as const).map((r) => (
-          <button
+          <Button.Root
             key={r}
             type="button"
-            className={`db-btn ${shown === r ? (r === "in" ? "db-btn--dibs" : "db-btn--primary") : "db-btn--secondary"}`}
+            variant={shown !== r ? "neutral" : r === "in" ? "dibs" : "primary"}
+            mode={shown === r ? "filled" : "lighter"}
+            className="px-2"
             aria-pressed={shown === r}
             onClick={() => choose(r)}
           >
             {RSVP_LABEL[r]}
-          </button>
+          </Button.Root>
         ))}
       </div>
       {showWaitlist && <p className="paragraph-sm muted">It's full. The host will let you know if a spot opens up.</p>}

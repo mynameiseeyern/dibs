@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { LogoMark } from "@/components/Logo";
+import * as Button from "@/components/ui/button";
 
 // If Supabase falls back to the Site URL, the sign-in link lands here: pass it on.
 export default async function Landing({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
@@ -20,12 +21,16 @@ export default async function Landing({ searchParams }: { searchParams: Promise<
         Get your crew from &ldquo;we should catch up&rdquo; to actually going. Ask Dibby to plan it, share it to the group chat, vote, then
         square up after. Your friends don&rsquo;t need the app.
       </p>
-      <a className="db-btn db-btn--dibs db-btn--lg db-btn--block" href="/new">
-        Start a plan
-      </a>
-      <a className="db-btn db-btn--ghost db-btn--block" href="/home">
-        I&rsquo;ve got plans already
-      </a>
+      <Button.Root asChild variant="dibs" size="large" block>
+        <a href="/new">
+          Start a plan
+        </a>
+      </Button.Root>
+      <Button.Root asChild mode="ghost" block>
+        <a href="/home">
+          I&rsquo;ve got plans already
+        </a>
+      </Button.Root>
     </main>
   );
 }

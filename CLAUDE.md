@@ -13,7 +13,7 @@ Build plan: https://claude.ai/artifact/2Lce9vh9ZvGunTKngL6sWX · Linear project 
 - `pnpm dev` — web app on :3000 (in-memory demo store if Supabase env is empty)
 - `pnpm test` — bill maths (Vitest). Only the bill maths has tests; keep them passing.
 - `pnpm build`, `pnpm typecheck`
-- `pnpm tokens` — regenerate `packages/ui/src/tokens.css` from `packages/ui/tokens.json`
+- `pnpm tokens` — regenerate `packages/ui/src/tokens.css` and `tailwind-theme.css` from `packages/ui/tokens.json`
 
 ## Design system
 
@@ -21,11 +21,15 @@ The source of truth is the Dibs design system on claude.ai (https://claude.ai/ar
 In this repo: read `packages/ui/docs/brand-book.md` before building UI, and `packages/ui/docs/components/<Name>.md` for each component.
 Open `packages/ui/design-system/index.html` in a browser to see every component rendered. Token values come from `packages/ui/scripts/gen-tokens.py` (see `packages/ui/README.md`).
 
-- Use the `.db-` component classes from `packages/ui/src/components.css` and the CSS variables from `tokens.css`. No raw hex values in app code.
+- Components are AlignUI (React + Tailwind v4), themed to Dibs: `apps/web/components/ui/*` (`import * as Button from "@/components/ui/button"`). Button, Badge, Avatar, Alert, Input/Label/Hint, Checkbox, Radio, Switch, Segmented control, Tab menu, Progress, Tooltip, Modal (the bottom sheet) and Toast (`toast.success(…)`). See them all at `/ui` in dev.
+- Their Tailwind theme (`packages/ui/src/tailwind-theme.css`) is generated from `tokens.json` by `pnpm tokens`, so `bg-primary-base`, `text-label-sm`, `rounded-lg` etc. are Dibs values. To change a component's look, edit its `tv()` styles in `components/ui`, not the app.
+- Dibs-only pieces with no AlignUI equivalent stay as `.db-` classes in `packages/ui/src/components.css`: card, plan card, vote option, bill split, chat bubble, stack/row, icon. The other `.db-` classes there are superseded by the components above.
+- `.db-` classes and the app's own classes are unlayered, so they beat Tailwind utilities. Don't put a `.db-`/app class and a utility for the same property on one element (e.g. use the `hidden` attribute, not the `hidden` class, on a `.section`).
+- No raw hex values in app code.
 - Violet `primary-base` is the brand; lime `accent-base` is the "calling dibs" moment, at most once per screen, always with black text.
 - Headings in Bricolage Grotesque, everything else Figtree, money and codes in DM Mono.
-- Phone first: 16px gutter, one column, main action pinned at the bottom as `db-btn--lg db-btn--block`. Tap targets at least 44px.
-- Icons: Remix Icon (`<i class="ri-… db-icon" aria-hidden="true">`). Never emoji as icons.
+- Phone first: 16px gutter, one column, main action pinned at the bottom as `<Button.Root size="large" block>`. Tap targets at least 44px.
+- Icons: Remix Icon, either the font (`<i className="ri-… db-icon" aria-hidden="true">`, or `<Button.Icon as="i" className="ri-…" />` inside a component) or `@remixicon/react`. Never emoji as icons.
 - Copy: Australian spelling, sentence case, lowercase **dibs**, sounds like a mate in the group chat. Never pushy about money.
 - Logos are in `packages/ui/assets/logos/`. `dibs-ai-member.svg` is only for Dibby.
 
@@ -49,5 +53,6 @@ Open `packages/ui/design-system/index.html` in a browser to see every component 
 
 - `apps/web` — Next.js 16 App Router. `lib/store` has the data layer (Supabase or in-memory), `lib/viewer.ts` works out who is looking at a plan.
 - `packages/shared` — bill maths, plan helpers, types.
-- `packages/ui` — tokens, components, design-system copy.
+- `packages/ui` — tokens (and the generated Tailwind theme), Dibs-only component CSS, design-system copy.
+- `apps/web/components/ui` — the AlignUI components, Dibs-themed.
 - `supabase/migrations` — schema and row-level security.

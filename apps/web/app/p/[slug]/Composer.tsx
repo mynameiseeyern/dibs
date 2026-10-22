@@ -3,6 +3,10 @@
 import { useActionState, useRef, useState } from "react";
 import { DibbyMark } from "@/components/Logo";
 import type { FormState } from "./actions";
+import * as Button from "@/components/ui/button";
+import * as Hint from "@/components/ui/hint";
+import * as Input from "@/components/ui/input";
+import * as Avatar from "@/components/ui/avatar";
 
 export function Composer({ action }: { action: (s: FormState, f: FormData) => Promise<FormState> }) {
   const [text, setText] = useState("");
@@ -23,42 +27,44 @@ export function Composer({ action }: { action: (s: FormState, f: FormData) => Pr
     >
       {pending && askedDibby && (
         <div className="db-msg db-msg--ai" aria-live="polite">
-          <span className="db-avatar db-avatar--sm" aria-hidden="true">
+          <Avatar.Root size="32" className="bg-transparent" aria-hidden="true">
             <DibbyMark size={32} />
-          </span>
+          </Avatar.Root>
           <div className="db-msg__bubble typing">
             Dibby&rsquo;s on it<span className="dots" aria-hidden="true"><i /><i /><i /></span>
           </div>
         </div>
       )}
       <div className="composer__row">
-        <div className="db-input">
-          <label htmlFor="body" className="sr-only">
-            Message
-          </label>
-          <input
-            id="body"
-            name="body"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Message, or @dibby…"
-            autoComplete="off"
-            maxLength={2000}
-          />
-        </div>
-        <button className="db-btn db-btn--primary db-btn--icon" aria-label="Send" disabled={pending || !text.trim()}>
+        <label htmlFor="body" className="sr-only">
+          Message
+        </label>
+        <Input.Root className="flex-1">
+          <Input.Wrapper>
+            <Input.Input
+              id="body"
+              name="body"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Message, or @dibby…"
+              autoComplete="off"
+              maxLength={2000}
+            />
+          </Input.Wrapper>
+        </Input.Root>
+        <Button.Root iconOnly aria-label="Send" disabled={pending || !text.trim()}>
           <i className="ri-send-plane-2-fill db-icon" aria-hidden="true" />
-        </button>
+        </Button.Root>
       </div>
       {!text && (
-        <button type="button" className="db-btn db-btn--ghost db-btn--sm composer__chip" onClick={() => setText("@dibby ")}>
+        <Button.Root type="button" mode="ghost" size="small" className="composer__chip" onClick={() => setText("@dibby ")}>
           <i className="ri-sparkling-line db-icon" aria-hidden="true" /> Ask Dibby
-        </button>
+        </Button.Root>
       )}
       {state?.error && (
-        <p className="db-hint db-hint--error" role="alert">
+        <Hint.Root hasError role="alert">
           {state.error}
-        </p>
+        </Hint.Root>
       )}
     </form>
   );

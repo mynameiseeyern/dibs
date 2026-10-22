@@ -28,6 +28,8 @@ import { ShareButton } from "./ShareButton";
 import { Thread } from "./Thread";
 import { VoteList } from "./Vote";
 import { siteUrl } from "@/lib/site";
+import * as Button from "@/components/ui/button";
+import * as Badge from "@/components/ui/badge";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -89,7 +91,7 @@ export default async function PlanPage({ params }: Props) {
   const iAnswered = Boolean(me && recap.some((a) => a.member_id === me.id));
 
   const baseStatus = planStatus(plan);
-  const status = wrapped && allSquare ? { ...baseStatus, label: "Wrapped · all square", tone: "success", icon: "ri-check-double-line" } : baseStatus;
+  const status = wrapped && allSquare ? { ...baseStatus, label: "Wrapped · all square", tone: "success" as const, icon: "ri-check-double-line" } : baseStatus;
   const voters = new Set(votes.map((v) => v.member_id)).size;
 
   return (
@@ -100,10 +102,12 @@ export default async function PlanPage({ params }: Props) {
           <Wordmark href={view.here.name ? "/home" : "/"} />
           <div className="topbar__end">
             {isHost && !cancelled && plan.status !== "wrapped" && (
-            <a className="db-btn db-btn--secondary db-btn--sm" href={`/p/${slug}/manage`}>
-              <i className="ri-edit-line db-icon" aria-hidden="true" />
-              Edit
-            </a>
+            <Button.Root asChild variant="neutral" mode="lighter" size="small">
+              <a href={`/p/${slug}/manage`}>
+                <i className="ri-edit-line db-icon" aria-hidden="true" />
+                Edit
+              </a>
+            </Button.Root>
             )}
             <AccountButton here={view.here} />
           </div>
@@ -111,10 +115,10 @@ export default async function PlanPage({ params }: Props) {
 
         <article className={`db-card db-plan${cancelled ? "" : " db-card--sticker"}`}>
           <div className="plan-card__top">
-            <span className={`db-badge db-badge--${status.tone}`}>
-              <i className={`${status.icon} db-icon`} aria-hidden="true" />
+            <Badge.Root color={status.tone}>
+              <Badge.Icon as="i" className={status.icon} aria-hidden="true" />
               {status.label}
-            </span>
+            </Badge.Root>
           </div>
           <h1 className="title-h3 plan-title">{plan.title}</h1>
           <ul className="db-plan__facts">
@@ -159,9 +163,9 @@ export default async function PlanPage({ params }: Props) {
           )}
           <div className="db-plan__foot">
             <MonogramStack people={going} />
-            <span className="db-badge db-badge--accent">
+            <Badge.Root color="accent">
               {inCount} in{full ? " · full" : ""}
-            </span>
+            </Badge.Root>
           </div>
         </article>
 
@@ -255,10 +259,12 @@ export default async function PlanPage({ params }: Props) {
               <p className="paragraph-sm muted">Get the dibs app to see all your plans in one place. Coming soon to the App Store.</p>
             )}
             {me.role === "organiser" && plan.status === "locked" && (
-              <a className={`db-btn db-btn--block ${started ? "db-btn--primary" : "db-btn--ghost"}`} href={`/p/${slug}/wrap`}>
-                <i className="ri-flag-line db-icon" aria-hidden="true" />
-                {started ? "Wrap it up: who came?" : "After the night: wrap it up"}
-              </a>
+              <Button.Root asChild mode={started ? "filled" : "ghost"} block>
+                <a href={`/p/${slug}/wrap`}>
+                  <i className="ri-flag-line db-icon" aria-hidden="true" />
+                  {started ? "Wrap it up: who came?" : "After the night: wrap it up"}
+                </a>
+              </Button.Root>
             )}
           </section>
         )}
@@ -286,10 +292,10 @@ export default async function PlanPage({ params }: Props) {
                           <VoteList rows={voteRows} canVote={Boolean(me)} open={plan.status === "voting"} vote={vote.bind(null, slug)} add={addOption.bind(null, slug)} />
                           {isHost && plan.status === "voting" && options.length > 0 && (
                             <form action={lockPlan.bind(null, slug)}>
-                              <button className="db-btn db-btn--ghost db-btn--sm">
+                              <Button.Root mode="ghost" size="small">
                                 <i className="ri-lock-2-line db-icon" aria-hidden="true" />
                                 Lock it in now
-                              </button>
+                              </Button.Root>
                             </form>
                           )}
                         </>
@@ -316,10 +322,10 @@ export default async function PlanPage({ params }: Props) {
                     />
                     {me && (
                       <form action={toggleDibbyMute.bind(null, slug)} className="dibby-mute">
-                        <button className="db-btn db-btn--ghost" aria-pressed={me.dibby_muted}>
+                        <Button.Root mode="ghost" aria-pressed={me.dibby_muted}>
                           <i className={`${me.dibby_muted ? "ri-notification-3-line" : "ri-notification-off-line"} db-icon`} aria-hidden="true" />
                           {me.dibby_muted ? "Show Dibby's nudges" : "Mute Dibby's nudges"}
-                        </button>
+                        </Button.Root>
                       </form>
                     )}
                   </>
@@ -373,7 +379,7 @@ export default async function PlanPage({ params }: Props) {
             )}
             {me.role === "guest" && (
               <form action={removeMe.bind(null, slug)}>
-                <button className="db-btn db-btn--ghost db-btn--sm">Remove me from this plan</button>
+                <Button.Root mode="ghost" size="small">Remove me from this plan</Button.Root>
               </form>
             )}
           </footer>

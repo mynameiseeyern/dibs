@@ -17,6 +17,11 @@ import { ShareButton } from "../ShareButton";
 import { siteUrl } from "@/lib/site";
 import { OWE_REMIND_AFTER_MS, OWE_REMIND_AGAIN_MS, TELL_PAYER_AFTER_MS } from "@/lib/nudges";
 import { allSquare, oweReminder, tellPayer } from "@/lib/copy";
+import * as Button from "@/components/ui/button";
+import * as Alert from "@/components/ui/alert";
+import * as Badge from "@/components/ui/badge";
+import * as Hint from "@/components/ui/hint";
+import * as ProgressBar from "@/components/ui/progress-bar";
 
 export const metadata = { title: "Square up" };
 export const dynamic = "force-dynamic";
@@ -33,11 +38,15 @@ export default async function Bills({ params, searchParams }: Props) {
 
   const back = (
     <header className="topbar">
-      <a className="db-btn db-btn--secondary db-btn--icon" href={`/p/${slug}`} aria-label="Back to the plan">
-        <i className="ri-arrow-left-line db-icon" aria-hidden="true" />
-      </a>
+      <Button.Root asChild variant="neutral" mode="lighter" iconOnly>
+        <a href={`/p/${slug}`} aria-label="Back to the plan">
+          <i className="ri-arrow-left-line db-icon" aria-hidden="true" />
+        </a>
+      </Button.Root>
       {me?.role === "organiser" && (
-        <a className="db-btn db-btn--ghost db-btn--sm" href={`/p/${slug}/wrap`}>Edit who came</a>
+        <Button.Root asChild mode="ghost" size="small">
+          <a href={`/p/${slug}/wrap`}>Edit who came</a>
+        </Button.Root>
       )}
     </header>
   );
@@ -47,10 +56,10 @@ export default async function Bills({ params, searchParams }: Props) {
     return (
       <main className="page">
         {back}
-        <div className="db-alert db-alert--information" role="status">
-          <i className="ri-lock-2-fill db-icon" aria-hidden="true" />
+        <Alert.Root status="information" role="status">
+          <Alert.Icon as="i" className="ri-lock-2-fill" aria-hidden="true" />
           <div><strong>Bills are just for people who came</strong>If you were there, ask {members.find((m) => m.role === "organiser")?.display_name.split(" ")[0] ?? "the organiser"} to tick you in.</div>
-        </div>
+        </Alert.Root>
       </main>
     );
   }
@@ -174,8 +183,8 @@ export default async function Bills({ params, searchParams }: Props) {
                         {r.lost === 0 ? `Dodged ${r.played} ${r.played === 1 ? "spin" : "spins"}` : `Lost ${r.lost} of ${r.played} · paid ${formatAud(r.paidCents)}`}
                       </small>
                     </span>
-                    {r.lost > 0 && <span className="db-badge db-badge--warning">{r.lost === r.played && r.played >= 2 ? "Cursed" : "Unlucky"}</span>}
-                    {r.lost === 0 && r.played >= 2 && <span className="db-badge db-badge--success">Charmed</span>}
+                    {r.lost > 0 && <Badge.Root color="warning">{r.lost === r.played && r.played >= 2 ? "Cursed" : "Unlucky"}</Badge.Root>}
+                    {r.lost === 0 && r.played >= 2 && <Badge.Root color="success">Charmed</Badge.Root>}
                   </li>
                 );
               })}
@@ -184,19 +193,19 @@ export default async function Bills({ params, searchParams }: Props) {
         )}
         {owedShares.length > 0 && (
           <div className="db-stack">
-            <div className="db-hint">{settled} of {owedShares.length} settled</div>
-            <div className="db-progress db-progress--accent" role="progressbar" aria-valuenow={settled} aria-valuemin={0} aria-valuemax={owedShares.length} aria-label="Settled">
-              <span style={{ width: `${(settled / owedShares.length) * 100}%` }} />
-            </div>
+            <Hint.Root>{settled} of {owedShares.length} settled</Hint.Root>
+            <ProgressBar.Root color="accent" value={settled} max={owedShares.length} aria-label="Settled" />
           </div>
         )}
 
         {owedShares.length > 0 && settled === owedShares.length && (
           <section className="moment">
             <Once id={`square:${plan.id}`} kind="square" size={220} label="Everyone's square. The crew celebrates." />
-            <span className="db-badge db-badge--success"><i className="ri-checkbox-circle-fill db-icon" aria-hidden="true" />All squared up</span>
+            <Badge.Root color="success"><Badge.Icon as="i" className="ri-checkbox-circle-fill" aria-hidden="true" />All squared up</Badge.Root>
             <p className="muted">{allSquare(plan.vibe)}</p>
-            <a className="db-btn db-btn--secondary" href={`/p/${slug}/recap`}><i className="ri-star-smile-line db-icon" aria-hidden="true" />On to the recap</a>
+            <Button.Root asChild variant="neutral" mode="lighter">
+              <a href={`/p/${slug}/recap`}><i className="ri-star-smile-line db-icon" aria-hidden="true" />On to the recap</a>
+            </Button.Root>
           </section>
         )}
 
@@ -211,10 +220,10 @@ export default async function Bills({ params, searchParams }: Props) {
         )}
 
         {payerNote && (
-          <div className="db-alert db-alert--information" role="status">
-            <i className="ri-eye-off-line db-icon" aria-hidden="true" />
+          <Alert.Root status="information" role="status">
+            <Alert.Icon as="i" className="ri-eye-off-line" aria-hidden="true" />
             <div>{payerNote}</div>
-          </div>
+          </Alert.Root>
         )}
 
         {netCards.map(({ id, mine, theirs, net, pay }) => (
@@ -240,12 +249,12 @@ export default async function Bills({ params, searchParams }: Props) {
                   <div className="payid__row"><div><span>Reference</span><strong className="payid__name">{ref}</strong></div><CopyButton value={ref} label="reference" /></div>
                 </div>
                 <p className="paragraph-sm muted">You each paid for something, so it&rsquo;s one payment instead of two. dibs never touches the money.</p>
-                <form action={settleNet.bind(null, slug, id)}><button className="db-btn db-btn--primary db-btn--block"><i className="ri-check-line db-icon" aria-hidden="true" />I&rsquo;ve paid {first(id)} {formatAud(net)}</button></form>
+                <form action={settleNet.bind(null, slug, id)}><Button.Root block><i className="ri-check-line db-icon" aria-hidden="true" />I&rsquo;ve paid {first(id)} {formatAud(net)}</Button.Root></form>
               </>
             ) : net > 0 ? (
               <p className="paragraph-sm muted">{first(id)} hasn&rsquo;t added a PayID yet.</p>
             ) : net === 0 ? (
-              <form action={settleNet.bind(null, slug, id)}><button className="db-btn db-btn--primary db-btn--block"><i className="ri-check-double-line db-icon" aria-hidden="true" />It cancels out. Call it square</button></form>
+              <form action={settleNet.bind(null, slug, id)}><Button.Root block><i className="ri-check-double-line db-icon" aria-hidden="true" />It cancels out. Call it square</Button.Root></form>
             ) : (
               <p className="paragraph-sm muted">{first(id)} sees the same thing and pays you the difference.</p>
             )}
@@ -257,15 +266,15 @@ export default async function Bills({ params, searchParams }: Props) {
             <span className="db-plan__eyebrow">{bill.title}</span>
             <h2 className="title-h4">You owe {first(bill.payer_member_id)} <span className="money">{formatAud(share.amount_cents)}</span></h2>
             {reminderFor(bill, share) && (
-              <div className="db-alert db-alert--information" role="status">
-                <i className="ri-notification-3-line db-icon" aria-hidden="true" />
+              <Alert.Root status="information" role="status">
+                <Alert.Icon as="i" className="ri-notification-3-line" aria-hidden="true" />
                 <div>{reminderFor(bill, share)}</div>
-              </div>
+              </Alert.Root>
             )}
             {share.status === "says_paid" ? (
               <>
                 <Once id={`paid:${bill.id}:${me.id}`} kind="paid" size={120} label="Paid" />
-                <div className="db-alert db-alert--success" role="status"><i className="ri-time-line db-icon" aria-hidden="true" /><div><strong>Marked as paid</strong>Waiting on {first(bill.payer_member_id)} to confirm.</div></div>
+                <Alert.Root status="success" role="status"><Alert.Icon as="i" className="ri-time-line" aria-hidden="true" /><div><strong>Marked as paid</strong>Waiting on {first(bill.payer_member_id)} to confirm.</div></Alert.Root>
               </>
             ) : pay ? (
               <>
@@ -276,7 +285,7 @@ export default async function Bills({ params, searchParams }: Props) {
                   <div className="payid__row"><div><span>Reference</span><strong className="payid__name">{ref}</strong></div><CopyButton value={ref} label="reference" /></div>
                 </div>
                 <p className="paragraph-sm muted">Pay from your banking app. dibs never touches the money.</p>
-                <form action={saysPaid.bind(null, slug, bill.id)}><button className="db-btn db-btn--primary db-btn--block"><i className="ri-check-line db-icon" aria-hidden="true" />I&rsquo;ve paid {first(bill.payer_member_id)}</button></form>
+                <form action={saysPaid.bind(null, slug, bill.id)}><Button.Root block><i className="ri-check-line db-icon" aria-hidden="true" />I&rsquo;ve paid {first(bill.payer_member_id)}</Button.Root></form>
               </>
             ) : (
               <p className="paragraph-sm muted">{first(bill.payer_member_id)} hasn&rsquo;t added a PayID yet.</p>
@@ -299,9 +308,9 @@ export default async function Bills({ params, searchParams }: Props) {
               {!inIt && !meAdultOnFile && <p className="paragraph-xs muted center">Sit it out and you just pay your share.</p>}
               {isPayer && (
                 <form action={spin.bind(null, slug, b.id)}>
-                  <button className="db-btn db-btn--primary db-btn--block" disabled={b.roulette_entrants.length < 2}>
+                  <Button.Root block disabled={b.roulette_entrants.length < 2}>
                     <i className="ri-refresh-line db-icon" aria-hidden="true" />{b.roulette_entrants.length < 2 ? "Need 2 people to spin" : "Spin it"}
-                  </button>
+                  </Button.Root>
                 </form>
               )}
             </section>
@@ -320,9 +329,11 @@ export default async function Bills({ params, searchParams }: Props) {
       </main>
       <div className="dock">
         <div className="dock__inner">
-          <a className="db-btn db-btn--primary db-btn--lg db-btn--block" href={`/p/${slug}/bills?add=1`}>
-            <i className="ri-add-line db-icon" aria-hidden="true" />I paid for something
-          </a>
+          <Button.Root asChild size="large" block>
+            <a href={`/p/${slug}/bills?add=1`}>
+              <i className="ri-add-line db-icon" aria-hidden="true" />I paid for something
+            </a>
+          </Button.Root>
         </div>
       </div>
     </>
@@ -350,7 +361,7 @@ function PayerCard({
           <div className="db-plan__eyebrow">You paid · {bill.title}</div>
           <div className="db-split__amount">{formatAud(bill.total_cents)}</div>
         </div>
-        <span className="db-badge db-badge--success db-badge--dot">{square} of {shares.length} square</span>
+        <Badge.Root color="success"><Badge.Dot />{square} of {shares.length} square</Badge.Root>
       </div>
       {shares.length === 0 && <p className="paragraph-sm muted">Nobody owes you on this one.</p>}
       {shares.map((s) => {
@@ -371,9 +382,9 @@ function PayerCard({
               </small>
             </span>
             {s.status === "confirmed" ? (
-              <span className="db-badge db-badge--success"><i className="ri-check-line db-icon" aria-hidden="true" />Square</span>
+              <Badge.Root color="success"><Badge.Icon as="i" className="ri-check-line" aria-hidden="true" />Square</Badge.Root>
             ) : s.status === "says_paid" ? (
-              <form action={confirmPaid.bind(null, slug, bill.id, s.member_id)}><button className="db-btn db-btn--primary db-btn--sm">Confirm</button></form>
+              <form action={confirmPaid.bind(null, slug, bill.id, s.member_id)}><Button.Root size="small">Confirm</Button.Root></form>
             ) : (
               <span className="db-split__owe">{formatAud(s.amount_cents)}</span>
             )}

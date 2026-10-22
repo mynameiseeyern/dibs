@@ -7,7 +7,8 @@
     "./tokens.css": "./src/tokens.css",
     "./components.css": "./src/components.css",
     "./fonts/*": "./fonts/*",
-    "./tokens.json": "./tokens.json"
+    "./tokens.json": "./tokens.json",
+    "./tailwind-theme.css": "./src/tailwind-theme.css"
   },
   "scripts": {
     "build": "node scripts/build-tokens.mjs",
