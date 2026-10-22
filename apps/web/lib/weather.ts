@@ -120,7 +120,9 @@ async function daily(point: Point, startIso: string, key: string): Promise<Forec
   };
   const when = localParts(startIso);
   const day = d.forecastDays?.find((x) => x.displayDate?.year === when.year && x.displayDate?.month === when.month && x.displayDate?.day === when.day);
-  if (!day || typeof day.maxTemperature?.degrees !== "number" || typeof day.minTemperature?.degrees !== "number") return null;
+  // Google's 10 days start today, so the far edge can miss by a day: say it's coming.
+  if (!day) return { kind: "too-far", daysOut: FORECAST_DAYS };
+  if (typeof day.maxTemperature?.degrees !== "number" || typeof day.minTemperature?.degrees !== "number") return null;
   const night = when.hour >= 18 || when.hour < 6;
   const part = (night ? day.nighttimeForecast : day.daytimeForecast) ?? day.daytimeForecast;
   return {
@@ -146,7 +148,7 @@ export async function forecastFor(plan: {
   const now = Date.now();
   if (start < now - 3 * 3600 * 1000) return null; // Already happened.
   const daysOut = Math.floor((start - now) / 86400000);
-  if (daysOut >= FORECAST_DAYS - 1) return { kind: "too-far", daysOut };
+  if (daysOut >= FORECAST_DAYS) return { kind: "too-far", daysOut };
 
   try {
     // A venue name alone can be ambiguous ("The Royal"), so search it with the area.
