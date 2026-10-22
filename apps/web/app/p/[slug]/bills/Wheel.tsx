@@ -1,35 +1,54 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 const FILLS = ["var(--accent-base)", "var(--primary-light)", "var(--away-light)", "var(--success-light)", "var(--highlighted-light)", "var(--information-light)"];
+const SPIN_MS = 4000;
 
 /**
- * The card-roulette wheel. The loser is decided on the server before this draws;
- * when `spin` is set it plays a few turns and lands the loser under the pointer.
+ * The card-roulette wheel. The loser is decided on the server; this only draws it.
+ * - idle: nobody's spun yet, wheel at rest.
+ * - suspense: about to spin, parked a little off the result so it doesn't give it away.
+ * - spin: five turns, landing the loser under the pointer, then calls onLanded.
+ * - landed: sitting on the loser.
  */
-export function Wheel({ names, loserIndex, spin }: { names: string[]; loserIndex: number | null; spin: boolean }) {
+export type WheelMode = "idle" | "suspense" | "spin" | "landed";
+
+export function Wheel({
+  names,
+  loserIndex,
+  mode,
+  onLanded,
+}: {
+  names: string[];
+  loserIndex: number | null;
+  mode: WheelMode;
+  onLanded?: () => void;
+}) {
   const n = Math.max(names.length, 1);
   const seg = 360 / n;
   // Rotation that puts the middle of segment i at the top.
   const restFor = (i: number) => -(i * seg + seg / 2);
   const target = loserIndex === null ? restFor(0) : restFor(loserIndex);
-  const [rot, setRot] = useState(spin ? target + 1440 : target);
+  const rot = mode === "idle" ? restFor(0) : mode === "suspense" ? target + seg * 0.5 + 140 : mode === "spin" ? target - 1800 : target;
 
   useEffect(() => {
-    if (!spin) return;
-    const t = requestAnimationFrame(() => setRot(target - 1440));
-    return () => cancelAnimationFrame(t);
-  }, [spin, target]);
+    if (mode !== "spin") return;
+    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const t = setTimeout(() => onLanded?.(), reduced ? 0 : SPIN_MS + 150);
+    return () => clearTimeout(t);
+  }, [mode, onLanded]);
 
   const r = 125;
   const pt = (deg: number, rad: number) => {
     const a = ((deg - 90) * Math.PI) / 180;
     return [130 + rad * Math.cos(a), 130 + rad * Math.sin(a)] as const;
   };
+  const label =
+    loserIndex === null || mode !== "landed" ? `Wheel with ${names.join(", ")}` : `The wheel landed on ${names[loserIndex]}`;
 
   return (
-    <div className="wheel" role="img" aria-label={loserIndex === null ? `Wheel with ${names.join(", ")}` : `The wheel landed on ${names[loserIndex]}`}>
+    <div className={`wheel${mode === "spin" ? " wheel--moving" : ""}`} role="img" aria-label={label}>
       <div className="wheel__pointer" aria-hidden="true" />
       <svg viewBox="0 0 260 260" style={{ transform: `rotate(${rot}deg)` }} aria-hidden="true">
         {names.length < 2 ? (

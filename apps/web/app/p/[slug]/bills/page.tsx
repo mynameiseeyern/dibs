@@ -9,15 +9,16 @@ import { loadPlan } from "@/lib/viewer";
 import { addBill, confirmPaid, saysPaid, spin, toggleSpin } from "./actions";
 import { AddBill } from "./AddBill";
 import { Wheel } from "./Wheel";
+import { RouletteResult } from "./RouletteResult";
 
 export const metadata = { title: "Square up" };
 export const dynamic = "force-dynamic";
 
-type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ spun?: string; add?: string }> };
+type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ add?: string }> };
 
 export default async function Bills({ params, searchParams }: Props) {
   const { slug } = await params;
-  const { spun, add } = await searchParams;
+  const { add } = await searchParams;
   const view = await loadPlan(slug);
   if (!view) notFound();
   const { plan, members, me } = view;
@@ -59,7 +60,8 @@ export default async function Bills({ params, searchParams }: Props) {
   const myOwing = owedShares.filter((s) => s.member_id === me.id && s.status !== "confirmed");
   const iPaid = bills.filter((b) => b.payer_member_id === me.id);
   const pendingSpins = bills.filter((b) => b.split_mode === "roulette" && !b.roulette_loser_id);
-  const justSpun = spun ? bills.find((b) => b.id === spun && b.roulette_loser_id) : undefined;
+  // Every spun roulette bill stays on the page, newest first. Only the newest gets the big moment.
+  const spunBills = bills.filter((b) => b.split_mode === "roulette" && b.roulette_loser_id).sort((a, b) => b.created_at.localeCompare(a.created_at));
 
   const payidFor = async (bill: Bill) => {
     if (bill.payid) return { name: bill.payid_name ?? first(bill.payer_member_id), payid: bill.payid };
@@ -91,14 +93,18 @@ export default async function Bills({ params, searchParams }: Props) {
           <h1 className="title-h3">{owedShares.length > 0 && settled === owedShares.length ? "Money square." : "Bills"}</h1>
         </div>
 
-        {justSpun && (
-          <section className="moment">
-            <span className="subheading-sm eyebrow">Card roulette · {justSpun.title}</span>
-            <Wheel names={justSpun.roulette_entrants.map(first)} loserIndex={justSpun.roulette_entrants.indexOf(justSpun.roulette_loser_id!)} spin />
-            <h2 className="title-h2">{first(justSpun.roulette_loser_id)}&rsquo;s shout.</h2>
-            <p className="muted">{first(justSpun.roulette_loser_id)} covers {formatAud(justSpun.total_cents)}. Everyone else is square on this one.</p>
-          </section>
-        )}
+        {spunBills.map((b, i) => (
+          <RouletteResult
+            key={b.id}
+            billId={b.id}
+            title={b.title}
+            names={b.roulette_entrants.map(first)}
+            loserIndex={b.roulette_entrants.indexOf(b.roulette_loser_id!)}
+            loserName={first(b.roulette_loser_id)}
+            amount={formatAud(b.total_cents)}
+            big={i === 0}
+          />
+        ))}
 
         {owedShares.length > 0 && (
           <div className="db-stack">
@@ -147,7 +153,7 @@ export default async function Bills({ params, searchParams }: Props) {
             <section key={b.id} className="db-card section" aria-label={`Card roulette for ${b.title}`}>
               <span className="db-plan__eyebrow">Card roulette · {b.title}</span>
               <h2 className="title-h4">Loser pays the lot: <span className="money">{formatAud(b.total_cents)}</span></h2>
-              <Wheel names={b.roulette_entrants.map(first)} loserIndex={null} spin={false} />
+              <Wheel names={b.roulette_entrants.map(first)} loserIndex={null} mode="idle" />
               <p className="paragraph-sm muted center">
                 {b.roulette_entrants.length === 0 ? "Nobody's in yet." : `${b.roulette_entrants.length} in: ${b.roulette_entrants.map(first).join(", ")}`}
               </p>

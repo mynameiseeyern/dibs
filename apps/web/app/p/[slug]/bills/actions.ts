@@ -117,7 +117,7 @@ export async function spin(slug: string, billId: string): Promise<void> {
   }
   const name = r.view.members.find((m) => m.id === loser)?.display_name.split(" ")[0] ?? "Someone";
   await store.addMessage({ planId: r.view.plan.id, memberId: null, kind: "dibby", body: `Card roulette on ${r.bill.title}: ${name}'s shout.` });
-  redirect(`${path(slug)}?spun=${billId}`);
+  redirect(path(slug));
 }
 
 export async function saysPaid(slug: string, billId: string): Promise<void> {
