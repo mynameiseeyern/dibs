@@ -1,7 +1,8 @@
 import "server-only";
 import type { Message, Plan, PlanMember, PlanOption, Vibe } from "@dibs/shared/types";
-import { searchVenues, type Venue } from "./places";
+import { searchPlaces, searchVenues, type Venue } from "./places";
 import { TZ } from "./time";
+import { resolveStart, sydneyDate } from "@dibs/shared/when";
 
 // Dibby: Claude Haiku with tools. Reads only messages that tag @dibby (plus recent context),
 // keeps no memory between plans, never talks about money owed or anything personal.
@@ -45,6 +46,20 @@ function nowInSydney() {
   return new Intl.DateTimeFormat("en-AU", { timeZone: TZ, dateStyle: "full", timeStyle: "short" }).format(new Date());
 }
 
+/**
+ * The next two weeks with their dates, so Dibby looks "Friday" up instead of working it out
+ * (date maths is where it used to go wrong).
+ */
+function calendar(): string {
+  const fmt = new Intl.DateTimeFormat("en-AU", { timeZone: TZ, weekday: "long", day: "numeric", month: "long" });
+  const days: string[] = [];
+  for (let i = 0; i < 14; i++) {
+    const d = new Date(Date.now() + i * 86400_000);
+    days.push(`${i === 0 ? "today" : i === 1 ? "tomorrow" : "         "} ${fmt.format(d)} = ${sydneyDate(d)}`);
+  }
+  return `Right now in Sydney it is ${nowInSydney()}.\nCalendar (use it, don't work dates out yourself):\n${days.join("\n")}`;
+}
+
 const RULES = `You are Dibby, the AI member of a friend group's plan in the dibs app.
 Rules:
 - Keep replies to one to three short sentences. Australian spelling.
@@ -77,17 +92,16 @@ const DRAFT_TOOL: Tool = {
       area: { type: ["string", "null"], description: "Suburb or area, e.g. 'Surry Hills'. Null if not given." },
       starts_at_local: {
         type: ["string", "null"],
-        description: "Start in Sydney local time as YYYY-MM-DDTHH:mm, resolving words like 'Friday' to the next such date. Default dinner 19:00, lunch 12:30, drinks 18:00. Null if no day given.",
+        description:
+          "Start in Sydney local time as YYYY-MM-DDTHH:mm. Only when the organiser named a day: look the date up in the calendar ('Friday' is the next Friday; 'this weekend' is the coming Saturday). For the time use what they said; if they named a meal but no time use brunch 11:00, lunch 12:30, arvo 15:00, drinks 18:00, dinner 19:00. If they gave no day, null. Never make up a day or a time.",
       },
-      search_query: { type: "string", description: "What to search for venues, e.g. 'cheap dumplings' or 'casual dinner'." },
-      suggestions: {
-        type: "array",
-        items: { type: "string" },
-        description: "Three well-known real venue names in that area that fit, used only if search is unavailable.",
+      search_query: { type: "string", description: "What to search for venues, e.g. 'cheap dumplings' or 'casual dinner'. Include the cuisine or activity and any budget words." },
+      reply: {
+        type: "string",
+        description: "One short line to the organiser, in the vibe's voice, saying what you drafted. If you set a time, say it plainly (e.g. 'Fri 7pm'). If no day was given, say the time's still to be decided.",
       },
-      reply: { type: "string", description: "One short line to the organiser, in the vibe's voice, saying what you drafted." },
     },
-    required: ["title", "area", "starts_at_local", "search_query", "suggestions", "reply"],
+    required: ["title", "area", "starts_at_local", "search_query", "reply"],
   },
 };
 
@@ -96,35 +110,61 @@ interface DraftInput {
   area: string | null;
   starts_at_local: string | null;
   search_query: string;
-  suggestions: string[];
   reply: string;
 }
 
-/** Search real venues for a draft, falling back to Dibby's suggestions when search is down. */
-async function finishDraft(i: DraftInput, vibe: Vibe): Promise<PlanDraft> {
-  const found = await searchVenues(i.search_query, i.area);
-  const venues: Venue[] =
-    found && found.length > 0
-      ? found.slice(0, 3)
-      : (i.suggestions ?? []).slice(0, 3).map((name) => ({ placeId: null, name, address: null, rating: null, priceLevel: null }));
+const LOCAL_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+
+/**
+ * Real venues for a draft, from Google Places only (every place on a plan is a real business).
+ * Biased to where the organiser is when they tapped "Near me". No results means no options.
+ */
+async function finishDraft(i: DraftInput, vibe: Vibe, near: { lat: number; lng: number } | null = null): Promise<PlanDraft> {
+  const found = await searchPlaces(i.search_query, near, near ? null : i.area);
+  const venues: Venue[] = (found ?? []).slice(0, 3).map((p) => ({ placeId: p.placeId, name: p.name, address: p.address, rating: p.rating, priceLevel: null }));
   return {
     title: String(i.title).slice(0, 80),
     area: i.area,
-    startsAtLocal: i.starts_at_local,
+    startsAtLocal: i.starts_at_local && LOCAL_RE.test(i.starts_at_local) ? i.starts_at_local : null,
     vibe,
     venues,
-    checked: Boolean(found && found.length > 0),
+    checked: venues.length > 0,
     reply: i.reply,
   };
 }
 
-export async function draftPlan(prompt: string, vibe: Vibe): Promise<PlanDraft> {
-  const system = `${RULES}\nVoice: ${VOICE[vibe]}\nRight now in Sydney it is ${nowInSydney()}.`;
-  const res = await claude(system, [{ role: "user", content: prompt.slice(0, 500) }], [DRAFT_TOOL], { type: "tool", name: "draft_plan" });
+/** What the organiser tapped on the Ask Dibby chips. These are facts, not hints. */
+export interface DraftPicks {
+  /** "2026-10-24" */
+  date?: string | null;
+  /** "19:00" */
+  time?: string | null;
+  /** 1 cheap, 2 mid, 3 fancy */
+  spend?: 1 | 2 | 3 | null;
+  near?: { lat: number; lng: number } | null;
+}
+
+const SPEND_WORDS = { 1: "cheap", 2: "mid-range", 3: "fancy" } as const;
+
+export async function draftPlan(prompt: string, vibe: Vibe, picks: DraftPicks = {}): Promise<PlanDraft> {
+  const fixed = [
+    picks.date && `Day: ${new Intl.DateTimeFormat("en-AU", { timeZone: "UTC", weekday: "long", day: "numeric", month: "long" }).format(new Date(`${picks.date}T00:00:00Z`))} = ${picks.date} (fixed, use exactly this)`,
+    picks.time && `Time: ${picks.time} (fixed, use exactly this)`,
+    picks.spend && `Budget: ${SPEND_WORDS[picks.spend]} (put it in the search)`,
+    picks.near && "Where: near the organiser right now (leave area null unless they named one)",
+  ].filter(Boolean);
+  const content = `${prompt.slice(0, 500) || "Set up a plan."}${fixed.length ? `\n\nThe organiser also tapped:\n${fixed.join("\n")}` : ""}`;
+  const system = `${RULES}\nVoice: ${VOICE[vibe]}\n${calendar()}`;
+  const res = await claude(system, [{ role: "user", content }], [DRAFT_TOOL], { type: "tool", name: "draft_plan" });
   const call = res.content.find((b): b is Extract<Block, { type: "tool_use" }> => b.type === "tool_use");
   if (!call) throw new Error("Dibby didn't draft a plan");
-  return finishDraft(call.input as unknown as DraftInput, vibe);
+  const input = call.input as unknown as DraftInput;
+  if (picks.spend && !input.search_query.toLowerCase().includes(SPEND_WORDS[picks.spend])) input.search_query = `${SPEND_WORDS[picks.spend]} ${input.search_query}`;
+  const draft = await finishDraft(input, vibe, picks.near ?? null);
+  draft.startsAtLocal = resolveStart(draft.startsAtLocal, picks);
+  return draft;
 }
+
 
 // ---------- Reply when tagged in a plan thread ----------
 
@@ -180,7 +220,7 @@ export async function replyInThread(ctx: ThreadContext, ask: string): Promise<Th
     `Going: ${going.join(", ") || "nobody yet"}. Haven't replied: ${quiet.join(", ") || "nobody"}.`,
     `Recent messages:\n${ctx.recent.map((m) => `${ctx.nameOf(m.member_id)}: ${m.body}`).join("\n")}`,
   ].join("\n");
-  const system = `${RULES}\nVoice: ${VOICE[plan.vibe]}\nRight now in Sydney it is ${nowInSydney()}.\n\n${context}`;
+  const system = `${RULES}\nVoice: ${VOICE[plan.vibe]}\n${calendar()}\n\n${context}`;
 
   const turns: Turn[] = [{ role: "user", content: ask.slice(0, 500) }];
   const found = new Map<string, Venue>();
@@ -221,7 +261,7 @@ export async function replyInThread(ctx: ThreadContext, ask: string): Promise<Th
         results.push({
           type: "tool_result",
           tool_use_id: c.id,
-          content: `New plan "${newPlan.title}" is set up with a vote on: ${where}${newPlan.checked ? "" : " (not checked on Maps)"}. Everyone from this plan is invited. A button to open it appears under your reply, so don't paste a link. Reply in one short line.`,
+          content: `New plan "${newPlan.title}" is set up with a vote on: ${where}. Everyone from this plan is invited. A button to open it appears under your reply, so don't paste a link. Reply in one short line.`,
         });
       }
     }
