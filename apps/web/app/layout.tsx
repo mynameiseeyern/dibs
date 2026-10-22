@@ -11,9 +11,10 @@ import "@fontsource/dm-mono/latin-400.css";
 import "@fontsource/dm-mono/latin-500.css";
 import "remixicon/fonts/remixicon.css";
 import "./globals.css";
+import { siteUrl } from "@/lib/site";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
+  metadataBase: new URL(siteUrl()),
   title: { default: "dibs", template: "%s · dibs" },
   description: "Plans sorted, money square. Get your crew from “we should catch up” to actually going.",
 };
