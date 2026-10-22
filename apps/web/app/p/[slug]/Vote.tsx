@@ -1,12 +1,11 @@
 "use client";
 
-import { useActionState, useOptimistic, useRef, useState, useTransition } from "react";
+import { useOptimistic, useRef, useState, useTransition } from "react";
 import type { PlanOption } from "@dibs/shared/types";
 import type { FormState } from "./actions";
 import { Fresh } from "@/components/moments/Fresh";
 import { PlacePicker } from "@/components/PlacePicker";
 import * as Button from "@/components/ui/button";
-import * as Hint from "@/components/ui/hint";
 import * as Modal from "@/components/ui/modal";
 import { toast } from "@/components/ui/toast";
 
@@ -42,8 +41,7 @@ export function VoteList({
   /** The plan's area, to start the map search near it. */
   area?: string | null;
 }) {
-  const [state, addAction, adding] = useActionState(add, undefined);
-  const [, startTransition] = useTransition();
+  const [adding, startAdding] = useTransition();
   // The tap moves your vote straight away: counts and bars update here, the server saves it behind,
   // and the next refresh replaces this with the real numbers (one vote per plan, so it moves, not adds).
   const [shownRows, moveVote] = useOptimistic(rows, (current: VoteRow[], optionId: string) =>
@@ -136,11 +134,6 @@ export function VoteList({
           {adding ? "Adding…" : "Add a place"}
         </Button.Root>
       )}
-      {state?.error && (
-        <Hint.Root hasError role="alert">
-          {state.error}
-        </Hint.Root>
-      )}
 
       <PlacePicker
         open={picking}
@@ -152,7 +145,12 @@ export function VoteList({
         onPick={(p) => {
           const f = new FormData();
           f.set("place_id", p.placeId);
-          startTransition(() => addAction(f));
+          // Say how it went either way: a toast is hard to miss, unlike a line under the button.
+          startAdding(async () => {
+            const res = await add(undefined, f);
+            if (res?.error) toast.error(res.error);
+            else toast.success(`Added ${p.name} to the vote`);
+          });
         }}
       />
 
