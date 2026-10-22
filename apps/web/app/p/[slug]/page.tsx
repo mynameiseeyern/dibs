@@ -9,6 +9,8 @@ import { Suspense } from "react";
 import { Weather } from "./Weather";
 import { PlanTabs } from "./PlanTabs";
 import { RsvpPicker } from "./RsvpPicker";
+import { AddToCalendar } from "./AddToCalendar";
+import { canAddToCalendar, googleCalendarLink } from "@/lib/calendar";
 import { Once } from "@/components/moments/Once";
 import { planStatus } from "@/lib/status";
 import { Monogram, MonogramStack } from "@/components/Monogram";
@@ -132,6 +134,9 @@ export default async function PlanPage({ params }: Props) {
               </Suspense>
             )}
           </ul>
+          {me && canAddToCalendar(plan) && plan.status === "locked" && (
+            <AddToCalendar icsHref={`/p/${slug}/calendar`} googleHref={googleCalendarLink(plan, `${siteUrl()}/p/${slug}`)} />
+          )}
           {(cancelled || plan.updated_note) && (
             <p className={`label-sm plan-card__note${cancelled ? " plan-card__note--off" : ""}`} role="status">
               <i className={`${cancelled ? "ri-close-circle-line" : "ri-refresh-line"} db-icon`} aria-hidden="true" />
