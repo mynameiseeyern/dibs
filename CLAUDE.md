@@ -11,7 +11,7 @@ Build plan: https://claude.ai/artifact/2Lce9vh9ZvGunTKngL6sWX · Linear project 
 ## Commands
 
 - `pnpm dev` — web app on :3000 (in-memory demo store if Supabase env is empty)
-- `pnpm test` — bill maths and plan start times (Vitest, `packages/shared`). Keep them passing.
+- `pnpm test` — bill maths, plan start times and RSVP access (Vitest, `packages/shared`). Keep them passing.
 - `pnpm build`, `pnpm typecheck`
 - `pnpm tokens` — regenerate `packages/ui/src/tokens.css` and `tailwind-theme.css` from `packages/ui/tokens.json`
 
@@ -48,6 +48,7 @@ Open `packages/ui/design-system/index.html` in a browser to see every component 
 - Guests have no account by default: signed device cookie (`lib/guest.ts`), every guest write goes through a server action or route.
 - A guest can add an email (`/account`). When someone signs in with it within an hour, or signs in on the browser holding the guest cookie, `store.claimGuests` moves those memberships onto the account (`lib/viewer.ts` `whoIsHere`). Signing out also clears the guest cookie.
 - Amounts are integer cents with a currency code (default AUD).
+- Only people going (and hosts) vote, chat, react or add places. Maybe, not replied or waitlisted: read only. Can't go: vote, chat and who's in are hidden. `planAccess` in `packages/shared/src/plans.ts`, checked in every server action. Stepping down from going before the plan starts takes your vote back.
 - Dibby never makes up a day or a time. Ask Dibby chips (day, time, budget, near me) are fixed facts; `resolveStart` in `packages/shared/src/when.ts` decides the start.
 - Every place on a plan (vote options, a set place) is a real, open business picked on the map (`components/PlacePicker.tsx`), and the server checks the place ID with `getPlace` before saving. No typed-in places.
 

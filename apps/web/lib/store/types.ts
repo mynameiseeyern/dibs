@@ -89,6 +89,8 @@ export interface Store {
   /** Hosts take an option off the vote. Its votes go with it. */
   removeOption(planId: string, optionId: string): Promise<void>;
   listVotes(planId: string): Promise<Vote[]>;
+  /** Takes back someone's vote on a plan (they're no longer going). */
+  removeVote(planId: string, memberId: string): Promise<void>;
   /** One vote per person per plan; voting again moves it. */
   castVote(planId: string, optionId: string, memberId: string): Promise<void>;
 

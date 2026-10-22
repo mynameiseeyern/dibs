@@ -204,6 +204,10 @@ export const supabaseStore: Store = {
       (v: { option_id: string; member_id: string }) => ({ option_id: v.option_id, member_id: v.member_id })
     ) as Vote[];
   },
+  async removeVote(planId, memberId) {
+    const ids = (must(await admin().from("options").select("id").eq("plan_id", planId)) as { id: string }[]).map((o) => o.id);
+    if (ids.length) must(await admin().from("votes").delete().eq("member_id", memberId).in("option_id", ids));
+  },
   async castVote(_planId, optionId, memberId) {
     // The one_vote_per_plan trigger removes their earlier vote on this plan.
     must(await admin().from("votes").upsert({ option_id: optionId, member_id: memberId }));

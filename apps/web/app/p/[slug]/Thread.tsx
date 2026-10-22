@@ -3,7 +3,7 @@ import { REACTIONS, type Reaction } from "@/lib/store/types";
 import { DibbyMark } from "@/components/Logo";
 import { Monogram } from "@/components/Monogram";
 import { TZ } from "@/lib/time";
-import { Composer } from "./Composer";
+import { Composer, ReadOnlyComposer } from "./Composer";
 import { Fresh } from "@/components/moments/Fresh";
 import type { FormState } from "./actions";
 import { splitPlanLink } from "@/lib/thread-links";
@@ -19,6 +19,7 @@ export function Thread({
   members,
   meId,
   canPost,
+  readOnly,
   post,
   vibe,
   reactions = [],
@@ -35,6 +36,8 @@ export function Thread({
   members: PlanMember[];
   meId: string | null;
   canPost: boolean;
+  /** Set when this person can only read along (a maybe, not replied, waitlisted): why. */
+  readOnly?: string | null;
   post: (s: FormState, f: FormData) => Promise<FormState>;
 }) {
   const byId = new Map(members.map((m) => [m.id, m]));
@@ -104,7 +107,9 @@ export function Thread({
             </Fresh>
           </div>
         )}
-        {canPost ? (
+        {readOnly ? (
+          <ReadOnlyComposer note={readOnly} />
+        ) : canPost ? (
           <Composer action={post} />
         ) : (
           <p className="paragraph-sm muted thread__readonly">Get the dibs app to chat here. You can still vote and RSVP.</p>

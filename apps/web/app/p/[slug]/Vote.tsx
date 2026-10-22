@@ -24,6 +24,7 @@ export function VoteList({
   remove,
   canRemoveAll = false,
   meId = null,
+  readOnly = null,
   area,
 }: {
   rows: VoteRow[];
@@ -36,6 +37,8 @@ export function VoteList({
   /** Hosts can take off any option; everyone else only the ones they added. */
   canRemoveAll?: boolean;
   meId?: string | null;
+  /** Set when this person can only look (a maybe, not replied, waitlisted): why, shown when they tap. */
+  readOnly?: string | null;
   /** The plan's area, to start the map search near it. */
   area?: string | null;
 }) {
@@ -47,7 +50,7 @@ export function VoteList({
   const [openRow, setOpenRow] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<VoteRow | null>(null);
   const [removing, setRemoving] = useState(false);
-  const canRemove = (r: VoteRow) => Boolean(remove) && open && (canRemoveAll || (meId !== null && r.added_by === meId));
+  const canRemove = (r: VoteRow) => !readOnly && Boolean(remove) && open && (canRemoveAll || (meId !== null && r.added_by === meId));
   const anyRemovable = rows.some(canRemove);
 
   const confirmRemove = async () => {
@@ -78,6 +81,7 @@ export function VoteList({
             disabled={!canVote || !open}
             onClick={() => {
               if (openRow === r.id) return setOpenRow(null);
+              if (readOnly) return void toast.info(readOnly);
               void vote(r.id);
             }}
           >
@@ -112,7 +116,7 @@ export function VoteList({
       })}
 
       {canVote && open && rows.length < 8 && (
-        <Button.Root type="button" variant="neutral" mode="lighter" block disabled={adding} onClick={() => setPicking(true)}>
+        <Button.Root type="button" variant="neutral" mode="lighter" block disabled={adding} onClick={() => (readOnly ? toast.info(readOnly) : setPicking(true))}>
           <i className="ri-map-pin-add-line db-icon" aria-hidden="true" />
           {adding ? "Adding…" : "Add a place"}
         </Button.Root>

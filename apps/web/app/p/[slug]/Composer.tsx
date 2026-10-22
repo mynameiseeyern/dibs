@@ -7,6 +7,7 @@ import * as Button from "@/components/ui/button";
 import * as Hint from "@/components/ui/hint";
 import * as Input from "@/components/ui/input";
 import * as Avatar from "@/components/ui/avatar";
+import { toast } from "@/components/ui/toast";
 
 export function Composer({ action }: { action: (s: FormState, f: FormData) => Promise<FormState> }) {
   const [text, setText] = useState("");
@@ -67,5 +68,25 @@ export function Composer({ action }: { action: (s: FormState, f: FormData) => Pr
         </Hint.Root>
       )}
     </form>
+  );
+}
+
+/**
+ * What maybes (and anyone not going yet) see instead of the composer: it looks like one, and
+ * tapping it says why they can't post.
+ */
+export function ReadOnlyComposer({ note }: { note: string }) {
+  return (
+    <div className="composer">
+      <div className="composer__row">
+        <button type="button" className="composer__readonly" onClick={() => toast.info(note)} aria-describedby="composer-ro-note">
+          <i className="ri-lock-line db-icon" aria-hidden="true" />
+          <span>Read only</span>
+        </button>
+      </div>
+      <p id="composer-ro-note" className="paragraph-xs muted">
+        {note}
+      </p>
+    </div>
   );
 }

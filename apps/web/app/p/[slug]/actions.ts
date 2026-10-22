@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { hasRoom } from "@dibs/shared/plans";
+import { hasRoom, planAccess, READ_ONLY_NOTE } from "@dibs/shared/plans";
 import type { PlanMember, Rsvp } from "@dibs/shared/types";
 import { BRB, mentionsDibby, replyInThread, type PlanDraft } from "@/lib/dibby";
 import { clearGuestSession, createGuestSession } from "@/lib/guest";
@@ -65,6 +65,10 @@ export async function setRsvp(slug: string, rsvp: Rsvp, form: FormData): Promise
     waitlisted = !holding && !hasRoom(others, view.plan.capacity, plusOne);
   }
   await store.updateMember(view.me.id, { rsvp, plus_one: rsvp === "in" ? plusOne : false, waitlisted });
+  // Only people going vote. Stepping back to maybe or can't go, before the plan starts,
+  // takes their vote back so it doesn't decide a night they might not come to.
+  const started = Boolean(view.plan.starts_at && Date.parse(view.plan.starts_at) <= Date.now());
+  if (rsvp !== "in" && view.plan.status === "voting" && !started) await store.removeVote(view.plan.id, view.me.id);
   // Was in, now can't go: Dibby gives the crew a heads-up (respects mute volume and the cap).
   if (rsvp === "out" && view.me.rsvp === "in" && !view.me.waitlisted) await nudgeOnBail(view.plan, view.me);
   revalidatePath(`/p/${slug}`);
@@ -80,6 +84,17 @@ export async function removeMe(slug: string): Promise<void> {
   redirect(`/p/${slug}`);
 }
 
+/**
+ * Only people who are going (and hosts) vote, chat, react or add places. Maybes, people who
+ * haven't replied and the waitlist read along; "can't go" don't see it. Null when allowed.
+ */
+function blocked(view: NonNullable<Awaited<ReturnType<typeof loadPlan>>>): string | null {
+  if (!view.me) return "Join the plan first.";
+  const a = planAccess(view.me);
+  if (a.level === "full") return null;
+  return a.level === "hidden" ? "You said you can't go. Tap I'm in to take part." : READ_ONLY_NOTE[a.why];
+}
+
 // ---------- Thread ----------
 
 export async function postMessage(slug: string, _prev: FormState, form: FormData): Promise<FormState> {
@@ -87,6 +102,8 @@ export async function postMessage(slug: string, _prev: FormState, form: FormData
   if (!view?.me) return { error: "Join the plan to chat." };
   // Guests read the thread; signed-in members post (ARV-46).
   if (!view.me.user_id) return { error: "Get the app to chat in the thread." };
+  const no = blocked(view);
+  if (no) return { error: no };
   const body = String(form.get("body") ?? "").trim().slice(0, 2000);
   if (!body) return undefined;
   const tagged = mentionsDibby(body);
@@ -182,7 +199,7 @@ export async function toggleDibbyMute(slug: string): Promise<void> {
 /** React to a message in the thread. Signed-in members only, like posting. */
 export async function toggleReaction(slug: string, messageId: string, emoji: string): Promise<void> {
   const view = await loadPlan(slug);
-  if (!view?.me?.user_id || !(REACTIONS as readonly string[]).includes(emoji)) return;
+  if (!view?.me?.user_id || !(REACTIONS as readonly string[]).includes(emoji) || blocked(view)) return;
   const messages = await store.listMessages(view.plan.id, 200);
   if (!messages.some((m) => m.id === messageId)) return;
   await store.toggleReaction({ planId: view.plan.id, message_id: messageId, member_id: view.me.id, emoji: emoji as Reaction["emoji"] });
@@ -193,7 +210,7 @@ export async function toggleReaction(slug: string, messageId: string, emoji: str
 
 export async function vote(slug: string, optionId: string): Promise<void> {
   const view = await loadPlan(slug);
-  if (!view?.me || view.plan.status !== "voting") return;
+  if (!view?.me || view.plan.status !== "voting" || blocked(view)) return;
   const options = await store.listOptions(view.plan.id);
   if (!options.some((o) => o.id === optionId)) return;
   await store.castVote(view.plan.id, optionId, view.me.id);
@@ -204,6 +221,8 @@ export async function vote(slug: string, optionId: string): Promise<void> {
 export async function addOption(slug: string, _prev: FormState, form: FormData): Promise<FormState> {
   const view = await loadPlan(slug);
   if (!view?.me || view.plan.status !== "voting") return { error: "Voting's closed." };
+  const no = blocked(view);
+  if (no) return { error: no };
   const options = await store.listOptions(view.plan.id);
   if (options.length >= 8) return { error: "That's plenty of options. Time to vote." };
   const place = await getPlace(String(form.get("place_id") ?? ""));
@@ -225,6 +244,8 @@ export async function removeOption(slug: string, optionId: string): Promise<{ er
   const option = (await store.listOptions(view.plan.id)).find((o) => o.id === optionId);
   if (!option) return { label: undefined };
   if (!view.isHost && option.added_by !== view.me.id) return { error: "You can only take off places you added." };
+  const no = blocked(view);
+  if (no) return { error: no };
   await store.removeOption(view.plan.id, option.id);
   await store.addMessage({ planId: view.plan.id, memberId: null, kind: "system", body: `${view.me!.display_name.split(" ")[0]} took ${option.label} off the vote.` });
   revalidatePath(`/p/${slug}`);
