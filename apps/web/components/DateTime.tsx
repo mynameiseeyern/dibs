@@ -139,7 +139,7 @@ export function DayStrip({
           <button
             type="button"
             aria-label="More dates"
-            className="flex h-14 w-14 shrink-0 snap-start flex-col items-center justify-center gap-0.5 rounded-lg bg-bg-weak-50 text-text-sub-600 transition duration-200 ease-out hover:bg-bg-soft-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+            className="flex h-14 w-14 shrink-0 snap-start flex-col items-center justify-center gap-0.5 rounded-lg text-text-sub-600 ring-1 ring-inset ring-stroke-soft-200 transition duration-200 ease-out hover:bg-bg-weak-50 hover:text-text-strong-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
           >
             <RiCalendarLine className="size-5" aria-hidden="true" />
             <span className="text-paragraph-xs">More</span>
