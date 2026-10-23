@@ -296,7 +296,7 @@ export default async function PlanPage({ params }: Props) {
                 label="Tell the group"
                 title={plan.title}
                 url={url}
-                text={`I'm in for ${plan.title}! ${inCount} going so far 👉 ${url}`}
+                text={`I'm in for ${[plan.title, formatShort(plan.starts_at), plan.venue_name].filter(Boolean).join(" · ")}. ${inCount} going so far, you coming? 👉 ${url}`}
               />
             )}
             {me.rsvp === "in" && !me.waitlisted && me.role === "guest" && (
@@ -480,7 +480,14 @@ export default async function PlanPage({ params }: Props) {
             <ShareButton
               title={plan.title}
               url={url}
-              text={shareText({ title: plan.title, deadline: plan.status === "voting" ? formatShort(plan.vote_deadline) : null, url })}
+              text={shareText({
+                title: plan.title,
+                when: formatShort(plan.starts_at),
+                place: plan.venue_name ?? plan.area,
+                voting: plan.status === "voting",
+                deadline: formatShort(plan.vote_deadline),
+                url,
+              })}
             />
           </div>
         </div>

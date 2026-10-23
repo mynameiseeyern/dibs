@@ -42,10 +42,15 @@ export function hasRoom(members: Parameters<typeof countIn>[0], capacity: number
 
 export const RSVP_LABEL: Record<Rsvp, string> = { in: "I'm in", maybe: "Maybe", out: "Can't go" };
 
-/** Prefilled WhatsApp message. Short, then the link. */
-export function shareText(opts: { title: string; deadline?: string | null; url: string }): string {
-  const by = opts.deadline ? ` Vote + RSVP by ${opts.deadline}` : " Vote + RSVP";
-  return `${opts.title} is on.${by} 👉 ${opts.url}`;
+/**
+ * Prefilled group-chat message: the event first (what, when, where), then one ask.
+ * "Friday dinner · Fri 7pm · Chat Thai. You in? 👉 link"
+ * While the place is still being voted on it says so, so people know there's a vote to do.
+ */
+export function shareText(opts: { title: string; when?: string | null; place?: string | null; voting?: boolean; deadline?: string | null; url: string }): string {
+  const head = [opts.title, opts.when, opts.voting ? null : opts.place].filter(Boolean).join(" · ");
+  const vote = opts.voting ? ` Place is up for a vote${opts.deadline ? ` till ${opts.deadline}` : ""}.` : "";
+  return `${head}.${vote} You in? 👉 ${opts.url}`;
 }
 
 /**
