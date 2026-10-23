@@ -350,7 +350,7 @@ export default async function PlanPage({ params, searchParams }: Props) {
                 rows={whenRows}
                 bestId={ranked.bestId}
                 outOf={counted.size}
-                me={me && access?.level !== "hidden" ? { id: me.id, display_name: me.display_name, colour: me.colour } : null}
+                me={me ? { id: me.id, display_name: me.display_name, colour: me.colour } : null}
                 readOnly={readOnly}
                 isHost={isHost}
                 max={MAX_TIMES}
