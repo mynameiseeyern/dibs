@@ -22,8 +22,11 @@ import * as Alert from "@/components/ui/alert";
 import * as Badge from "@/components/ui/badge";
 import * as Hint from "@/components/ui/hint";
 import * as ProgressBar from "@/components/ui/progress-bar";
+import { planPreview } from "@/lib/plan-preview";
 
-export const metadata = { title: "Square up" };
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  return planPreview((await params).slug, { label: "Square up", path: "/bills", blurb: "See your share and square up. Balances stay private." });
+}
 export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ add?: string }> };

@@ -12,13 +12,21 @@ import "@fontsource/dm-mono/latin-500.css";
 import "remixicon/fonts/remixicon.css";
 import "./globals.css";
 import { siteUrl } from "@/lib/site";
+import { SITE_DESCRIPTION, SITE_NAME, TAGLINE } from "@/lib/og";
 import { FinishSignIn } from "@/components/FinishSignIn";
 import { Toaster } from "@/components/ui/toast";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
-  title: { default: "dibs", template: "%s · dibs" },
-  description: "Plans sorted, money square. Get your crew from “we should catch up” to actually going.",
+  applicationName: SITE_NAME,
+  title: { default: `${SITE_NAME}: ${TAGLINE.toLowerCase()}`, template: "%s · dibs" },
+  description: SITE_DESCRIPTION,
+  // Plans and personal pages stay out of search. The landing page opts back in.
+  robots: { index: false, follow: false },
+  openGraph: { title: `${SITE_NAME}: ${TAGLINE.toLowerCase()}`, description: SITE_DESCRIPTION, siteName: SITE_NAME, type: "website", locale: "en_AU", url: "/" },
+  twitter: { card: "summary_large_image", title: `${SITE_NAME}: ${TAGLINE.toLowerCase()}`, description: SITE_DESCRIPTION },
+  appleWebApp: { title: SITE_NAME, capable: true, statusBarStyle: "default" },
+  formatDetection: { telephone: false },
 };
 
 export const viewport: Viewport = {
