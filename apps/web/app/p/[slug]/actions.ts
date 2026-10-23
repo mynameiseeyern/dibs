@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { READ_ONLY_NOTE, cleanCustomPlace, hasRoom, planAccess } from "@dibs/shared/plans";
 import type { PlanMember, Rsvp } from "@dibs/shared/types";
-import { BRB, mentionsDibby, replyInThread, suggestMore, type PlanDraft } from "@/lib/dibby";
+import { asSearchMemo, BRB, mentionsDibby, replyInThread, suggestMore, type PlanDraft } from "@/lib/dibby";
 import { clearGuestSession, createGuestSession } from "@/lib/guest";
 import { store } from "@/lib/store";
 import { REACTIONS, type Reaction } from "@/lib/store/types";
@@ -152,7 +152,8 @@ async function runDibby(planId: string, slug: string, ask: string, asker: PlanMe
       const created = await createFromThread(out.newPlan, asker, view.members, ask);
       body = `${out.reply}\n${planLinkLine(created.slug)}`;
     }
-    await store.addMessage({ planId, memberId: null, kind: "dibby", body });
+    // Remember where Dibby looked, so "how about korean?" next time searches the same place.
+    await store.addMessage({ planId, memberId: null, kind: "dibby", body, template: out.searched ?? undefined });
   } catch (e) {
     console.error("[dibby]", e);
     await store.addMessage({ planId, memberId: null, kind: "dibby", body: BRB });
@@ -253,9 +254,13 @@ export async function askDibbyMore(slug: string, form: FormData): Promise<{ erro
   const options = await store.listOptions(view.plan.id);
   if (options.length >= 8) return { error: "That's plenty of options. Time to vote." };
   const ask = clean(form.get("ask"), 500);
+  // Look where Dibby last looked on this plan (say, Hong Kong), else the plan's area.
+  const recent = await store.listMessages(view.plan.id, 30);
+  const memo = [...recent].reverse().map((m) => (m.kind === "dibby" ? asSearchMemo(m.template) : null)).find(Boolean) ?? null;
+  const area = memo?.area ?? view.plan.area;
   let more;
   try {
-    more = await suggestMore(ask, view.plan.vibe, view.plan.area, options.map((o) => ({ placeId: o.place_id, label: o.label })));
+    more = await suggestMore(ask, view.plan.vibe, area, options.map((o) => ({ placeId: o.place_id, label: o.label })));
   } catch (e) {
     console.error("[dibby more]", e);
     return { error: "brb, Dibby's having a moment. Try again, or add a place from the map." };
@@ -268,7 +273,7 @@ export async function askDibbyMore(slug: string, form: FormData): Promise<{ erro
   const body = venues.length
     ? `${more.reply} Added ${names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`} to the vote.`
     : "Couldn't find anything new for that on Maps. Try a different ask, or add one from the map.";
-  await store.addMessage({ planId: view.plan.id, memberId: null, kind: "dibby", body });
+  await store.addMessage({ planId: view.plan.id, memberId: null, kind: "dibby", body, template: { k: "search", query: more.query, area } });
   revalidatePath(`/p/${slug}`);
   return { added: names };
 }

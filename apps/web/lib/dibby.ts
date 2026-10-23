@@ -185,8 +185,8 @@ const MORE_TOOL: Tool = {
  * Three more real spots for an open vote, skipping what's already on it. Same rule as a draft:
  * Google Places only, nothing made up, and no results means none added.
  */
-export async function suggestMore(ask: string, vibe: Vibe, area: string | null, have: { placeId: string | null; label: string }[]): Promise<{ venues: Venue[]; reply: string }> {
-  const content = `The vote already has: ${have.map((h) => h.label).join(", ") || "nothing yet"}.${area ? ` The plan's area is ${area}.` : ""}\nSomeone asked for more: ${ask.slice(0, 500) || "more like these"}`;
+export async function suggestMore(ask: string, vibe: Vibe, area: string | null, have: { placeId: string | null; label: string }[]): Promise<{ venues: Venue[]; reply: string; query: string }> {
+  const content = `The vote already has: ${have.map((h) => h.label).join(", ") || "nothing yet"}.${area ? ` We're looking in ${area}.` : ""}\nSomeone asked for more: ${ask.slice(0, 500) || "more like these"}`;
   const res = await claude(`${RULES}\nVoice: ${VOICE[vibe]}`, [{ role: "user", content }], [MORE_TOOL], { type: "tool", name: "find_places" });
   const call = res.content.find((b): b is Extract<Block, { type: "tool_use" }> => b.type === "tool_use");
   if (!call) throw new Error("Dibby didn't search");
@@ -198,10 +198,19 @@ export async function suggestMore(ask: string, vibe: Vibe, area: string | null, 
     .filter((p) => !ids.has(p.placeId) && !names.has(p.name.toLowerCase()))
     .slice(0, 3)
     .map((p) => ({ placeId: p.placeId, name: p.name, address: p.address, rating: p.rating, priceLevel: null }));
-  return { venues, reply: String(input.reply ?? "").slice(0, 300) };
+  return { venues, reply: String(input.reply ?? "").slice(0, 300), query: String(input.search_query ?? ask).slice(0, 120) };
 }
 
 // ---------- Reply when tagged in a plan thread ----------
+
+/** Where Dibby last looked on this plan, kept on its message so the next ask starts there. */
+export interface SearchMemo {
+  k: "search";
+  query: string;
+  area: string | null;
+}
+export const asSearchMemo = (raw: unknown): SearchMemo | null =>
+  raw && typeof raw === "object" && (raw as SearchMemo).k === "search" && typeof (raw as SearchMemo).query === "string" ? (raw as SearchMemo) : null;
 
 export interface ThreadContext {
   plan: Plan;
@@ -216,6 +225,8 @@ export interface ThreadResult {
   addOptions: Venue[];
   /** A separate plan Dibby set up, for the action to create. At most one per ask. */
   newPlan: PlanDraft | null;
+  /** The last venue search this turn, to remember for the next ask. */
+  searched: SearchMemo | null;
 }
 
 const THREAD_TOOLS: Tool[] = [
@@ -224,7 +235,14 @@ const THREAD_TOOLS: Tool[] = [
     description: "Search Google Places for venues. Returns up to 3 real places.",
     input_schema: {
       type: "object",
-      properties: { query: { type: "string" }, area: { type: ["string", "null"] } },
+      properties: {
+        query: { type: "string", description: "What to look for, e.g. 'korean bbq' or 'rooftop bar'. Budget words welcome." },
+        area: {
+          type: ["string", "null"],
+          description:
+            "Where to look: a suburb, city or country, e.g. 'Hong Kong', 'Newtown'. Keep the place the conversation is already about: if the crew were looking at Hong Kong and someone asks 'how about korean?', the area is still Hong Kong. Only null when nobody has named a place at all (then the plan's area is used).",
+        },
+      },
       required: ["query", "area"],
     },
   },
@@ -249,37 +267,50 @@ export async function replyInThread(ctx: ThreadContext, ask: string): Promise<Th
   const { plan, members, options } = ctx;
   const going = members.filter((m) => m.rsvp === "in").map((m) => m.display_name);
   const quiet = members.filter((m) => !m.rsvp).map((m) => m.display_name);
+  // Where we've been looking: the last search Dibby ran on this plan, before the plan's own area.
+  const memo = [...ctx.recent].reverse().map((m) => (m.kind === "dibby" ? asSearchMemo(m.template) : null)).find(Boolean) ?? null;
+  const lookingIn = memo?.area ?? plan.area ?? null;
   const context = [
     `Plan: ${plan.title}. Status: ${plan.status}. Area: ${plan.area ?? "not set"}. When: ${plan.starts_at ?? "not set"}.`,
-    `Venue: ${plan.venue_name ?? "not decided"}. Vote options: ${options.map((o) => `${o.label} (${o.votes} votes)`).join(", ") || "none yet"}.`,
+    `Venue: ${plan.venue_name ?? "not decided"}. Vote options: ${options.map((o) => `${o.label}${o.note ? `, ${o.note}` : ""} (${o.votes} votes)`).join("; ") || "none yet"}.`,
+    memo ? `Where we've been looking: ${memo.area ?? "no area"} (last search: ${memo.query}). A follow-up like "how about korean?" means the same place.` : "",
+    "When you searched, start your reply with where you looked, e.g. 'Korean in Hong Kong:' so the crew can see what you did.",
     `Going: ${going.join(", ") || "nobody yet"}. Haven't replied: ${quiet.join(", ") || "nobody"}.`,
     `Recent messages:\n${ctx.recent.map((m) => `${ctx.nameOf(m.member_id)}: ${m.body}`).join("\n")}`,
-  ].join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
   const system = `${RULES}\nVoice: ${VOICE[plan.vibe]}\n${calendar()}\n\n${context}`;
 
   const turns: Turn[] = [{ role: "user", content: ask.slice(0, 500) }];
   const found = new Map<string, Venue>();
   const toAdd: Venue[] = [];
   let newPlan: PlanDraft | null = null;
+  let searched: SearchMemo | null = null;
 
   for (let step = 0; step < 4; step++) {
     const res = await claude(system, turns, THREAD_TOOLS);
     const calls = res.content.filter((b): b is Extract<Block, { type: "tool_use" }> => b.type === "tool_use");
     if (calls.length === 0) {
       const text = res.content.filter((b): b is Extract<Block, { type: "text" }> => b.type === "text").map((b) => b.text).join(" ").trim();
-      return { reply: text || newPlan?.reply || "On it.", addOptions: toAdd, newPlan };
+      return { reply: text || newPlan?.reply || "On it.", addOptions: toAdd, newPlan, searched };
     }
     turns.push({ role: "assistant", content: res.content });
     const results: Block[] = [];
     for (const c of calls) {
       if (c.name === "search_venues") {
         const q = c.input as { query: string; area: string | null };
-        const venues = await searchVenues(q.query, q.area ?? plan.area);
+        const area = (q.area ?? "").trim() || lookingIn;
+        const venues = await searchVenues(q.query, area);
         for (const v of venues ?? []) found.set(v.name.toLowerCase(), v);
+        searched = { k: "search", query: q.query, area };
         results.push({
           type: "tool_result",
           tool_use_id: c.id,
-          content: venues === null ? "Search is unavailable right now." : JSON.stringify(venues.map((v) => ({ name: v.name, address: v.address, rating: v.rating }))),
+          content:
+            venues === null
+              ? "Search is unavailable right now."
+              : `Searched "${q.query}" in ${area ?? "no particular area"}: ${JSON.stringify(venues.map((v) => ({ name: v.name, address: v.address, rating: v.rating })))}`,
         });
       } else if (c.name === "add_options") {
         const names = ((c.input as { names?: string[] }).names ?? []).slice(0, 3);
@@ -302,7 +333,7 @@ export async function replyInThread(ctx: ThreadContext, ask: string): Promise<Th
     }
     turns.push({ role: "user", content: results });
   }
-  return { reply: newPlan?.reply ?? "Done. Have a look at the vote.", addOptions: toAdd, newPlan };
+  return { reply: newPlan?.reply ?? "Done. Have a look at the vote.", addOptions: toAdd, newPlan, searched };
 }
 
 export const mentionsDibby = (text: string) => /(^|\s)@dibby\b/i.test(text);

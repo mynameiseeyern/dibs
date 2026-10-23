@@ -9,37 +9,12 @@ export interface Venue {
 }
 
 /**
- * Google Places (New) text search. Field mask keeps it to the cheap fields, and we only
- * store the place ID and name. Returns null when there's no key or the call fails.
+ * Venues for Dibby: the same search as the picker (demo places without a key, open businesses
+ * only), trimmed to `max`. Null when search is unavailable.
  */
 export async function searchVenues(query: string, area: string | null, max = 3): Promise<Venue[] | null> {
-  const key = process.env.GOOGLE_PLACES_API_KEY;
-  if (!key) return null;
-  try {
-    const res = await fetch("https://places.googleapis.com/v1/places:searchText", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Goog-Api-Key": key,
-        "X-Goog-FieldMask": "places.id,places.displayName,places.shortFormattedAddress,places.rating,places.priceLevel",
-      },
-      body: JSON.stringify({ textQuery: area ? `${query} in ${area}` : query, regionCode: "AU", pageSize: max }),
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as {
-      places?: { id: string; displayName?: { text: string }; shortFormattedAddress?: string; rating?: number; priceLevel?: string }[];
-    };
-    return (data.places ?? []).slice(0, max).map((p) => ({
-      placeId: p.id,
-      name: p.displayName?.text ?? "Somewhere",
-      address: p.shortFormattedAddress ?? null,
-      rating: p.rating ?? null,
-      priceLevel: p.priceLevel ?? null,
-    }));
-  } catch {
-    return null;
-  }
+  const found = await searchPlaces(query, null, area);
+  return found ? found.slice(0, max).map((p) => ({ placeId: p.placeId, name: p.name, address: p.address, rating: p.rating, priceLevel: null })) : null;
 }
 
 /** A business picked on the map. `placeId` is Google's (or "demo:…" in local demo mode). */
@@ -115,7 +90,7 @@ export async function searchPlaces(query: string, near: { lat: number; lng: numb
       headers: { "Content-Type": "application/json", "X-Goog-Api-Key": key, "X-Goog-FieldMask": PLACE_FIELDS.split(",").map((f) => `places.${f}`).join(",") },
       body: JSON.stringify({
         textQuery: !near && area ? `${q} in ${area}` : q,
-        regionCode: "AU",
+        ...(!near && area ? {} : { regionCode: "AU" }),
         pageSize: 8,
         ...(near ? { locationBias: { circle: { center: { latitude: near.lat, longitude: near.lng }, radius: 8000 } } } : {}),
       }),
