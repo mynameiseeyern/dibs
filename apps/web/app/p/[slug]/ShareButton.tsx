@@ -10,6 +10,7 @@ export function ShareButton({
   title,
   label = "Share to the group chat",
   quiet = false,
+  onShare,
 }: {
   text: string;
   url: string;
@@ -17,8 +18,11 @@ export function ShareButton({
   label?: string;
   /** Secondary style, for share moments that aren't the screen's main action. */
   quiet?: boolean;
+  /** Counts the tap (a server action). Fire and forget: sharing never waits on it. */
+  onShare?: () => Promise<void>;
 }) {
   async function share() {
+    onShare?.().catch(() => {});
     if (navigator.share) {
       try {
         await navigator.share({ title, text });

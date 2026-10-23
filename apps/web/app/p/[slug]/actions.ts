@@ -16,6 +16,7 @@ import { DIBBY_HEADS_UP, planLinkLine } from "@/lib/thread-links";
 import { getPlace } from "@/lib/places";
 import { readNear } from "@/lib/near";
 import { withPlaces } from "@/lib/place-ids";
+import { track } from "@/lib/events";
 
 export type FormState = { error?: string } | undefined;
 
@@ -32,6 +33,7 @@ export async function joinPlan(slug: string, _prev: FormState, form: FormData): 
     const profile = await store.getProfile(view.organiser.id);
     if (profile) {
       await store.addMember({ planId: view.plan.id, userId: view.organiser.id, name: `${profile.first_name} ${profile.last_name}`, role: "guest" });
+      await track({ name: "member_joined", planId: view.plan.id, userId: view.organiser.id });
       revalidatePath(`/p/${slug}`);
       return undefined;
     }
@@ -44,12 +46,14 @@ export async function joinPlan(slug: string, _prev: FormState, form: FormData): 
   // Signed in but never set up to organise (a guest who added their email): join as the account.
   if (view.organiser) {
     await store.addMember({ planId: view.plan.id, userId: view.organiser.id, name: `${first} ${last}`, role: "guest" });
+    await track({ name: "member_joined", planId: view.plan.id, userId: view.organiser.id });
     revalidatePath(`/p/${slug}`);
     return undefined;
   }
 
   const guest = view.guest ?? (await createGuestSession(first, last));
   await store.addMember({ planId: view.plan.id, guestId: guest.id, name: `${first} ${last}`, role: "guest" });
+  await track({ name: "member_joined", planId: view.plan.id, guestId: guest.id });
   revalidatePath(`/p/${slug}`);
   return undefined;
 }
@@ -76,6 +80,20 @@ export async function setRsvp(slug: string, rsvp: Rsvp, form: FormData): Promise
   // Was in, now can't go: Dibby gives the crew a heads-up (respects mute volume and the cap).
   if (rsvp === "out" && view.me.rsvp === "in" && !view.me.waitlisted) await nudgeOnBail(view.plan, view.me);
   revalidatePath(`/p/${slug}`);
+}
+
+/** Someone tapped a share button. Counted, nothing else: the share sheet itself is the phone's. */
+export async function trackShare(slug: string, kind: "invite" | "im_in" | "bills"): Promise<void> {
+  const view = await loadPlan(slug);
+  if (!view?.me) return;
+  await track({ name: "plan_shared", planId: view.plan.id, userId: view.me.user_id, guestId: view.me.guest_id, props: { kind } });
+}
+
+/** A guest tapped "Get the dibs app" (web to app, ARV-50). There's no app yet, so it's a count. */
+export async function appInterest(slug: string): Promise<void> {
+  const view = await loadPlan(slug);
+  if (!view?.me) return;
+  await track({ name: "app_interest", planId: view.plan.id, userId: view.me.user_id, guestId: view.me.guest_id });
 }
 
 /** Guest privacy: drop them from this plan and forget their name and device. */

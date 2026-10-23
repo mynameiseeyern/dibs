@@ -7,7 +7,8 @@
     "./bills": "./src/bills/index.ts",
     "./types": "./src/types.ts",
     "./plans": "./src/plans.ts",
-    "./when": "./src/when.ts"
+    "./when": "./src/when.ts",
+    "./metrics": "./src/metrics.ts"
   },
   "scripts": {
     "test": "vitest run",

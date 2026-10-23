@@ -1,6 +1,7 @@
 import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { makeSlug, pickColour } from "@dibs/shared/plans";
+import type { LoggedEvent } from "@dibs/shared/metrics";
 import type { Bill, BillShare, Message, NewMember, NewPlan, Plan, PlanMember, PlanOption, Store, Subscription, Vote, RecapAnswer, Reaction } from "./types";
 
 // Server-side Supabase store using the service key. Every caller checks access first
@@ -295,5 +296,27 @@ export const supabaseStore: Store = {
       .gte("created_at", sinceIso);
     if (error) throw new Error(error.message);
     return count ?? 0;
+  },
+  async logEvent(e) {
+    const { error } = await admin().from("events").insert({
+      name: e.name,
+      plan_id: e.planId ?? null,
+      user_id: e.userId ?? null,
+      guest_id: e.guestId ?? null,
+      bill_id: e.billId ?? null,
+      props: e.props ?? {},
+    });
+    if (error) console.warn("[events]", e.name, error.message);
+  },
+  async listEvents(sinceIso) {
+    const out: LoggedEvent[] = [];
+    // Paged: Supabase caps a select at 1,000 rows.
+    for (let from = 0; ; from += 1000) {
+      const rows = must(
+        await admin().from("events").select("name, plan_id, user_id, guest_id, bill_id, props, at").gte("at", sinceIso).order("at").range(from, from + 999)
+      ) as { name: LoggedEvent["name"]; plan_id: string | null; user_id: string | null; guest_id: string | null; bill_id: string | null; props: LoggedEvent["props"]; at: string }[];
+      for (const r of rows) out.push({ name: r.name, planId: r.plan_id, userId: r.user_id, guestId: r.guest_id, billId: r.bill_id, props: r.props, at: r.at });
+      if (rows.length < 1000) return out;
+    }
   },
 };

@@ -22,10 +22,11 @@ import { owedToYou, youOwe } from "@/lib/copy";
 import { store } from "@/lib/store";
 import { formatShort, formatWhen } from "@/lib/time";
 import { loadPlan } from "@/lib/viewer";
-import { addOption, askDibbyMore, joinPlan, lockPlan, postMessage, removeMe, removeOption, setRsvp, toggleDibbyMute, toggleReaction, vote } from "./actions";
+import { appInterest, trackShare, addOption, askDibbyMore, joinPlan, lockPlan, postMessage, removeMe, removeOption, setRsvp, toggleDibbyMute, toggleReaction, vote } from "./actions";
 import { setPlace } from "./manage/actions";
 import { JoinForm } from "./JoinForm";
 import { ShareButton } from "./ShareButton";
+import { GetTheApp } from "./GetTheApp";
 import { Thread } from "./Thread";
 import { VoteList } from "./Vote";
 import { siteUrl } from "@/lib/site";
@@ -289,13 +290,14 @@ export default async function PlanPage({ params }: Props) {
               <ShareButton
                 quiet
                 label="Tell the group"
+                onShare={trackShare.bind(null, slug, "im_in")}
                 title={plan.title}
                 url={url}
                 text={`I'm in for ${[plan.title, formatShort(plan.starts_at), plan.venue_name].filter(Boolean).join(" · ")}. ${inCount} going so far, you coming? 👉 ${url}`}
               />
             )}
             {me.rsvp === "in" && !me.waitlisted && me.role === "guest" && (
-              <p className="paragraph-sm muted">Get the dibs app to see all your plans in one place. Coming soon to the App Store.</p>
+              <GetTheApp onTap={appInterest.bind(null, slug)} />
             )}
             {me.role === "organiser" && plan.status === "locked" && (
               <Button.Root asChild mode={started ? "filled" : "ghost"} block>
@@ -473,6 +475,7 @@ export default async function PlanPage({ params }: Props) {
         <div className="dock">
           <div className="dock__inner">
             <ShareButton
+              onShare={trackShare.bind(null, slug, "invite")}
               title={plan.title}
               url={url}
               text={shareText({
