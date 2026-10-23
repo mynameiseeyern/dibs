@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { APIProvider, AdvancedMarker, ColorScheme, Map, useMap } from "@vis.gl/react-google-maps";
+import { AdvancedMarker, ColorScheme, Map, useMap } from "@vis.gl/react-google-maps";
+import { GoogleMaps, MAPS_KEY, MAP_ID } from "@/components/maps/GoogleMaps";
 import * as Modal from "@/components/ui/modal";
 import * as Button from "@/components/ui/button";
 import * as Input from "@/components/ui/input";
@@ -27,9 +28,6 @@ export const isTyped = (p: PlacePick): p is TypedPlace => "custom" in p;
 /** What a server action takes: a map place's ID, or the typed-in place. */
 export const pickArg = (p: PlacePick): string | CustomPlace => (isTyped(p) ? { name: p.name, address: p.address } : p.placeId);
 
-const MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
-// Advanced markers need a map ID. Google's demo ID works until a real one is set.
-const MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAP_ID || "DEMO_MAP_ID";
 const SYDNEY = { lat: -33.8688, lng: 151.2093 };
 
 /**
@@ -176,9 +174,9 @@ export function PlacePicker({
 
           {MAPS_KEY ? (
             <div className="place-map">
-              <APIProvider apiKey={MAPS_KEY} region="AU" language="en-AU">
+              <GoogleMaps>
                 <PlaceMap places={places} picked={picked} exclude={exclude} onPick={setPicked} onCentre={setCentre} />
-              </APIProvider>
+              </GoogleMaps>
             </div>
           ) : null}
 

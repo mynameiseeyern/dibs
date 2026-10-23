@@ -7,6 +7,9 @@ import { Fresh } from "@/components/moments/Fresh";
 import { PlacePicker, isTyped, pickArg } from "@/components/PlacePicker";
 import type { CustomPlace } from "@dibs/shared/plans";
 import { DibbyMark } from "@/components/Logo";
+import { PlaceCard } from "@/components/maps/PlaceCard";
+import { PlaceDetailsSheet } from "@/components/maps/PlaceDetailsSheet";
+import { GoogleMaps } from "@/components/maps/GoogleMaps";
 import { DibbyWorking } from "@/components/DibbyWorking";
 import { locate } from "@/lib/locate";
 import * as Input from "@/components/ui/input";
@@ -77,11 +80,10 @@ export function VoteList({
   const [ask, setAsk] = useState("");
   const [dibbyBusy, startDibby] = useTransition();
   const [deciding, setDeciding] = useState(false);
-  const [openRow, setOpenRow] = useState<string | null>(null);
+  const [viewing, setViewing] = useState<VoteRow | null>(null);
   const [confirming, setConfirming] = useState<VoteRow | null>(null);
   const [removing, setRemoving] = useState(false);
   const canRemove = (r: VoteRow) => !readOnly && Boolean(remove) && open && (canRemoveAll || (meId !== null && r.added_by === meId));
-  const anyRemovable = rows.some(canRemove);
 
   const confirmRemove = async () => {
     if (!confirming || !remove) return;
@@ -89,64 +91,67 @@ export function VoteList({
     const res = await remove(confirming.id);
     setRemoving(false);
     setConfirming(null);
-    setOpenRow(null);
     if (res.error) toast.error(res.error);
     else toast.success(`Took ${res.label ?? confirming.label} off the vote`);
   };
 
   return (
+    <GoogleMaps>
     <Fresh>
       {rows.length === 0 && <p className="paragraph-sm muted">No options yet. Add a place, or ask Dibby.</p>}
-      {anyRemovable && (
-        <p className="paragraph-xs muted">{canRemoveAll ? "Swipe an option left to take it off." : "Swipe a place you added left to take it off."}</p>
-      )}
       {visible.map((r) => {
         const share = total ? Math.round((r.votes / total) * 100) : 0;
         const winning = top > 0 && r.votes === top;
-        const option = (
-          <button
-            type="button"
-            className={`db-vote${winning ? " db-vote--winning" : ""}`}
-            aria-pressed={r.mine}
-            disabled={!canVote || !open}
-            aria-busy={voting && r.mine ? true : undefined}
-            onClick={() => {
-              if (openRow === r.id) return setOpenRow(null);
-              if (readOnly) return void toast.info(readOnly);
-              if (r.mine) return;
-              startVote(async () => {
-                moveVote(r.id);
-                await vote(r.id);
-              });
-            }}
-          >
-            <span className="db-vote__title">{r.label}</span>
-            <span className="db-vote__meta">
-              {[r.mine ? "Your pick" : null, r.note].filter(Boolean).join(" · ") || `${r.votes} ${r.votes === 1 ? "vote" : "votes"}`}
-            </span>
-            <span className="db-vote__count" aria-label={`${r.votes} ${r.votes === 1 ? "vote" : "votes"}`}>
-              {r.votes}
-            </span>
-            <span className="db-vote__bar">
-              <span style={{ width: `${share}%` }} />
-            </span>
-          </button>
-        );
-        return canRemove(r) ? (
-          <SwipeRow
-            key={r.id}
-            freshId={r.id}
-            open={openRow === r.id}
-            onOpenChange={(o) => setOpenRow(o ? r.id : null)}
-            label={r.label}
-            onDelete={() => setConfirming(r)}
-          >
-            {option}
-          </SwipeRow>
-        ) : (
-          <div key={r.id} data-fresh-id={r.id}>
-            {option}
-          </div>
+        // The place (Google's photos, stars and reviews, or a typed-in name and address), the
+        // tally, then plain buttons: vote, view the place, and delete for whoever may.
+        return (
+          <article key={r.id} data-fresh-id={r.id} className="vote-card" data-mine={r.mine || undefined} data-winning={winning || undefined} aria-label={r.label}>
+            <PlaceCard placeId={r.place_id} name={r.label} address={r.note} />
+            <div className="vote-card__tally">
+              <span className="vote-card__bar" aria-hidden="true">
+                <span style={{ width: `${share}%` }} />
+              </span>
+              <span className="paragraph-xs muted">
+                {r.votes} {r.votes === 1 ? "vote" : "votes"}
+                {total ? ` · ${share}%` : ""}
+                {winning && total ? " · in front" : ""}
+              </span>
+            </div>
+            <div className="vote-card__actions">
+              {open && (
+                <Button.Root
+                  type="button"
+                  variant="primary"
+                  mode={r.mine ? "lighter" : "filled"}
+                  size="small"
+                  className="flex-1"
+                  aria-pressed={r.mine}
+                  aria-label={r.mine ? `Your pick: ${r.label}` : `Vote for ${r.label}`}
+                  disabled={!canVote || (voting && !r.mine)}
+                  onClick={() => {
+                    if (readOnly) return void toast.info(readOnly);
+                    if (r.mine) return;
+                    startVote(async () => {
+                      moveVote(r.id);
+                      await vote(r.id);
+                    });
+                  }}
+                >
+                  <i className={`${r.mine ? "ri-checkbox-circle-fill" : "ri-check-line"} db-icon`} aria-hidden="true" />
+                  {r.mine ? "Your pick" : "Vote"}
+                </Button.Root>
+              )}
+              <Button.Root type="button" variant="neutral" mode="lighter" size="small" className="flex-1" aria-label={`View ${r.label}`} onClick={() => setViewing(r)}>
+                <i className="ri-eye-line db-icon" aria-hidden="true" />
+                View
+              </Button.Root>
+              {canRemove(r) && (
+                <Button.Root type="button" variant="error" mode="lighter" size="small" iconOnly aria-label={`Take ${r.label} off the vote`} onClick={() => setConfirming(r)}>
+                  <i className="ri-delete-bin-line db-icon" aria-hidden="true" />
+                </Button.Root>
+              )}
+            </div>
+          </article>
         );
       })}
 
@@ -280,95 +285,11 @@ export function VoteList({
           </Modal.Footer>
         </Modal.Content>
       </Modal.Root>
+      <PlaceDetailsSheet place={viewing && { placeId: viewing.place_id, name: viewing.label, address: viewing.note }} onClose={() => setViewing(null)} />
     </Fresh>
+    </GoogleMaps>
   );
 }
 
-const REVEAL = 96;
-/** How many options show before the list folds. */
-const FOLD_AT = 4;
-
-/**
- * Swipe left to show Delete behind a vote option. Tapping the option while it's open closes it.
- * Keyboard and screen readers get the same Delete button: tabbing to it slides the row open.
- */
-function SwipeRow({
-  freshId,
-  open,
-  onOpenChange,
-  label,
-  onDelete,
-  children,
-}: {
-  freshId: string;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  label: string;
-  onDelete: () => void;
-  children: React.ReactNode;
-}) {
-  const start = useRef<{ x: number; y: number; base: number } | null>(null);
-  const axis = useRef<"x" | "y" | null>(null);
-  const moved = useRef(false);
-  const [drag, setDrag] = useState<number | null>(null);
-  const offset = drag ?? (open ? -REVEAL : 0);
-
-  return (
-    <div className="vote-swipe" data-fresh-id={freshId}>
-      <button
-        type="button"
-        className="vote-swipe__delete"
-        aria-label={`Take ${label} off the vote`}
-        onFocus={() => onOpenChange(true)}
-        onClick={onDelete}
-      >
-        <i className="ri-delete-bin-line db-icon" aria-hidden="true" />
-        <span>Delete</span>
-      </button>
-      <div
-        className="vote-swipe__front"
-        data-dragging={drag !== null || undefined}
-        style={{ transform: `translateX(${offset}px)` }}
-        onPointerDown={(e) => {
-          if (e.pointerType === "mouse" && e.button !== 0) return;
-          start.current = { x: e.clientX, y: e.clientY, base: open ? -REVEAL : 0 };
-          axis.current = null;
-          moved.current = false;
-        }}
-        onPointerMove={(e) => {
-          const s = start.current;
-          if (!s) return;
-          const dx = e.clientX - s.x;
-          const dy = e.clientY - s.y;
-          if (!axis.current) {
-            if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
-            axis.current = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
-            if (axis.current === "x") e.currentTarget.setPointerCapture(e.pointerId);
-          }
-          if (axis.current !== "x") return;
-          moved.current = true;
-          setDrag(Math.max(-REVEAL - 24, Math.min(0, s.base + dx)));
-        }}
-        onPointerUp={() => {
-          if (drag !== null) onOpenChange(drag < -REVEAL / 2);
-          setDrag(null);
-          start.current = null;
-        }}
-        onPointerCancel={() => {
-          setDrag(null);
-          start.current = null;
-        }}
-        // A swipe isn't a tap: don't let it vote.
-        onClickCapture={(e) => {
-          if (moved.current) {
-            e.preventDefault();
-            e.stopPropagation();
-            moved.current = false;
-          }
-        }}
-      >
-        {children}
-      </div>
-    </div>
-  );
-}
+// Cards are taller than the old rows, so fold after three.
+const FOLD_AT = 3;

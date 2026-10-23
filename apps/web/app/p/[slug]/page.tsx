@@ -392,6 +392,7 @@ export default async function PlanPage({ params }: Props) {
                         meId={me?.id ?? null}
                         canPost={Boolean(me?.user_id)}
                         readOnly={readOnly}
+                      placeNames={Object.fromEntries(options.filter((o) => o.place_id).map((o) => [o.place_id!, o.label]))}
                         post={postMessage.bind(null, slug)}
                       />
                       {me && !wrapped && (
