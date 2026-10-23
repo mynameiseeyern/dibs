@@ -15,6 +15,8 @@ const Switch = React.forwardRef<
     <SwitchPrimitives.Root
       className={cn(
         'group/switch relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full bg-stroke-sub-300 p-[3px]',
+        // 28px to look at, 44px to tap.
+        "before:absolute before:inset-x-0 before:-inset-y-2 before:content-['']",
         'transition-colors duration-200 ease-out',
         'data-[state=checked]:bg-primary-base',
         'outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring',

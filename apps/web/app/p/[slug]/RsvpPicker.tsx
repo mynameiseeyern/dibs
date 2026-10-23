@@ -5,6 +5,7 @@ import { RSVP_LABEL } from "@dibs/shared/plans";
 import type { Rsvp, Vibe } from "@dibs/shared/types";
 import { rsvpHeading } from "@/lib/copy";
 import * as Button from "@/components/ui/button";
+import { send } from "@/lib/send";
 
 /**
  * RSVP buttons that answer the tap straight away. The choice shows immediately
@@ -37,7 +38,7 @@ export function RsvpPicker({
     if (r === "in" && plusOnes) form.set("plus_one", plusOne ? "on" : "");
     startTransition(async () => {
       setShown(r);
-      await setRsvp(r, form);
+      await send(() => setRsvp(r, form), { what: "your answer" });
     });
   }
 

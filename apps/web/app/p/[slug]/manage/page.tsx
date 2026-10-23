@@ -54,6 +54,7 @@ export default async function Manage({ params }: { params: Promise<{ slug: strin
       </div>
       <EditPlan
         status={locked ? "locked" : "voting"}
+        askWhenHref={plan.starts_at && Date.parse(plan.starts_at) <= Date.now() ? undefined : `/p/${slug}?when=ask#when`}
         title={plan.title}
         whenLabel={formatWhen(plan.starts_at)}
         deadlineLabel={formatWhen(plan.vote_deadline)}

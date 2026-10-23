@@ -55,19 +55,19 @@ export function NewPlanForm() {
 
       <WhenChips value={when} onChange={setWhen} />
 
+      <SegmentedControl.Root value={where} onValueChange={(v) => setWhere(v as Where)} className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
         <Label.Root asChild>
           <span id="where-l">Where</span>
         </Label.Root>
-        <SegmentedControl.Root value={where} onValueChange={(v) => setWhere(v as Where)}>
           <SegmentedControl.List aria-labelledby="where-l">
             <SegmentedControl.Trigger value="place">Already decided</SegmentedControl.Trigger>
             <SegmentedControl.Trigger value="vote">Feeling democratic?</SegmentedControl.Trigger>
           </SegmentedControl.List>
-        </SegmentedControl.Root>
       </div>
 
-      {where === "place" ? (
+      {/* Both panels stay mounted so each tab controls a real panel; only the picked one shows. */}
+      <SegmentedControl.Content value="place" forceMount hidden={where !== "place"}>
         <div className="flex flex-col gap-2">
           {place && isTyped(place) ? (
             <>
@@ -91,7 +91,8 @@ export function NewPlanForm() {
           )}
           <PlacePicker open={picking} onOpenChange={setPicking} title="Where's it at?" cta="Use" onPick={setPlace} />
         </div>
-      ) : (
+      </SegmentedControl.Content>
+      <SegmentedControl.Content value="vote" forceMount hidden={where !== "vote"}>
         <div className="db-card section">
           <label className="flex min-h-11 cursor-pointer items-center gap-3">
             <span className="flex-1">
@@ -116,7 +117,8 @@ export function NewPlanForm() {
             <Field label="Where-ish" name="area" placeholder="Surry Hills" icon="ri-map-pin-line" maxLength={80} autoComplete="off" hint="Open vote: everyone adds places from the map." />
           )}
         </div>
-      )}
+      </SegmentedControl.Content>
+      </SegmentedControl.Root>
 
       <fieldset className="m-0 min-w-0 border-0 p-0">
         <Label.Root asChild className="mb-2">

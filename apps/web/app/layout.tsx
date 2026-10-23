@@ -15,6 +15,7 @@ import { siteUrl } from "@/lib/site";
 import { SITE_DESCRIPTION, SITE_NAME, TAGLINE } from "@/lib/og";
 import { FinishSignIn } from "@/components/FinishSignIn";
 import { Toaster } from "@/components/ui/toast";
+import { OfflineBanner } from "@/components/OfflineBanner";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
@@ -43,6 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en-AU">
       <body>
+        <OfflineBanner />
         {children}
         <FinishSignIn />
         <Toaster />

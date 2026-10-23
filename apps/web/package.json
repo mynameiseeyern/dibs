@@ -24,6 +24,7 @@
     "@radix-ui/react-tabs": "1.2.1",
     "@radix-ui/react-tooltip": "1.4.1",
     "@remixicon/react": "4.9.0",
+    "@sentry/nextjs": "11.6.0",
     "@supabase/ssr": "0.12.7",
     "@supabase/supabase-js": "2.117.2",
     "@vis.gl/react-google-maps": "1.10.1",

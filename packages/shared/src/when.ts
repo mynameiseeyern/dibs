@@ -32,3 +32,30 @@ export function resolveStart(fromText: string | null, picks: WhenPicks, now = ne
   if (time) return `${time > sydneyTime(now) ? sydneyDate(now) : sydneyDate(new Date(now.getTime() + 86_400_000))}T${time}`;
   return null;
 }
+
+/** At most this many times on a "When works?" poll. */
+export const MAX_TIMES = 4;
+
+export interface RankedTime<T extends { id: string; starts_at: string }> {
+  time: T;
+  /** Member IDs free at this time, counting only people who can take part. */
+  free: string[];
+}
+
+/**
+ * "When works?": the times in order, who's free for each, and the best one. Only people who can
+ * take part (going, and hosts) count, so a vote left behind by someone who stepped down doesn't.
+ * Best is the most people free; a tie goes to the earliest. No best until someone's said.
+ */
+export function rankTimes<T extends { id: string; starts_at: string }>(
+  times: T[],
+  votes: { time_id: string; member_id: string }[],
+  counted: Set<string>
+): { rows: RankedTime<T>[]; bestId: string | null } {
+  const rows = [...times]
+    .sort((a, b) => Date.parse(a.starts_at) - Date.parse(b.starts_at))
+    .map((time) => ({ time, free: [...new Set(votes.filter((v) => v.time_id === time.id && counted.has(v.member_id)).map((v) => v.member_id))] }));
+  let best: RankedTime<T> | null = null;
+  for (const r of rows) if (r.free.length > 0 && (!best || r.free.length > best.free.length)) best = r;
+  return { rows, bestId: best?.time.id ?? null };
+}

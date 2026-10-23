@@ -13,7 +13,8 @@ export type DibbyVolume = "quiet" | "normal" | "loud";
 export interface Plan {
   id: string;
   slug: string;
-  organiser_id: string;
+  /** Null once the organiser deleted their account. */
+  organiser_id: string | null;
   title: string;
   area: string | null;
   starts_at: string | null;
@@ -112,3 +113,16 @@ export interface BillShare {
 export const MONOGRAM_COLOURS = ["violet", "lime", "sun", "mint", "tangerine", "sky", "coral", "rose", "aqua", "ivory"] as const;
 export type MonogramColour = (typeof MONOGRAM_COLOURS)[number];
 
+
+/** A time the host put to the crew ("When works?"). */
+export interface PlanTime {
+  id: string;
+  plan_id: string;
+  starts_at: string;
+}
+
+/** Someone ticked that they're free at a time. */
+export interface TimeVote {
+  time_id: string;
+  member_id: string;
+}
