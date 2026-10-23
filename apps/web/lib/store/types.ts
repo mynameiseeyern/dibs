@@ -1,3 +1,4 @@
+import type { AppEvent, LoggedEvent } from "@dibs/shared/metrics";
 import type { Bill, BillShare, Message, Plan, PlanMember, PlanOption, Rsvp, Vibe, Role, Vote } from "@dibs/shared/types";
 
 export interface Profile {
@@ -117,6 +118,11 @@ export interface Store {
   claimNudge(planId: string, kind: string, key: string): Promise<boolean>;
   /** How many automatic nudges a plan has had since a time, for the daily cap. */
   countNudgesSince(planId: string, sinceIso: string): Promise<number>;
+
+  /** The pilot's event log (ARV-50). Never throws: a lost event mustn't break what the person did. */
+  logEvent(e: AppEvent): Promise<void>;
+  /** Events since a time, oldest first, for /admin/metrics. */
+  listEvents(sinceIso: string): Promise<LoggedEvent[]>;
 }
 
 export interface RecapAnswer {

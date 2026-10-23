@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { makeSlug, pickColour } from "@dibs/shared/plans";
+import type { LoggedEvent } from "@dibs/shared/metrics";
 import type { Bill, BillShare, Guest, Message, NewMember, NewPlan, Plan, PlanMember, PlanOption, Profile, Store, Subscription, Vote, RecapAnswer, Reaction } from "./types";
 
 // In-memory store for local runs without Supabase. Lost on restart.
@@ -17,6 +18,7 @@ interface Db {
   nudges: { plan_id: string; kind: string; key: string; at: number }[];
   reactions: (Reaction & { plan_id: string })[];
   lists: { list: string; email: string; userId: string | null; token: string; unsubscribed: boolean; source: string }[];
+  events: LoggedEvent[];
 }
 
 const g = globalThis as unknown as { __dibsDb?: Db };
@@ -34,7 +36,9 @@ const db: Db = (g.__dibsDb ??= {
   nudges: [],
   reactions: [],
   lists: [],
+  events: [],
 });
+db.events ??= [];
 db.nudges ??= [];
 db.reactions ??= [];
 
@@ -282,5 +286,11 @@ export const memoryStore: Store = {
   async countNudgesSince(planId, sinceIso) {
     const since = Date.parse(sinceIso);
     return db.nudges.filter((n) => n.plan_id === planId && n.at >= since).length;
+  },
+  async logEvent(e) {
+    db.events.push({ ...e, at: now() });
+  },
+  async listEvents(sinceIso) {
+    return db.events.filter((e) => e.at >= sinceIso);
   },
 };

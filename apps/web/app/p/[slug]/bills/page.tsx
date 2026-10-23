@@ -14,6 +14,7 @@ import { OptIn } from "./OptIn";
 import { rouletteTally } from "@dibs/shared/bills";
 import { Once } from "@/components/moments/Once";
 import { ShareButton } from "../ShareButton";
+import { trackShare } from "../actions";
 import { siteUrl } from "@/lib/site";
 import { OWE_REMIND_AFTER_MS, OWE_REMIND_AGAIN_MS, TELL_PAYER_AFTER_MS } from "@/lib/nudges";
 import { allSquare, oweReminder, tellPayer } from "@/lib/copy";
@@ -216,6 +217,7 @@ export default async function Bills({ params, searchParams }: Props) {
           <ShareButton
             quiet
             label="Update the group"
+            onShare={trackShare.bind(null, slug, "bills")}
             title={plan.title}
             url={`${siteUrl()}/p/${slug}/bills`}
             text={`${plan.title}: ${settled} of ${owedShares.length} settled. If you still owe, your amount and the PayID are here 👉 ${siteUrl()}/p/${slug}/bills`}
