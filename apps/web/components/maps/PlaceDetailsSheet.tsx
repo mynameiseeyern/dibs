@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useMapsLibrary } from "@vis.gl/react-google-maps";
 import * as Modal from "@/components/ui/modal";
 import * as Button from "@/components/ui/button";
@@ -10,7 +10,8 @@ import { GoogleBoundary } from "./GoogleBoundary";
 
 /**
  * "View" on a place: Google's full place details (photos, reviews, opening hours, website,
- * phone) in a bottom sheet, with a link out to Google Maps. Loads only while open.
+ * phone) in a bottom sheet. Loads only while open. Google's panel has its own "Open in Maps"
+ * link, so ours only shows when the panel can't load.
  */
 export function PlaceDetailsSheet({
   place,
@@ -21,18 +22,21 @@ export function PlaceDetailsSheet({
 }) {
   const ready = useGoogleMapsReady();
   const google = Boolean(place && ready && isGooglePlaceId(place.placeId));
+  const [failed, setFailed] = useState(false);
+  const fail = useCallback(() => setFailed(true), []);
+  useEffect(() => setFailed(false), [place?.placeId]);
   return (
     <Modal.Root open={Boolean(place)} onOpenChange={(o) => !o && onClose()}>
       <Modal.Content className="max-h-[92dvh] overflow-y-auto">
         <Modal.Header title={place?.name ?? ""} />
         {place && google ? (
-          <GoogleBoundary fallback={<Modal.Body>{place.address ?? "Couldn't load the details. Try Open in Google Maps."}</Modal.Body>}>
-            <GoogleDetails placeId={place.placeId!} />
+          <GoogleBoundary fallback={<Modal.Body>{place.address ?? "Couldn't load the details. Try Open in Google Maps."}</Modal.Body>} onError={fail}>
+            <GoogleDetails placeId={place.placeId!} onFail={fail} />
           </GoogleBoundary>
         ) : place ? (
           <Modal.Body>{place.address ?? "No more details for this one."}</Modal.Body>
         ) : null}
-        {place && isGooglePlaceId(place.placeId) && (
+        {place && isGooglePlaceId(place.placeId) && (!google || failed) && (
           <Modal.Footer>
             <Button.Root asChild variant="neutral" mode="lighter" size="large" block>
               <a href={mapsUrl(place.placeId, place.name)} target="_blank" rel="noreferrer">
@@ -47,7 +51,7 @@ export function PlaceDetailsSheet({
   );
 }
 
-function GoogleDetails({ placeId }: { placeId: string }) {
+function GoogleDetails({ placeId, onFail }: { placeId: string; onFail: () => void }) {
   const places = useMapsLibrary("places");
   const box = useRef<HTMLDivElement>(null);
   const [loaded, setLoaded] = useState(false);
@@ -56,8 +60,14 @@ function GoogleDetails({ placeId }: { placeId: string }) {
     if (!el) return;
     const ok = () => setLoaded(true);
     el.addEventListener("gmp-load", ok);
-    return () => el.removeEventListener("gmp-load", ok);
-  }, [places]);
+    el.addEventListener("gmp-error", onFail);
+    el.addEventListener("gmp-requesterror", onFail);
+    return () => {
+      el.removeEventListener("gmp-load", ok);
+      el.removeEventListener("gmp-error", onFail);
+      el.removeEventListener("gmp-requesterror", onFail);
+    };
+  }, [places, onFail]);
   return (
     <div ref={box} className="place-details" aria-busy={!loaded}>
       {!loaded && <p className="paragraph-sm muted">Loading photos and reviews…</p>}
