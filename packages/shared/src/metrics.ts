@@ -15,7 +15,7 @@ export const EVENT_NAMES = [
   "member_joined",
   /** Someone tapped a share button. props.kind: "invite" (host) | "im_in" (guest) | "bills". */
   "plan_shared",
-  /** A guest tapped "Get the dibs app". */
+  /** A guest tapped "Get the Dibby app". */
   "app_interest",
   /** A bill was added. props.owed: shares still to be paid. */
   "bill_created",

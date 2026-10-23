@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 
 /**
  * Link previews: what WhatsApp, iMessage, Messenger, Slack and Discord show when someone pastes
- * a dibs link. Images are drawn with next/og, which can't read CSS variables, so the brand
+ * a Dibby link. Images are drawn with next/og, which can't read CSS variables, so the brand
  * colours are spelled out here once (from packages/ui/tokens.json).
  */
 export const OG = {
@@ -19,9 +19,9 @@ export const OG = {
 /** Monogram fills, by member colour. */
 export const OG_FILL: Record<string, string> = { violet: "#DCD3FF", lime: "#C8F03C", sun: "#FFE7A8", mint: "#BDF2D5", tangerine: "#FFD1BD", sky: "#C9E0FF", coral: "#FFC4CF", rose: "#FFD0E6", aqua: "#BFF0F5", ivory: "#F3EEE4" };
 
-export const SITE_NAME = "dibs";
+export const SITE_NAME = "Dibby";
 export const TAGLINE = "Plans sorted, money square.";
-export const SITE_DESCRIPTION = "Get your crew from “we should catch up” to actually going. Dibby plans it, the group votes, everyone squares up after. Your friends don’t need the app.";
+export const SITE_DESCRIPTION = "Get your crew from “we should catch up” to actually going. Dibby finds the spot, the group votes, everyone squares up after. Your friends don’t need the app.";
 
 const font = (f: string) => readFile(join(process.cwd(), "assets/fonts", f));
 

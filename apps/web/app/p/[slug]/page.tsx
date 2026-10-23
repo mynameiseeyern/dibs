@@ -224,7 +224,7 @@ export default async function PlanPage({ params, searchParams }: Props) {
                   : owedToMe > 0
                     ? owedToYou(plan.vibe, formatAud(owedToMe))
                     : bills.length === 0
-                      ? "Paid for something? Add it and dibs does the maths."
+                      ? "Paid for something? Add it and Dibby does the maths."
                       : `${owed.length - open.length} of ${owed.length} settled.`}
               </span>
             </a>

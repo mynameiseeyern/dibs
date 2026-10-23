@@ -1,4 +1,4 @@
-// Bill maths for Dibs. Pure functions, integer cents only. Shares always add up to the total.
+// Bill maths for Dibby. Pure functions, integer cents only. Shares always add up to the total.
 
 export type SplitMode = "even" | "amount" | "percent" | "exclude" | "roulette";
 

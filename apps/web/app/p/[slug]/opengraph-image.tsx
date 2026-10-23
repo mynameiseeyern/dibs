@@ -6,7 +6,7 @@ import { OG, OG_FILL, OG_HEADERS, OgMark, ogFonts } from "@/lib/og";
 
 // The WhatsApp / iMessage preview card. The share link carries ?v=<version>, so a changed
 // plan gets a fresh card instead of WhatsApp's cached one. Only what anyone with the link sees.
-export const alt = "A plan on dibs: what, when, where and who's in";
+export const alt = "A plan on Dibby: what, when, where and who's in";
 export const size = OG.size;
 export const contentType = "image/png";
 
@@ -22,14 +22,14 @@ export default async function Image({ params }: { params: Promise<{ slug: string
   const n = plan ? countIn(members) : 0;
   const cancelled = plan?.status === "cancelled";
   const status = cancelled ? "Called off" : plan?.status === "wrapped" ? `${n} went` : n === 0 ? "You in?" : `${n} in`;
-  const title = plan?.title ?? "A plan on dibs";
+  const title = plan?.title ?? "A plan on Dibby";
 
   return new ImageResponse(
     (
       <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "space-between", background: OG.violet, color: OG.white, padding: "64px 72px", fontFamily: "Figtree" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14, fontFamily: "Bricolage", fontSize: 44, letterSpacing: "-0.04em" }}>
           <OgMark size={56} tile="rgba(255,255,255,0.14)" />
-          dibs
+          dibby
         </div>
         <div style={{ display: "flex", flexDirection: "column" }}>
           <div style={{ fontFamily: "Bricolage", fontSize: title.length > 40 ? 64 : title.length > 22 ? 76 : 96, lineHeight: 1, letterSpacing: "-0.03em", textDecoration: cancelled ? "line-through" : "none" }}>{title}</div>

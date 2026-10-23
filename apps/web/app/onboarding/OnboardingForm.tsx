@@ -27,7 +27,7 @@ export function OnboardingForm({ next }: { next: string }) {
       <div className="flex flex-col gap-2">
         <label className="flex min-h-11 cursor-pointer items-center gap-3">
           <Checkbox.Root name="beta_updates" aria-describedby="beta_updates-hint" />
-          Send me dibs beta updates
+          Send me Dibby beta updates
         </label>
         <Hint.Root id="beta_updates-hint">
           A short email when we ship something new. Unsubscribe any time.

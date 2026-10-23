@@ -19,10 +19,10 @@ export default async function Landing({ searchParams }: { searchParams: Promise<
       {sp.bye && (
         <Alert.Root status="success" role="status">
           <Alert.Icon as="i" className="ri-checkbox-circle-line" aria-hidden="true" />
-          <div>Your account&rsquo;s deleted. Thanks for planning with dibs.</div>
+          <div>Your account&rsquo;s deleted. Thanks for planning with Dibby.</div>
         </Alert.Root>
       )}
-      <LogoMark size={88} title="dibs" />
+      <LogoMark size={88} title="Dibby" />
       <h1 className="title-h2">
         Plans sorted,
         <br />

@@ -1,6 +1,6 @@
-# dibs
+# Dibby
 
-Plans sorted, money square. Hackathon POC (Linear: Dibs — Hackathon, P-ARV-1).
+Plans sorted, money square. The web app at dibby.social (Linear project P-ARV-1).
 
 ## Run it
 
@@ -25,7 +25,7 @@ the whole flow locally. With keys, organisers sign in by magic link and everythi
 
 - `apps/web` — Next.js 16 app (plan pages, organiser screens, server actions)
 - `packages/shared` — bill maths (unit tested), plan helpers, types
-- `packages/ui` — Dibs design-system tokens and `.db-` components, from the Dibs design system on claude.ai. `pnpm tokens` regenerates `tokens.css` from `tokens.json`. Brand book, component guidelines and logos are in `packages/ui/docs` and `packages/ui/assets` (see `packages/ui/README.md`).
+- `packages/ui` — Dibby design-system tokens and `.db-` components, from the design system on claude.ai. `pnpm tokens` regenerates `tokens.css` from `tokens.json`. Brand book, component guidelines and logos are in `packages/ui/docs` and `packages/ui/assets` (see `packages/ui/README.md`).
 - `supabase/migrations` — schema, row-level security, PayID and settle-up functions
 
 Build plan: https://claude.ai/artifact/2Lce9vh9ZvGunTKngL6sWX

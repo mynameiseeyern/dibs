@@ -22,7 +22,7 @@ export default async function Login({ searchParams }: { searchParams: Promise<{ 
   return (
     <main className="page page--center">
       <Wordmark />
-      <h1 className="title-h3">Sign in to dibs</h1>
+      <h1 className="title-h3">Sign in to Dibby</h1>
       <p className="muted">
         {usingSupabase ? "We'll email you a link, no password. Your plans come with you to any device." : "Demo mode: Supabase isn't set up yet, so you'll go straight in."}
       </p>

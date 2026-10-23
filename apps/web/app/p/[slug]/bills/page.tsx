@@ -124,7 +124,7 @@ export default async function Bills({ params, searchParams }: Props) {
       .filter((s) => !nettedWith.has(payerOfBill.get(s.bill_id)!))
       .map(async (s) => ({ share: s, bill: bills.find((b) => b.id === s.bill_id)!, pay: await payidFor(bills.find((b) => b.id === s.bill_id)!) }))
   );
-  const ref = `Dibs ${plan.title}`.slice(0, 35);
+  const ref = `Dibby ${plan.title}`.slice(0, 35);
 
   // Private money reminders (ARV-24): shown only to the person they're about, never posted.
   const now = Date.now();
@@ -254,7 +254,7 @@ export default async function Bills({ params, searchParams }: Props) {
                   <div className="payid__row"><div><span>Amount</span><strong>{(net / 100).toFixed(2)}</strong></div><CopyButton value={(net / 100).toFixed(2)} label="amount" /></div>
                   <div className="payid__row"><div><span>Reference</span><strong className="payid__name">{ref}</strong></div><CopyButton value={ref} label="reference" /></div>
                 </div>
-                <p className="paragraph-sm muted">You each paid for something, so it&rsquo;s one payment instead of two. dibs never touches the money.</p>
+                <p className="paragraph-sm muted">You each paid for something, so it&rsquo;s one payment instead of two. Dibby never touches the money.</p>
                 <ActionForm action={settleNet.bind(null, slug, id)} what="that payment" block icon="ri-check-line" label={<>I&rsquo;ve paid {first(id)} {formatAud(net)}</>} />
               </>
             ) : net > 0 ? (
@@ -290,7 +290,7 @@ export default async function Bills({ params, searchParams }: Props) {
                   <div className="payid__row"><div><span>Amount</span><strong>{(share.amount_cents / 100).toFixed(2)}</strong></div><CopyButton value={(share.amount_cents / 100).toFixed(2)} label="amount" /></div>
                   <div className="payid__row"><div><span>Reference</span><strong className="payid__name">{ref}</strong></div><CopyButton value={ref} label="reference" /></div>
                 </div>
-                <p className="paragraph-sm muted">Pay from your banking app. dibs never touches the money.</p>
+                <p className="paragraph-sm muted">Pay from your banking app. Dibby never touches the money.</p>
                 <ActionForm action={saysPaid.bind(null, slug, bill.id)} what="that payment" block icon="ri-check-line" label={<>I&rsquo;ve paid {first(bill.payer_member_id)}</>} />
               </>
             ) : (

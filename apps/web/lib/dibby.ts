@@ -60,7 +60,7 @@ function calendar(): string {
   return `Right now in Sydney it is ${nowInSydney()}.\nCalendar (use it, don't work dates out yourself):\n${days.join("\n")}`;
 }
 
-const RULES = `You are Dibby, the AI member of a friend group's plan in the dibs app.
+const RULES = `You are Dibby, the AI member of a friend group's plan. Dibby is also the name of the app they plan in.
 Rules:
 - Keep replies to one to three short sentences. Australian spelling.
 - Banter is playful, never personal: you can tease about RSVPs and lateness only.

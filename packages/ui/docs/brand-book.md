@@ -1,10 +1,12 @@
-Dibs is the friend-group app where a crew talks, decides, turns up and squares up without leaving the group. The system is playful and built phone-first: big type, round shapes, two loud brand colours used sparingly, and copy that sounds like a mate in the group chat.
+Dibby is the friend-group app where a crew talks, decides, turns up and squares up without leaving the group. The system is playful and built phone-first: big type, round shapes, two loud brand colours used sparingly, and copy that sounds like a mate in the group chat.
 
 ## Content fundamentals
 
 - Talk like a friend in the chat: casual, warm, a little cheeky. Never corporate, never pushy, never snarky about money.
 - Short sentences. Australian spelling and phrasing (“organiser”, “shout”, “colour”).
-- Sentence case everywhere; the brand name is always lowercase **dibs**. Eyebrows (`subheading-sm`) are the only capitals.
+- Sentence case everywhere. In sentences the name is **Dibby**, capital D, like a person's name. The logo is lowercase **dibby**. Eyebrows (`subheading-sm`) are the only capitals.
+- **Dibby is both the app and the AI member in the chat**: one character. App copy can speak as Dibby (“I’ll keep your plans here”). When the copy is about the AI specifically, say “the AI in your chat” or just “Dibby”, never “Dibby’s AI”.
+- **dibs** is now a verb, not the name: calling dibs is the lime moment (“Call dibs”, “4 called dibs”). Never use it as the product name.
 - Say “you” to the reader and use people’s first names: “You owe Sam $42, tap to pay.”
 - Money copy is kind and specific: the amount, who to, one tap. No guilt-tripping, streaks or pressure to open the app.
 - Each group picks a vibe, and every string has three versions:
@@ -16,7 +18,7 @@ Dibs is the friend-group app where a crew talks, decides, turns up and squares u
 ## Visual foundations
 
 **Colour.** White `bg-white-0` page, ink `text-strong-950` copy.
-- `primary-base` (Dibs violet, from the app icon) is the brand: primary buttons, the current tab, your own chat bubbles, progress. Text on it is always `static-white`.
+- `primary-base` (Dibby violet, from the app icon) is the brand: primary buttons, the current tab, your own chat bubbles, progress. Text on it is always `static-white`.
 - `accent-base` (lime, the friend with a hand up) is the “calling dibs” moment: the winning vote, “I’m in”, squared up. Use it once per screen, always with `static-black` text, never white.
 - Status families (`success`, `warning`, `error`, `away`, `information`, `verified`, `highlighted`, `feature`, `stable`, `faded`) each come as `-base` (solid, ink text), `-dark` (text), `-light` (border) and `-lighter` (soft fill). Put `-dark` text on `-lighter` fills. Status always comes with a word or icon, never colour alone.
 - Every text pair meets 4.5:1 in both Light and Dark themes. `text-soft-400` is for meta on `bg-white-0` and `bg-weak-50` only.
@@ -40,7 +42,7 @@ Dibs is the friend-group app where a crew talks, decides, turns up and squares u
 
 **Depth.**
 - Mostly flat. Cards float on `shadow-sm`, and popovers and tooltips on `shadow-md`.
-- The playful signature is the **sticker**: a `stroke-strong-950` 2px border plus `shadow-pop` (a hard 4px ink drop). It is only for the one hero action (the Dibs button) and the plan card that matters right now.
+- The playful signature is the **sticker**: a `stroke-strong-950` 2px border plus `shadow-pop` (a hard 4px ink drop). It is only for the one hero action (the lime “call dibs” button) and the plan card that matters right now.
 
 **Touch.** Every tappable thing is at least `size-tap` (44px). Default controls are `size-control-md`, and the main phone action is `size-control-lg`.
 
@@ -61,8 +63,8 @@ Dibs is the friend-group app where a crew talks, decides, turns up and squares u
 ## Logo
 
 - Use the V3 “hands up” mark from `assets/Logos/`: three friends, one popping up to call dibs.
-- `dibs-app-icon.svg` is the app icon on violet. `dibs-mark-on-dark.svg` goes only on `bg-strong-950`. `dibs-ai-member.svg` is only for the AI member.
-- The wordmark is live text: **dibs** in Bricolage Grotesque 800, lowercase.
+- `dibs-app-icon.svg` is the app icon on violet. `dibs-mark-on-dark.svg` goes only on `bg-strong-950`. `dibs-ai-member.svg` (the lime smiley) is Dibby’s face in the chat and member lists, never the app logo. (The file names keep the old name.)
+- The wordmark is live text: **dibby** in Bricolage Grotesque 800, lowercase.
 
 ## Using the components
 

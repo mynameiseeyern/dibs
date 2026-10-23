@@ -26,7 +26,7 @@ export default async function Unsubscribe({ searchParams }: { searchParams: Prom
         <section className="db-card section">
           <h1 className="title-h4">That link doesn&rsquo;t work</h1>
           <p className="muted">
-            It might be from a test email or it&rsquo;s been cut short. Reply to any dibs email and we&rsquo;ll take you off the list.
+            It might be from a test email or it&rsquo;s been cut short. Reply to any Dibby email and we&rsquo;ll take you off the list.
           </p>
         </section>
       )}

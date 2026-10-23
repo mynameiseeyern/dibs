@@ -4,7 +4,7 @@ import { useState } from "react";
 import * as Button from "@/components/ui/button";
 
 /**
- * "Get the dibs app" for guests. There's no app yet, so the tap is counted (web to app, ARV-50)
+ * "Get the Dibby app" for guests. There's no app yet, so the tap is counted (web to app, ARV-50)
  * and the button says so honestly instead of pretending to go somewhere.
  */
 export function GetTheApp({ onTap }: { onTap: () => Promise<void> }) {
@@ -28,7 +28,7 @@ export function GetTheApp({ onTap }: { onTap: () => Promise<void> }) {
       }}
     >
       <i className="ri-smartphone-line db-icon" aria-hidden="true" />
-      Get the dibs app
+      Get the Dibby app
     </Button.Root>
   );
 }

@@ -137,7 +137,7 @@ export async function saveProfile(_prev: FormState, form: FormData): Promise<For
   const dob = clean(form.get("dob"), 10);
   const payid = clean(form.get("payid"), 100) || null;
   if (!first || !last) return { error: "We need your first and last name." };
-  if (!isAdult(dob)) return { error: "You need to be 18 or over to organise plans on dibs." };
+  if (!isAdult(dob)) return { error: "You need to be 18 or over to organise plans on Dibby." };
   try {
     await store.upsertProfile({ user_id: me.id, first_name: first, last_name: last, dob, payid, payid_name: payid ? `${first} ${last}` : null });
   } catch (e) {
@@ -181,7 +181,7 @@ export async function createPlan(_prev: FormState, form: FormData): Promise<Form
   if (where === "dibby") {
     const ask = String(form.get("ask") ?? "").replace(/^\s*@dibby\s*/i, "").trim().slice(0, 500);
     if (!ask && !picks.spend) return { error: "Tell Dibby what you're after, like “dumplings” or “bowling”." };
-    if (!process.env.ANTHROPIC_API_KEY) return { error: "Dibby isn't switched on yet. Pick a place, or vote on it and add your own." };
+    if (!process.env.ANTHROPIC_API_KEY) return { error: "Dibby can't find places just yet. Pick a place, or vote on it and add your own." };
     let draft;
     try {
       draft = await draftPlan([title, ask].filter(Boolean).join(": "), vibe, picks);

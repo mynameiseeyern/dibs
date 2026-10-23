@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { shareText } from "./plans";
 
-const url = "https://dibs.app/p/abc";
+const url = "https://dibby.social/p/abc";
 
 describe("shareText", () => {
   it("leads with the event when the place is set", () => {

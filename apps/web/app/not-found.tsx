@@ -10,7 +10,7 @@ export default function NotFound() {
         <p className="muted">The link might be old, or the plan wrapped up more than 30 days ago. Ask whoever sent it for a fresh one.</p>
         <Button.Root asChild variant="neutral" mode="lighter">
           <a href="/">
-            Go to dibs
+            Go to Dibby
           </a>
         </Button.Root>
       </section>

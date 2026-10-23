@@ -27,7 +27,7 @@ export async function planPreview(slug: string, page?: { label: string; path: st
   const meta = previewMeta({ title, description: [facts, page?.blurb ?? call].filter(Boolean).join(" · "), path: `/p/${slug}${page?.path ?? ""}` });
   // A plan's own pages show the plan's card too (Next only attaches it to the plan page itself).
   if (page) {
-    const image = { url: `/p/${slug}/opengraph-image`, width: 1200, height: 630, alt: `${plan.title} on dibs` };
+    const image = { url: `/p/${slug}/opengraph-image`, width: 1200, height: 630, alt: `${plan.title} on Dibby` };
     meta.openGraph = { ...meta.openGraph, images: [image] };
     meta.twitter = { ...meta.twitter, images: [image] };
   }
