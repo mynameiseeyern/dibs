@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { cn } from "@/utils/cn";
 import { RiCalendarLine, RiTimeLine } from "@remixicon/react";
 import { Calendar } from "@/components/ui/datepicker";
 import * as Popover from "@/components/ui/popover";
 import * as Select from "@/components/ui/select";
 import * as Button from "@/components/ui/button";
-import * as Label from "@/components/ui/label";
 import * as Hint from "@/components/ui/hint";
 
 // Date and time pickers built from AlignUI's Datepicker, Popover and Select.
@@ -78,6 +78,101 @@ export function DatePopover({
   );
 }
 
+/** How far ahead the strip goes before you need the calendar. */
+const STRIP_DAYS = 21;
+
+const addDays = (ymd: string, n: number) => {
+  const d = toDate(ymd);
+  d.setDate(d.getDate() + n);
+  return toYmd(d);
+};
+const monthName = (ymd: string) => toDate(ymd).toLocaleDateString("en-AU", { month: "long" });
+
+/**
+ * The next three weeks as a swipeable row of day tiles, after the HR template's day picker,
+ * with a calendar tile at the end for anything further out. Tap a picked day again to clear it.
+ */
+export function DayStrip({
+  value,
+  onChange,
+  label,
+  bleed = false,
+}: {
+  value: string | null;
+  onChange: (ymd: string | null) => void;
+  label: string;
+  /** Run the strip edge to edge past the page's 16px gutter. */
+  bleed?: boolean;
+}) {
+  const today = sydneyToday();
+  const days = useMemo(() => Array.from({ length: STRIP_DAYS }, (_, i) => addDays(today, i)), [today]);
+  const later = value && !days.includes(value) ? value : null;
+  const row = useRef<HTMLDivElement>(null);
+  const labelId = `strip-${label.toLowerCase().replace(/\W+/g, "-")}`;
+
+  // Keep the picked day in view, including one picked from the calendar.
+  useEffect(() => {
+    row.current?.querySelector<HTMLElement>("[aria-pressed=true]")?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
+  }, [value]);
+
+  const first = monthName(days[0]);
+  const last = monthName(later ?? days[days.length - 1]);
+  return (
+    <div className="flex min-w-0 flex-col gap-2">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="label-sm" id={labelId}>
+          {label}
+        </span>
+        <span className="paragraph-xs muted">{first === last ? first : `${first} – ${last}`}</span>
+      </div>
+      <div
+        ref={row}
+        role="group"
+        aria-labelledby={labelId}
+        className={cn("flex snap-x gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden", bleed && "-mx-4 scroll-px-4 px-4")}
+      >
+        {days.map((d, i) => (
+          <DayTile key={d} ymd={d} on={value === d} top={i === 0 ? "Today" : undefined} onClick={() => onChange(value === d ? null : d)} />
+        ))}
+        {later && <DayTile ymd={later} on top={toDate(later).toLocaleDateString("en-AU", { month: "short" })} onClick={() => onChange(null)} />}
+        <DatePopover value={value} onChange={onChange}>
+          <button
+            type="button"
+            aria-label="More dates"
+            className="flex h-14 w-14 shrink-0 snap-start flex-col items-center justify-center gap-0.5 rounded-lg bg-bg-weak-50 text-text-sub-600 transition duration-200 ease-out hover:bg-bg-soft-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+          >
+            <RiCalendarLine className="size-5" aria-hidden="true" />
+            <span className="text-paragraph-xs">More</span>
+          </button>
+        </DatePopover>
+      </div>
+    </div>
+  );
+}
+
+/** Weekday over the date, 56px tall; violet when picked. */
+function DayTile({ ymd, on, top, onClick }: { ymd: string; on: boolean; top?: string; onClick: () => void }) {
+  const d = toDate(ymd);
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      aria-label={d.toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long" })}
+      onClick={onClick}
+      className={cn(
+        "flex h-14 w-12 shrink-0 snap-start select-none flex-col items-center justify-center gap-0.5 rounded-lg",
+        "transition duration-200 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
+        on ? "bg-primary-base text-static-white" : "text-text-strong-950 hover:bg-bg-weak-50",
+      )}
+    >
+      <span className={cn("text-paragraph-xs", on ? "text-static-white" : "text-text-sub-600")}>
+        {top ?? d.toLocaleDateString("en-AU", { weekday: "short" })}
+      </span>
+      <span className="text-label-md">{d.getDate()}</span>
+    </button>
+  );
+}
+
 /** AlignUI Select of half-hour times. Keeps an off-the-grid time (7:15pm) if that's what's set. */
 export function TimeSelect({
   value,
@@ -138,16 +233,8 @@ export function DateTimeField({
 
   return (
     <div className="flex flex-col gap-2">
-      <Label.Root htmlFor={`${name}-date`}>{label}</Label.Root>
-      <div className="grid grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] gap-2">
-        <DatePopover value={date} onChange={setDate}>
-          <Button.Root id={`${name}-date`} type="button" variant="neutral" mode="stroke" className="justify-start">
-            <Button.Icon as={RiCalendarLine} />
-            <span className={date ? undefined : "text-text-sub-600"}>{date ? dateLabel(date) : "Pick a day"}</span>
-          </Button.Root>
-        </DatePopover>
-        <TimeSelect value={time} onChange={setTime} />
-      </div>
+      <DayStrip label={label} value={date} onChange={setDate} />
+      <TimeSelect value={time} onChange={setTime} placeholder="Pick a time" />
       {/* Carries the value and the half-filled warning. Visually hidden, not display:none, so the browser can point at it. */}
       <input ref={check} name={name} value={value} onChange={() => {}} className="sr-only" tabIndex={-1} aria-hidden="true" />
       {hint && <Hint.Root>{hint}</Hint.Root>}

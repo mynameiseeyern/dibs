@@ -32,6 +32,7 @@ import * as DigitInput from "@/components/ui/digit-input";
 import * as ProgressCircle from "@/components/ui/progress-circle";
 import * as LinkButton from "@/components/ui/link-button";
 import { useState } from "react";
+import { DayStrip, DateTimeField } from "@/components/DateTime";
 import {
   RiAddLine,
   RiMapPinLine,
@@ -396,8 +397,11 @@ function DateDemo() {
   const [day, setDay] = useState<Date | undefined>();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  const [stripDay, setStripDay] = useState<string | null>(null);
   return (
     <>
+      <DayStrip label="When" value={stripDay} onChange={setStripDay} bleed />
+      <DateTimeField name="g-when" label="Day and time" hint="Sydney and Melbourne time." />
       <div className="rounded-lg p-2 ring-1 ring-inset ring-stroke-soft-200">
         <Calendar mode="single" selected={day} onSelect={setDay} disabled={{ before: today }} weekStartsOn={1} />
       </div>

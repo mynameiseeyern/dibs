@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import * as Button from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 import * as Select from "@/components/ui/select";
-import { DatePopover, dateLabel, timeLabel } from "@/components/DateTime";
+import { DayStrip, dateLabel, timeLabel } from "@/components/DateTime";
 
 const TZ = "Australia/Sydney";
 export const TIMES = [
@@ -84,7 +84,6 @@ export function Chip({ on, children, ...rest }: { on: boolean; children: React.R
 /** Day and time chips. Anything tapped is a fixed fact; leave both blank and the time stays to be decided. */
 export type WhenValue = { date: string | null; time: string | null };
 export function WhenChips({ value, onChange }: { value?: WhenValue; onChange?: (v: WhenValue) => void }) {
-  const days = useMemo(nextDays, []);
   const [own, setOwn] = useState<WhenValue>({ date: null, time: null });
   const { date, time } = value ?? own;
   const set = (v: WhenValue) => (onChange ? onChange(v) : setOwn(v));
@@ -94,14 +93,7 @@ export function WhenChips({ value, onChange }: { value?: WhenValue; onChange?: (
     <>
       <input type="hidden" name="pick_date" value={date ?? ""} />
       <input type="hidden" name="pick_time" value={time ?? ""} />
-      <Chips label="When" items={days} value={date} onChange={setDate}>
-        <DatePopover value={date} onChange={setDate}>
-          <Chip on={!!date && !days.some((d) => d.id === date)}>
-            <Button.Icon as="i" className="ri-calendar-line" aria-hidden="true" />
-            {date && !days.some((d) => d.id === date) ? dateLabel(date) : "Pick a date"}
-          </Chip>
-        </DatePopover>
-      </Chips>
+      <DayStrip label="When" value={date} onChange={setDate} bleed />
       <Chips label="Time" items={TIMES} value={time} onChange={setTime}>
         <OtherTime value={time} onChange={setTime} />
       </Chips>
