@@ -8,6 +8,7 @@ import { PlacePicker, isTyped, pickArg } from "@/components/PlacePicker";
 import type { CustomPlace } from "@dibs/shared/plans";
 import { DibbyMark } from "@/components/Logo";
 import { DibbyWorking } from "@/components/DibbyWorking";
+import { locate } from "@/lib/locate";
 import * as Input from "@/components/ui/input";
 import * as Button from "@/components/ui/button";
 import * as Modal from "@/components/ui/modal";
@@ -189,6 +190,11 @@ export function VoteList({
                 const f = new FormData();
                 f.set("ask", ask);
                 startDibby(async () => {
+                  const here = await locate({ ask: true });
+                  if (here) {
+                    f.set("near_lat", String(here.lat));
+                    f.set("near_lng", String(here.lng));
+                  }
                   const res = await askDibby!(f);
                   setAsking(false);
                   if (res.error) toast.error(res.error);
@@ -203,7 +209,7 @@ export function VoteList({
                   <Input.Input name="ask" value={ask} onChange={(e) => setAsk(e.target.value)} placeholder="Somewhere cheaper, a rooftop, more ramen…" maxLength={500} autoComplete="off" autoFocus />
                 </Input.Wrapper>
               </Input.Root>
-              <p className="paragraph-xs muted">Dibby adds up to three real spots{rows.length ? " it hasn't already suggested" : ""}. What you type goes to an AI provider.</p>
+              <p className="paragraph-xs muted">Dibby adds up to three real spots{rows.length ? " it hasn't already suggested" : ""}, near you unless you name a place. What you type goes to an AI provider.</p>
               {dibbyBusy && <DibbyWorking where={area ?? null} />}
             </form>
           </Modal.Body>

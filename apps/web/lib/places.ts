@@ -12,8 +12,8 @@ export interface Venue {
  * Venues for Dibby: the same search as the picker (demo places without a key, open businesses
  * only), trimmed to `max`. Null when search is unavailable.
  */
-export async function searchVenues(query: string, area: string | null, max = 3): Promise<Venue[] | null> {
-  const found = await searchPlaces(query, null, area);
+export async function searchVenues(query: string, area: string | null, max = 3, near: { lat: number; lng: number } | null = null): Promise<Venue[] | null> {
+  const found = await searchPlaces(query, area ? null : near, area);
   return found ? found.slice(0, max).map((p) => ({ placeId: p.placeId, name: p.name, address: p.address, rating: p.rating, priceLevel: null })) : null;
 }
 
@@ -90,7 +90,8 @@ export async function searchPlaces(query: string, near: { lat: number; lng: numb
       headers: { "Content-Type": "application/json", "X-Goog-Api-Key": key, "X-Goog-FieldMask": PLACE_FIELDS.split(",").map((f) => `places.${f}`).join(",") },
       body: JSON.stringify({
         textQuery: !near && area ? `${q} in ${area}` : q,
-        ...(!near && area ? {} : { regionCode: "AU" }),
+        // Only a fully open search leans Australian; a named place or where you are decides otherwise.
+        ...(near || area ? {} : { regionCode: "AU" }),
         pageSize: 8,
         ...(near ? { locationBias: { circle: { center: { latitude: near.lat, longitude: near.lng }, radius: 8000 } } } : {}),
       }),

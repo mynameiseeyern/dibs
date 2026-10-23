@@ -50,6 +50,7 @@ Open `packages/ui/design-system/index.html` in a browser to see every component 
 - Amounts are integer cents with a currency code (default AUD).
 - Only people going (and hosts) vote, chat, react or add places. Maybe, not replied or waitlisted: read only. Can't go: vote, chat and who's in are hidden. `planAccess` in `packages/shared/src/plans.ts`, checked in every server action. Stepping down from going before the plan starts takes your vote back.
 - Dibby never makes up a day or a time. Ask Dibby chips (day, time, budget, near me) are fixed facts; `resolveStart` in `packages/shared/src/when.ts` decides the start.
+- Dibby searches near the asker by default (`lib/locate.ts`, rounded to ~100m). A place named in the ask, or earlier in that plan's chat (`SearchMemo` on Dibby's message), wins. Coordinates only bias the Places search: never saved, never sent to the AI.
 - Every place on a plan (vote options, a set place) comes from the place picker (`components/PlacePicker.tsx`): either a real, open business from the map, which the server checks with `getPlace` before saving, or a place typed in (someone's place, a spot in a park) as a name plus an optional address (`cleanCustomPlace`).
 - A typed-in place's name is public like any plan detail (page, WhatsApp preview, Dibby). Its address is only shown to people in the plan: plan card, vote options, calendar files. The picker says so on each field and flags a name that looks like an address (`looksLikeAddress`); it never blocks.
 

@@ -14,6 +14,7 @@ import { loadPlan } from "@/lib/viewer";
 import { localToIso } from "@/lib/time";
 import { DIBBY_HEADS_UP, planLinkLine } from "@/lib/thread-links";
 import { getPlace } from "@/lib/places";
+import { readNear } from "@/lib/near";
 
 export type FormState = { error?: string } | undefined;
 
@@ -121,13 +122,13 @@ export async function postMessage(slug: string, _prev: FormState, form: FormData
         body: DIBBY_HEADS_UP,
       });
     }
-    await runDibby(view.plan.id, slug, body, view.me);
+    await runDibby(view.plan.id, slug, body, view.me, readNear(form));
   }
   revalidatePath(`/p/${slug}`);
   return undefined;
 }
 
-async function runDibby(planId: string, slug: string, ask: string, asker: PlanMember) {
+async function runDibby(planId: string, slug: string, ask: string, asker: PlanMember, near: { lat: number; lng: number } | null) {
   const view = await loadPlan(slug);
   if (!view) return;
   const [options, votes, recent] = await Promise.all([store.listOptions(planId), store.listVotes(planId), store.listMessages(planId, 20)]);
@@ -140,6 +141,7 @@ async function runDibby(planId: string, slug: string, ask: string, asker: PlanMe
         options: options.map((o) => ({ ...o, votes: votes.filter((v) => v.option_id === o.id).length })),
         recent,
         nameOf: (id) => (id ? names.get(id) ?? "Someone" : "Dibby"),
+        near,
       },
       ask
     );
@@ -257,10 +259,12 @@ export async function askDibbyMore(slug: string, form: FormData): Promise<{ erro
   // Look where Dibby last looked on this plan (say, Hong Kong), else the plan's area.
   const recent = await store.listMessages(view.plan.id, 30);
   const memo = [...recent].reverse().map((m) => (m.kind === "dibby" ? asSearchMemo(m.template) : null)).find(Boolean) ?? null;
-  const area = memo?.area ?? view.plan.area;
+  const near = readNear(form);
+  // A place named earlier in this plan wins; otherwise around the asker, then the plan's area.
+  const area = memo?.area ?? (near ? null : view.plan.area);
   let more;
   try {
-    more = await suggestMore(ask, view.plan.vibe, area, options.map((o) => ({ placeId: o.place_id, label: o.label })));
+    more = await suggestMore(ask, view.plan.vibe, area, options.map((o) => ({ placeId: o.place_id, label: o.label })), near);
   } catch (e) {
     console.error("[dibby more]", e);
     return { error: "brb, Dibby's having a moment. Try again, or add a place from the map." };
@@ -273,7 +277,7 @@ export async function askDibbyMore(slug: string, form: FormData): Promise<{ erro
   const body = venues.length
     ? `${more.reply} Added ${names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`} to the vote.`
     : "Couldn't find anything new for that on Maps. Try a different ask, or add one from the map.";
-  await store.addMessage({ planId: view.plan.id, memberId: null, kind: "dibby", body, template: { k: "search", query: more.query, area } });
+  await store.addMessage({ planId: view.plan.id, memberId: null, kind: "dibby", body, template: { k: "search", query: more.query, area: more.area, near: more.near } });
   revalidatePath(`/p/${slug}`);
   return { added: names };
 }

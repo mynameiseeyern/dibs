@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { locate } from "@/lib/locate";
 import type { Vibe } from "@dibs/shared/types";
 import { createPlan } from "../actions";
 import { Field, FormError } from "@/components/Field";
@@ -38,6 +39,14 @@ export function NewPlanForm() {
   const [ask, setAsk] = useState("");
   const [vibe, setVibe] = useState<Vibe>("chill");
   const placeholder = useCyclingPlaceholder(mode === "dibby" && ask === "");
+  // Near me is the default for Dibby: on straight away if location's already allowed, otherwise
+  // asked for the first time Dibby's section is in play. Tap the chip to turn it off.
+  const locAsked = useRef(false);
+  useEffect(() => {
+    if (mode !== "dibby" || search.near || locAsked.current) return;
+    locAsked.current = true;
+    locate({ ask: false }).then((c) => (c ? setSearch((v) => ({ ...v, near: c })) : locate({ ask: true }).then((c2) => c2 && setSearch((v) => ({ ...v, near: c2 })))));
+  }, [mode, search.near]);
 
   return (
     <form action={action} className="form">

@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
+import { locate, type Coords } from "@/lib/locate";
 import { DibbyMark } from "@/components/Logo";
 import type { FormState } from "./actions";
 import * as Button from "@/components/ui/button";
@@ -13,6 +14,18 @@ export function Composer({ action }: { action: (s: FormState, f: FormData) => Pr
   const [text, setText] = useState("");
   const [askedDibby, setAskedDibby] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  // Dibby searches around you by default. Ask for location once, when you first tag Dibby.
+  const tagging = /(^|\s)@dibby\b/i.test(text);
+  const [near, setNear] = useState<Coords | null>(null);
+  const asked = useRef(false);
+  useEffect(() => {
+    locate({ ask: false }).then((c) => c && setNear(c));
+  }, []);
+  useEffect(() => {
+    if (!tagging || near || asked.current) return;
+    asked.current = true;
+    locate({ ask: true }).then(setNear);
+  }, [tagging, near]);
   const [state, formAction, pending] = useActionState(async (s: FormState, f: FormData) => {
     const r = await action(s, f);
     setText("");
@@ -36,6 +49,8 @@ export function Composer({ action }: { action: (s: FormState, f: FormData) => Pr
           </div>
         </div>
       )}
+      <input type="hidden" name="near_lat" value={tagging && near ? near.lat : ""} />
+      <input type="hidden" name="near_lng" value={tagging && near ? near.lng : ""} />
       <div className="composer__row">
         <label htmlFor="body" className="sr-only">
           Message
@@ -61,6 +76,12 @@ export function Composer({ action }: { action: (s: FormState, f: FormData) => Pr
         <Button.Root type="button" mode="ghost" size="small" className="composer__chip" onClick={() => setText("@dibby ")}>
           <i className="ri-sparkling-line db-icon" aria-hidden="true" /> Ask Dibby
         </Button.Root>
+      )}
+      {tagging && (
+        <p className="paragraph-xs muted composer__where">
+          <i className={`${near ? "ri-map-pin-fill" : "ri-map-pin-line"} db-icon`} aria-hidden="true" />{" "}
+          {near ? "Dibby looks near you. Name a place to look somewhere else." : "Name a place, like “in Newtown”, and Dibby looks there."}
+        </p>
       )}
       {state?.error && (
         <Hint.Root hasError role="alert">

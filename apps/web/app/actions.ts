@@ -1,5 +1,6 @@
 "use server";
 
+import { readNear } from "@/lib/near";
 import { redirect } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import type { Vibe } from "@dibs/shared/types";
@@ -224,13 +225,11 @@ function readPicks(form: FormData): DraftPicks {
   const date = String(form.get("pick_date") ?? "");
   const time = String(form.get("pick_time") ?? "");
   const spend = Number(form.get("pick_spend"));
-  const lat = Number(form.get("near_lat"));
-  const lng = Number(form.get("near_lng"));
   return {
     date: /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null,
     time: /^([01]\d|2[0-3]):[0-5]\d$/.test(time) ? time : null,
     spend: spend === 1 || spend === 2 || spend === 3 ? spend : null,
-    near: form.get("near_lat") && Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180 ? { lat, lng } : null,
+    near: readNear(form),
   };
 }
 
