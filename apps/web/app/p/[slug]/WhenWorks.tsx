@@ -7,6 +7,7 @@ import { Field } from "@/components/Field";
 import { MonogramStack } from "@/components/Monogram";
 import type { MonogramColour } from "@dibs/shared/types";
 import { toast } from "@/components/ui/toast";
+import { send } from "@/lib/send";
 
 type Person = { id: string; display_name: string; colour: MonogramColour };
 export type WhenRow = { id: string; label: string; short: string; free: Person[]; mine: boolean };
@@ -120,8 +121,8 @@ export function WhenWorks({
                       if (readOnly) return void toast.info(readOnly);
                       startToggle(async () => {
                         toggle(r.id);
-                        const res = await actions.markFree(r.id);
-                        if (res.error) toast.error(res.error);
+                        const res = await send(() => actions.markFree(r.id), { retry: false, what: "that" });
+                        if (res?.error) toast.error(res.error);
                       });
                     }}
                   >

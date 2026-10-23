@@ -7,6 +7,7 @@ import type { Vibe } from "@dibs/shared/types";
 import { currentOrganiser, demoSignIn, signOut } from "@/lib/auth";
 import { clearGuestSession, currentGuest } from "@/lib/guest";
 import { store, usingSupabase } from "@/lib/store";
+import { report } from "@/lib/report";
 import { draftPlan, type DraftPicks } from "@/lib/dibby";
 import { localToIso } from "@/lib/time";
 import { resolveStart } from "@dibs/shared/when";
@@ -82,6 +83,24 @@ export async function signOutAction() {
   await signOut();
   await clearGuestSession();
   redirect("/");
+}
+
+/**
+ * Delete my account (ARV-53). Memberships become "Former member" so shared bills stay right;
+ * the profile, PayID, email list rows and sign-in are deleted. Then signed out, and home.
+ */
+export async function deleteAccountAction(): Promise<{ error?: string }> {
+  const me = await currentOrganiser();
+  if (!me) return { error: "You're not signed in." };
+  try {
+    await store.deleteAccount(me.id);
+  } catch (e) {
+    console.error("[delete account]", e);
+    return { error: "Couldn't delete it just then. Try again, or email hello@dibby.social and we'll do it." };
+  }
+  await signOut().catch(() => {});
+  await clearGuestSession();
+  redirect("/?bye=1");
 }
 
 /** Sign out and straight back to the sign-in page, to come back as someone else. */
@@ -167,7 +186,7 @@ export async function createPlan(_prev: FormState, form: FormData): Promise<Form
     try {
       draft = await draftPlan([title, ask].filter(Boolean).join(": "), vibe, picks);
     } catch (e) {
-      console.error("[dibby draft]", e);
+      report("dibby draft", e);
       return { error: "brb, Dibby's having a moment. Try again, or add your own places." };
     }
     const plan = await store.createPlan({

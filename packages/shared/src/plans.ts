@@ -47,6 +47,9 @@ export const RSVP_LABEL: Record<Rsvp, string> = { in: "I'm in", maybe: "Maybe", 
  * "Friday dinner · Fri 7pm · Chat Thai. You in? 👉 link"
  * While the place is still being voted on it says so, so people know there's a vote to do.
  */
+/** What someone who deleted their account shows as, in plans they were part of. */
+export const FORMER_MEMBER = "Former member";
+
 export function shareText(opts: { title: string; when?: string | null; place?: string | null; voting?: boolean; deadline?: string | null; url: string }): string {
   const head = [opts.title, opts.when, opts.voting ? null : opts.place].filter(Boolean).join(" · ");
   const vote = opts.voting ? ` Place is up for a vote${opts.deadline ? ` till ${opts.deadline}` : ""}.` : "";

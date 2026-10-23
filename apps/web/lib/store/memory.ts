@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { makeSlug, pickColour } from "@dibs/shared/plans";
+import { FORMER_MEMBER, makeSlug, pickColour } from "@dibs/shared/plans";
 import type { LoggedEvent } from "@dibs/shared/metrics";
 import type { Bill, BillShare, Guest, Message, NewMember, NewPlan, Plan, PlanMember, PlanOption, PlanTime, Profile, Store, Subscription, TimeVote, Vote, RecapAnswer, Reaction } from "./types";
 
@@ -292,6 +292,13 @@ export const memoryStore: Store = {
   async countNudgesSince(planId, sinceIso) {
     const since = Date.parse(sinceIso);
     return db.nudges.filter((n) => n.plan_id === planId && n.at >= since).length;
+  },
+  async deleteAccount(userId) {
+    for (const m of db.members.values()) if (m.user_id === userId) Object.assign(m, { user_id: null, display_name: FORMER_MEMBER });
+    for (const p of db.plans.values()) if (p.organiser_id === userId) p.organiser_id = null;
+    db.profiles.delete(userId);
+    db.lists = db.lists.filter((l) => l.userId !== userId);
+    for (const e of db.events) if (e.userId === userId) e.userId = null;
   },
   async listTimes(planId) {
     return db.times.filter((t) => t.plan_id === planId);

@@ -189,13 +189,13 @@ export function PlacePicker({
           </div>
 
           {places.length > 0 && (
-            <ul className="place-list" role="listbox" aria-label="Places">
+            <ul className="place-list" aria-label="Places">
               {places.map((p) => {
                 const taken = exclude.includes(p.placeId);
                 const selected = picked?.placeId === p.placeId;
                 return (
-                  <li key={p.placeId} role="option" aria-selected={selected} aria-disabled={taken}>
-                    <button type="button" className="place-row" data-selected={selected || undefined} disabled={taken} onClick={() => setPicked(p)}>
+                  <li key={p.placeId}>
+                    <button type="button" className="place-row" aria-pressed={selected} data-selected={selected || undefined} disabled={taken} onClick={() => setPicked(p)}>
                       <i className={`${selected ? "ri-map-pin-fill" : "ri-map-pin-line"} db-icon`} aria-hidden="true" />
                       <span className="place-row__text">
                         <span className="label-md">{p.name}</span>

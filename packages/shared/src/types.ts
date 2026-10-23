@@ -13,7 +13,8 @@ export type DibbyVolume = "quiet" | "normal" | "loud";
 export interface Plan {
   id: string;
   slug: string;
-  organiser_id: string;
+  /** Null once the organiser deleted their account. */
+  organiser_id: string | null;
   title: string;
   area: string | null;
   starts_at: string | null;

@@ -4,7 +4,9 @@ import { BETA_LIST } from "@dibs/email";
 import { store, usingSupabase } from "@/lib/store";
 import { whoIsHere } from "@/lib/viewer";
 import { formatAud, rouletteTally } from "@dibs/shared/bills";
-import { forgetDeviceAction, signOutAction, switchAccountAction } from "../actions";
+import { deleteAccountAction, forgetDeviceAction, signOutAction, switchAccountAction } from "../actions";
+import { DeleteAccount } from "./DeleteAccount";
+import { SiteFooter } from "@/components/SiteFooter";
 import { KeepPlansForm } from "./KeepPlansForm";
 import { BetaUpdatesToggle } from "./BetaUpdatesToggle";
 import * as Button from "@/components/ui/button";
@@ -107,6 +109,7 @@ export default async function Account() {
               <form action={signOutAction}>
                 <Button.Root mode="ghost" block>Sign out</Button.Root>
               </form>
+              <DeleteAccount action={deleteAccountAction} />
             </>
           ) : (
             <>
@@ -123,6 +126,7 @@ export default async function Account() {
           )}
         </section>
       )}
+      <SiteFooter />
     </main>
   );
 }

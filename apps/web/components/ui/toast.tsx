@@ -34,22 +34,36 @@ export function Toaster() {
   );
 }
 
-function ToastCard({ status, title, description }: { status: Status; title: string; description?: string }) {
+type Extra = { description?: string; retry?: () => void };
+
+function ToastCard({ status, title, description, retry, onDone }: { status: Status; title: string; onDone: () => void } & Extra) {
   const Icon = ICONS[status];
   return (
     <Alert.Root variant='stroke' status={status} size='large' className='rounded-lg' role={status === 'error' ? 'alert' : 'status'}>
       <Alert.Icon as={Icon} />
-      <div>
+      <div className='flex-1'>
         <strong>{title}</strong>
         {description}
       </div>
+      {retry && (
+        <button
+          type='button'
+          className='-my-2 min-h-11 shrink-0 cursor-pointer rounded-full px-3 text-label-sm text-primary-dark underline underline-offset-2'
+          onClick={() => {
+            onDone();
+            retry();
+          }}
+        >
+          Try again
+        </button>
+      )}
     </Alert.Root>
   );
 }
 
-function show(status: Status, title: string, opts?: ExternalToast & { description?: string }) {
-  const { description, ...rest } = opts ?? {};
-  return sonnerToast.custom(() => <ToastCard status={status} title={title} description={description} />, {
+function show(status: Status, title: string, opts?: ExternalToast & Extra) {
+  const { description, retry, ...rest } = opts ?? {};
+  return sonnerToast.custom((id) => <ToastCard status={status} title={title} description={description} retry={retry} onDone={() => sonnerToast.dismiss(id)} />, {
     duration: 3000,
     ...rest,
   });
@@ -57,9 +71,9 @@ function show(status: Status, title: string, opts?: ExternalToast & { descriptio
 
 /** `toast.success("Link copied")`, `toast.error("Couldn't save that", { description: "Try again in a sec." })` */
 export const toast = {
-  success: (title: string, opts?: ExternalToast & { description?: string }) => show('success', title, opts),
-  error: (title: string, opts?: ExternalToast & { description?: string }) => show('error', title, opts),
-  warning: (title: string, opts?: ExternalToast & { description?: string }) => show('warning', title, opts),
-  info: (title: string, opts?: ExternalToast & { description?: string }) => show('information', title, opts),
+  success: (title: string, opts?: ExternalToast & Extra) => show('success', title, opts),
+  error: (title: string, opts?: ExternalToast & Extra) => show('error', title, opts),
+  warning: (title: string, opts?: ExternalToast & Extra) => show('warning', title, opts),
+  info: (title: string, opts?: ExternalToast & Extra) => show('information', title, opts),
   dismiss: sonnerToast.dismiss,
 };
