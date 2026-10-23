@@ -4,8 +4,11 @@ import { loadPlan } from "@/lib/viewer";
 import { wrapUp } from "../bills/actions";
 import * as Button from "@/components/ui/button";
 import * as Checkbox from "@/components/ui/checkbox";
+import { planPreview } from "@/lib/plan-preview";
 
-export const metadata = { title: "Wrap-up" };
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  return planPreview((await params).slug, { label: "Wrap-up", path: "/wrap" });
+}
 export const dynamic = "force-dynamic";
 
 export default async function Wrap({ params }: { params: Promise<{ slug: string }> }) {

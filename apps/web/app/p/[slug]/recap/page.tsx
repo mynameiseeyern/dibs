@@ -8,8 +8,11 @@ import { saveRecap } from "./actions";
 import { RecapForm } from "./RecapForm";
 import * as Button from "@/components/ui/button";
 import * as Alert from "@/components/ui/alert";
+import { planPreview } from "@/lib/plan-preview";
 
-export const metadata = { title: "Recap" };
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  return planPreview((await params).slug, { label: "Recap", path: "/recap", blurb: "How it went, in one place." });
+}
 export const dynamic = "force-dynamic";
 
 export default async function Recap({ params }: { params: Promise<{ slug: string }> }) {

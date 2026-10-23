@@ -6,8 +6,11 @@ import { cancelPlan, openVote, setArea, setCapacity, setDibbyVolume, setPlace, s
 import { store } from "@/lib/store";
 import { EditPlan } from "./EditPlan";
 import * as Button from "@/components/ui/button";
+import { planPreview } from "@/lib/plan-preview";
 
-export const metadata = { title: "Edit plan" };
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  return planPreview((await params).slug, { label: "Edit plan", path: "/manage" });
+}
 
 export const dynamic = "force-dynamic";
 

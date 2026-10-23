@@ -29,6 +29,7 @@ import { ShareButton } from "./ShareButton";
 import { Thread } from "./Thread";
 import { VoteList } from "./Vote";
 import { siteUrl } from "@/lib/site";
+import { planPreview } from "@/lib/plan-preview";
 import * as Button from "@/components/ui/button";
 import * as Badge from "@/components/ui/badge";
 import * as Alert from "@/components/ui/alert";
@@ -38,13 +39,7 @@ type Props = { params: Promise<{ slug: string }> };
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const view = await loadPlan((await params).slug);
-  if (!view) return { title: "Plan not found" };
-  const when = formatWhen(view.plan.starts_at);
-  return {
-    title: view.plan.title,
-    description: [when, view.plan.venue_name ?? view.plan.area, `${countIn(view.members)} in`].filter(Boolean).join(" · "),
-  };
+  return planPreview((await params).slug);
 }
 
 const ORDER: (Rsvp | "waitlist" | "none")[] = ["in", "maybe", "waitlist", "none", "out"];

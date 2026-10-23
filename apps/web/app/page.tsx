@@ -1,6 +1,9 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { LogoMark } from "@/components/Logo";
 import * as Button from "@/components/ui/button";
+
+export const metadata: Metadata = { robots: { index: true, follow: true }, alternates: { canonical: "/" } };
 
 // If Supabase falls back to the Site URL, the sign-in link lands here: pass it on.
 export default async function Landing({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
