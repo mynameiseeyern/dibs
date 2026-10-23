@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useMapsLibrary } from "@vis.gl/react-google-maps";
 import { isGooglePlaceId, useGoogleMapsReady } from "./GoogleMaps";
+import { GoogleBoundary } from "./GoogleBoundary";
 
 /*
  * A place, with Google's photos, star rating and review count, type, price and open-now, from the
@@ -31,8 +32,13 @@ export function PlaceCard({
 }) {
   const ready = useGoogleMapsReady();
   const [failed, setFailed] = useState(false);
-  if (!ready || !isGooglePlaceId(placeId) || failed) return <PlaceSummary name={name} address={address} placeId={placeId} layout={layout} />;
-  return <GooglePlace placeId={placeId} name={name} layout={layout} onFail={() => setFailed(true)} />;
+  const plain = <PlaceSummary name={name} address={address} placeId={placeId} layout={layout} />;
+  if (!ready || !isGooglePlaceId(placeId) || failed) return plain;
+  return (
+    <GoogleBoundary fallback={plain}>
+      <GooglePlace placeId={placeId} name={name} layout={layout} onFail={() => setFailed(true)} />
+    </GoogleBoundary>
+  );
 }
 
 function GooglePlace({ placeId, name, layout, onFail }: { placeId: string; name: string; layout: Layout; onFail: () => void }) {
@@ -82,7 +88,9 @@ function GooglePlace({ placeId, name, layout, onFail }: { placeId: string; name:
     <div ref={box} className={`place-card place-card--${layout}`} data-loaded={loaded || undefined} aria-busy={!loaded}>
       {!loaded && <PlaceSkeleton name={name} layout={layout} />}
       {seen && places && (
-        <gmp-place-details-compact orientation={layout === "tile" ? "vertical" : "horizontal"} truncation-preferred="">
+        // React sets orientation as a property (the element is defined by now), which only takes
+        // Google's enum values in capitals; lowercase throws and used to take the page down.
+        <gmp-place-details-compact orientation={layout === "tile" ? "VERTICAL" : "HORIZONTAL"} truncation-preferred="">
           <gmp-place-details-place-request place={placeId}></gmp-place-details-place-request>
           <gmp-place-content-config>
             <gmp-place-media lightbox-preferred=""></gmp-place-media>
@@ -145,7 +153,7 @@ declare module "react" {
       "gmp-place-phone-number": El;
       "gmp-place-summary": El;
       "gmp-place-reviews": El;
-      "gmp-place-details-compact": El & { orientation?: "horizontal" | "vertical"; "truncation-preferred"?: string };
+      "gmp-place-details-compact": El & { orientation?: "HORIZONTAL" | "VERTICAL"; "truncation-preferred"?: string };
       "gmp-place-details-place-request": El & { place: string };
       "gmp-place-content-config": El;
       "gmp-place-media": El & { "lightbox-preferred"?: string };

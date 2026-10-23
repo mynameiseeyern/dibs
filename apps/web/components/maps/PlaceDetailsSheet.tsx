@@ -6,6 +6,7 @@ import * as Modal from "@/components/ui/modal";
 import * as Button from "@/components/ui/button";
 import { isGooglePlaceId, useGoogleMapsReady } from "./GoogleMaps";
 import { mapsUrl } from "./PlaceCard";
+import { GoogleBoundary } from "./GoogleBoundary";
 
 /**
  * "View" on a place: Google's full place details (photos, reviews, opening hours, website,
@@ -25,7 +26,9 @@ export function PlaceDetailsSheet({
       <Modal.Content className="max-h-[92dvh] overflow-y-auto">
         <Modal.Header title={place?.name ?? ""} />
         {place && google ? (
-          <GoogleDetails placeId={place.placeId!} />
+          <GoogleBoundary fallback={<Modal.Body>{place.address ?? "Couldn't load the details. Try Open in Google Maps."}</Modal.Body>}>
+            <GoogleDetails placeId={place.placeId!} />
+          </GoogleBoundary>
         ) : place ? (
           <Modal.Body>{place.address ?? "No more details for this one."}</Modal.Body>
         ) : null}
