@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { makeSlug, pickColour } from "@dibs/shared/plans";
+import { FORMER_MEMBER, makeSlug, pickColour } from "@dibs/shared/plans";
 import type { LoggedEvent } from "@dibs/shared/metrics";
 import type { Bill, BillShare, Message, NewMember, NewPlan, Plan, PlanMember, PlanOption, PlanTime, Store, Subscription, TimeVote, Vote, RecapAnswer, Reaction } from "./types";
 
@@ -296,6 +296,17 @@ export const supabaseStore: Store = {
       .gte("created_at", sinceIso);
     if (error) throw new Error(error.message);
     return count ?? 0;
+  },
+  async deleteAccount(userId) {
+    // Rename first: the sign-in's foreign keys only null the IDs, they'd leave the name behind.
+    must(await admin().from("plan_members").update({ display_name: FORMER_MEMBER, user_id: null }).eq("user_id", userId));
+    must(await admin().from("plans").update({ organiser_id: null }).eq("organiser_id", userId));
+    must(await admin().from("mailing_list").delete().eq("user_id", userId));
+    const ev = await admin().from("events").update({ user_id: null }).eq("user_id", userId);
+    if (ev.error) console.warn("[delete account] events", ev.error.message);
+    must(await admin().from("profiles").delete().eq("user_id", userId));
+    const { error } = await admin().auth.admin.deleteUser(userId);
+    if (error) throw new Error(error.message);
   },
   async listTimes(planId) {
     return must(await admin().from("plan_times").select("id, plan_id, starts_at").eq("plan_id", planId)) as PlanTime[];

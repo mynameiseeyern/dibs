@@ -16,6 +16,7 @@ import * as Input from "@/components/ui/input";
 import * as Button from "@/components/ui/button";
 import * as Modal from "@/components/ui/modal";
 import { toast } from "@/components/ui/toast";
+import { send } from "@/lib/send";
 
 export interface VoteRow extends PlanOption {
   votes: number;
@@ -133,7 +134,7 @@ export function VoteList({
                     if (r.mine) return;
                     startVote(async () => {
                       moveVote(r.id);
-                      await vote(r.id);
+                      await send(() => vote(r.id), { what: "your vote" });
                     });
                   }}
                 >

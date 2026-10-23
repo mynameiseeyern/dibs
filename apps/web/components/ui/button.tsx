@@ -55,7 +55,8 @@ export const buttonVariants = tv({
         icon: 'size-5',
       },
       small: {
-        root: 'min-h-9 gap-2 px-4 text-label-sm',
+        // 36px to look at, 44px to tap: the hit area reaches 4px past the top and bottom.
+        root: "min-h-9 gap-2 px-4 text-label-sm before:absolute before:inset-x-0 before:-inset-y-1 before:content-['']",
         icon: 'size-5',
       },
     },
@@ -69,7 +70,7 @@ export const buttonVariants = tv({
   compoundVariants: [
     { iconOnly: true, size: 'large', class: { root: 'w-13' } },
     { iconOnly: true, size: 'medium', class: { root: 'w-11' } },
-    { iconOnly: true, size: 'small', class: { root: 'w-9' } },
+    { iconOnly: true, size: 'small', class: { root: 'w-9 before:-inset-1' } },
 
     //#region variant=primary
     {

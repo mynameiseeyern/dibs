@@ -119,6 +119,12 @@ export interface Store {
   /** How many automatic nudges a plan has had since a time, for the daily cap. */
   countNudgesSince(planId: string, sinceIso: string): Promise<number>;
 
+  /**
+   * Deletes an account (ARV-53). Their memberships become "Former member" (so bills stay right),
+   * their profile, PayID and mailing-list rows go, events lose their ID, and the sign-in is deleted.
+   */
+  deleteAccount(userId: string): Promise<void>;
+
   /** "When works?" (ARV-21): times the host put to the crew, and who's free for each. */
   listTimes(planId: string): Promise<PlanTime[]>;
   listTimeVotes(planId: string): Promise<TimeVote[]>;

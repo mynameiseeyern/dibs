@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { LogoMark } from "@/components/Logo";
 import * as Button from "@/components/ui/button";
+import * as Alert from "@/components/ui/alert";
+import { SiteFooter } from "@/components/SiteFooter";
 
 export const metadata: Metadata = { robots: { index: true, follow: true }, alternates: { canonical: "/" } };
 
@@ -14,6 +16,12 @@ export default async function Landing({ searchParams }: { searchParams: Promise<
   }
   return (
     <main className="page page--center">
+      {sp.bye && (
+        <Alert.Root status="success" role="status">
+          <Alert.Icon as="i" className="ri-checkbox-circle-line" aria-hidden="true" />
+          <div>Your account&rsquo;s deleted. Thanks for planning with dibs.</div>
+        </Alert.Root>
+      )}
       <LogoMark size={88} title="dibs" />
       <h1 className="title-h2">
         Plans sorted,
@@ -34,6 +42,7 @@ export default async function Landing({ searchParams }: { searchParams: Promise<
           I&rsquo;ve got plans already
         </a>
       </Button.Root>
+      <SiteFooter />
     </main>
   );
 }

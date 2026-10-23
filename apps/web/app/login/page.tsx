@@ -4,6 +4,7 @@ import { currentOrganiser } from "@/lib/auth";
 import { usingSupabase } from "@/lib/store";
 import { LoginForm } from "./LoginForm";
 import * as Alert from "@/components/ui/alert";
+import { SiteFooter } from "@/components/SiteFooter";
 
 export const metadata = { title: "Sign in" };
 
@@ -35,6 +36,7 @@ export default async function Login({ searchParams }: { searchParams: Promise<{ 
         </Alert.Root>
       )}
       <LoginForm next={next} demo={!usingSupabase} />
+      <SiteFooter />
     </main>
   );
 }

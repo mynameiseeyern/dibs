@@ -18,6 +18,7 @@ import { getPlace } from "@/lib/places";
 import { readNear } from "@/lib/near";
 import { withPlaces } from "@/lib/place-ids";
 import { track } from "@/lib/events";
+import { report } from "@/lib/report";
 
 export type FormState = { error?: string } | undefined;
 
@@ -183,7 +184,7 @@ async function runDibby(planId: string, slug: string, ask: string, asker: PlanMe
     // The places it added show as tiles under its reply.
     await store.addMessage({ planId, memberId: null, kind: "dibby", body, template: withPlaces(out.searched, added) });
   } catch (e) {
-    console.error("[dibby]", e);
+    report("dibby", e);
     await store.addMessage({ planId, memberId: null, kind: "dibby", body: BRB });
   }
 }
@@ -292,7 +293,7 @@ export async function askDibbyMore(slug: string, form: FormData): Promise<{ erro
   try {
     more = await suggestMore(ask, view.plan.vibe, area, options.map((o) => ({ placeId: o.place_id, label: o.label })), near);
   } catch (e) {
-    console.error("[dibby more]", e);
+    report("dibby more", e);
     return { error: "brb, Dibby's having a moment. Try again, or add a place from the map." };
   }
   const room = Math.max(0, 8 - options.length);
