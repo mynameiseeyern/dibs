@@ -20,15 +20,22 @@ export async function locate({ ask }: { ask: boolean }): Promise<Coords | null> 
       return null;
     }
   }
-  return new Promise((resolve) =>
+  // The browser's own timeout only starts once permission is given, so an ignored prompt would
+  // hang forever. Give up after 6s and search without it (the plan's area, or a named place).
+  return new Promise((resolve) => {
+    const giveUp = setTimeout(() => resolve(null), 6_000);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const coords = { lat: Math.round(pos.coords.latitude * 1000) / 1000, lng: Math.round(pos.coords.longitude * 1000) / 1000 };
         cached = { at: Date.now(), coords };
+        clearTimeout(giveUp);
         resolve(coords);
       },
-      () => resolve(null),
-      { maximumAge: 600_000, timeout: 8_000 }
-    )
-  );
+      () => {
+        clearTimeout(giveUp);
+        resolve(null);
+      },
+      { maximumAge: 600_000, timeout: 6_000 }
+    );
+  });
 }
