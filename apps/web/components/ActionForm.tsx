@@ -39,8 +39,9 @@ export function ActionForm({
         });
       }}
     >
-      <Button.Root block={block} size={size} disabled={pending} aria-label={ariaLabel}>
-        {icon && <i className={`${icon} db-icon`} aria-hidden="true" />}
+      <Button.Root block={block} size={size} disabled={pending} aria-label={pending ? undefined : ariaLabel} aria-busy={pending}>
+        {/* Saving shows a spinner, so it reads as "working", not "can't tap". */}
+        {pending ? <i className="ri-loader-4-line db-icon db-spin" aria-hidden="true" /> : icon && <i className={`${icon} db-icon`} aria-hidden="true" />}
         {pending ? "Saving…" : label}
       </Button.Root>
     </form>
