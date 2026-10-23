@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { Wordmark } from "@/components/Logo";
 import { Gallery } from "./Gallery";
+import { DibsPieces } from "./DibsPieces";
 
 export const metadata = { title: "Components" };
 
@@ -14,6 +15,7 @@ export default function UiGallery() {
       </header>
       <h1 className="title-h3">Components</h1>
       <Gallery />
+      <DibsPieces />
     </main>
   );
 }
