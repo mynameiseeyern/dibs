@@ -15,6 +15,7 @@ import { localToIso } from "@/lib/time";
 import { DIBBY_HEADS_UP, planLinkLine } from "@/lib/thread-links";
 import { getPlace } from "@/lib/places";
 import { readNear } from "@/lib/near";
+import { withPlaces } from "@/lib/place-ids";
 
 export type FormState = { error?: string } | undefined;
 
@@ -146,8 +147,11 @@ async function runDibby(planId: string, slug: string, ask: string, asker: PlanMe
       ask
     );
     const existing = new Set(options.map((o) => o.label.toLowerCase()));
+    const added: (string | null)[] = [];
     for (const v of out.addOptions) {
-      if (!existing.has(v.name.toLowerCase())) await store.addOption({ planId, label: v.name, placeId: v.placeId, note: v.address });
+      if (existing.has(v.name.toLowerCase())) continue;
+      await store.addOption({ planId, label: v.name, placeId: v.placeId, note: v.address });
+      added.push(v.placeId);
     }
     let body = out.reply;
     if (out.newPlan && asker.user_id) {
@@ -155,7 +159,8 @@ async function runDibby(planId: string, slug: string, ask: string, asker: PlanMe
       body = `${out.reply}\n${planLinkLine(created.slug)}`;
     }
     // Remember where Dibby looked, so "how about korean?" next time searches the same place.
-    await store.addMessage({ planId, memberId: null, kind: "dibby", body, template: out.searched ?? undefined });
+    // The places it added show as tiles under its reply.
+    await store.addMessage({ planId, memberId: null, kind: "dibby", body, template: withPlaces(out.searched, added) });
   } catch (e) {
     console.error("[dibby]", e);
     await store.addMessage({ planId, memberId: null, kind: "dibby", body: BRB });
@@ -188,7 +193,7 @@ async function createFromThread(draft: PlanDraft, asker: PlanMember, crew: PlanM
   await store.addMessage({ planId: plan.id, memberId: organiser?.id ?? null, kind: "text", body: ask, mentionsDibby: true });
   await store.addMessage({ planId: plan.id, memberId: null, kind: "system", body: DIBBY_HEADS_UP });
   const tail = draft.venues.length ? "Vote's open for 24 hours." : "Couldn't find spots for that on Maps, so add a few from the map and the vote opens.";
-  await store.addMessage({ planId: plan.id, memberId: null, kind: "dibby", body: `${draft.reply} ${tail}` });
+  await store.addMessage({ planId: plan.id, memberId: null, kind: "dibby", body: `${draft.reply} ${tail}`, template: withPlaces(null, draft.venues.map((v) => v.placeId)) });
   revalidatePath(`/p/${plan.slug}`);
   return plan;
 }
@@ -277,7 +282,13 @@ export async function askDibbyMore(slug: string, form: FormData): Promise<{ erro
   const body = venues.length
     ? `${more.reply} Added ${names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`} to the vote.`
     : "Couldn't find anything new for that on Maps. Try a different ask, or add one from the map.";
-  await store.addMessage({ planId: view.plan.id, memberId: null, kind: "dibby", body, template: { k: "search", query: more.query, area: more.area, near: more.near } });
+  await store.addMessage({
+    planId: view.plan.id,
+    memberId: null,
+    kind: "dibby",
+    body,
+    template: withPlaces({ k: "search", query: more.query, area: more.area, near: more.near }, venues.map((v) => v.placeId)),
+  });
   revalidatePath(`/p/${slug}`);
   return { added: names };
 }

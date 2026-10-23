@@ -14,6 +14,7 @@ import { siteUrl } from "@/lib/site";
 import { BETA_LIST } from "@dibs/email";
 import { cleanCustomPlace } from "@dibs/shared/plans";
 import { getPlace } from "@/lib/places";
+import { withPlaces } from "@/lib/place-ids";
 
 export type FormState = { error?: string; sent?: string } | undefined;
 
@@ -189,7 +190,7 @@ export async function createPlan(_prev: FormState, form: FormData): Promise<Form
       body: "Heads up: messages that tag @dibby are sent to an AI provider so Dibby can reply. Dibby only reads messages it's tagged in.",
     });
     const tail = draft.venues.length ? "Vote's open for 24 hours." : "Couldn't find spots for that on Maps, so add a few from the map and the vote opens.";
-    await store.addMessage({ planId: plan.id, memberId: null, kind: "dibby", body: `${draft.reply} ${tail}` });
+    await store.addMessage({ planId: plan.id, memberId: null, kind: "dibby", body: `${draft.reply} ${tail}`, template: withPlaces(null, draft.venues.map((v) => v.placeId)) });
     redirect(`/p/${plan.slug}`);
   }
 

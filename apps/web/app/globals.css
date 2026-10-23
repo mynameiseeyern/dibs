@@ -255,16 +255,6 @@
 .place-pin[data-taken] { color: var(--faded-base); }
 @media (prefers-reduced-motion: reduce) { .place-pin { transition: none; } }
 
-/* ---------- Swipe to delete (vote options, hosts only) ---------- */
-.vote-swipe { position: relative; border-radius: var(--radius-md); touch-action: pan-y; overflow-x: clip; }
-.vote-swipe__delete { all: unset; box-sizing: border-box; position: absolute; inset: 0 0 0 auto; width: 104px; display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 2px; padding-right: var(--space-4); border-radius: var(--radius-md); background: var(--error-base); color: var(--static-black); font: 600 13px/16px var(--font-sans); cursor: pointer; }
-.vote-swipe__delete .db-icon { font-size: 22px; }
-.vote-swipe__delete span, .vote-swipe__delete .db-icon { width: 64px; text-align: center; }
-.vote-swipe__delete:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
-/* Solid base: a voted option's fill is translucent in Dark, and Delete must not show through. */
-.vote-swipe__front { position: relative; border-radius: var(--radius-md); background: var(--bg-white-0); transition: transform var(--motion-base) var(--ease-spring); }
-.vote-swipe__front[data-dragging] { transition: none; }
-@media (prefers-reduced-motion: reduce) { .vote-swipe__front { transition: none; } }
 .place-card { display: flex; align-items: center; gap: var(--space-3); }
 .place-card > .db-icon { color: var(--primary-base); flex: none; }
 .place-card__text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
@@ -298,3 +288,85 @@
 .edit-plan__choice[aria-checked="true"] { border-color: var(--primary-base); background: var(--primary-lighter); }
 .edit-plan__choice:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .composer__where { display: flex; align-items: center; gap: 4px; margin: 0; }
+
+/* ---------- Place cards (Google Places UI Kit) ---------- */
+/* Google's element takes our fonts and colours through its custom properties. Attribution stays visible. */
+gmp-place-details-compact {
+  --gmp-mat-font-family: var(--font-sans);
+  --gmp-mat-color-surface: transparent;
+  --gmp-mat-color-on-surface: var(--text-strong-950);
+  --gmp-mat-color-on-surface-variant: var(--text-sub-600);
+  --gmp-mat-color-primary: var(--primary-dark);
+  --gmp-mat-color-positive: var(--success-dark);
+  --gmp-mat-color-negative: var(--error-dark);
+  --gmp-mat-color-info: var(--information-dark);
+  --gmp-mat-color-neutral-container: var(--bg-soft-200);
+  --gmp-mat-color-on-neutral-container: var(--text-sub-600);
+  --gmp-mat-color-secondary-container: var(--bg-soft-200);
+  --gmp-mat-color-on-secondary-container: var(--text-strong-950);
+  --gmp-mat-color-outline-decorative: transparent;
+  display: block;
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.place-card { position: relative; min-width: 0; }
+.place-card:not([data-loaded]) gmp-place-details-compact { position: absolute; inset: 0; opacity: 0; pointer-events: none; }
+.place-card--tile { width: 232px; flex: none; }
+
+.place-skeleton { display: flex; gap: var(--space-3); padding: var(--space-3); }
+.place-skeleton--tile { flex-direction: column; }
+.place-skeleton__photo { flex: none; width: 88px; height: 88px; border-radius: var(--radius-sm); background: var(--bg-soft-200); animation: place-pulse 1.4s ease-in-out infinite; }
+.place-skeleton--tile .place-skeleton__photo { width: 100%; height: 128px; }
+.place-skeleton__text { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.place-skeleton__line { width: 120px; height: 12px; border-radius: var(--radius-full); background: var(--bg-soft-200); animation: place-pulse 1.4s ease-in-out infinite; }
+@keyframes place-pulse { 50% { opacity: 0.5; } }
+@media (prefers-reduced-motion: reduce) { .place-skeleton__photo, .place-skeleton__line { animation: none; } }
+
+.place-summary { display: flex; gap: var(--space-3); align-items: flex-start; padding: var(--space-3) var(--space-4); }
+.place-summary > .db-icon { color: var(--text-soft-400); margin-top: 1px; }
+.place-summary__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.place-summary__text > * { overflow-wrap: anywhere; }
+.place-summary--tile { width: 232px; flex: none; }
+
+/* ---------- Vote option as a card: the place, the tally, then Vote / View / Delete ---------- */
+.vote-card { border: 1.5px solid var(--stroke-soft-200); border-radius: var(--radius-md); background: var(--bg-white-0); overflow: hidden; }
+.vote-card[data-mine] { border-color: var(--primary-base); }
+.vote-card[data-winning] { border: 2px solid var(--stroke-strong-950); box-shadow: var(--shadow-pop); }
+.vote-card__tally { display: flex; flex-direction: column; gap: var(--space-1); padding: 0 var(--space-3); }
+.vote-card__bar { display: block; height: 6px; border-radius: var(--radius-full); background: var(--bg-soft-200); overflow: hidden; }
+.vote-card__bar > span { display: block; height: 100%; border-radius: inherit; background: var(--primary-bar, var(--primary-base)); transition: width var(--motion-expressive) var(--ease-standard); }
+.vote-card[data-winning] .vote-card__bar > span { background: var(--accent-base); box-shadow: inset 0 0 0 1.5px var(--stroke-strong-950); }
+.vote-card__actions { display: flex; gap: var(--space-2); padding: var(--space-3); }
+@media (prefers-reduced-motion: reduce) { .vote-card__bar > span { transition: none; } }
+gmp-place-details {
+  --gmp-mat-font-family: var(--font-sans);
+  --gmp-mat-color-surface: transparent;
+  --gmp-mat-color-on-surface: var(--text-strong-950);
+  --gmp-mat-color-on-surface-variant: var(--text-sub-600);
+  --gmp-mat-color-primary: var(--primary-dark);
+  --gmp-mat-color-disabled-surface: var(--bg-sub-300);
+  --gmp-mat-color-positive: var(--success-dark);
+  --gmp-mat-color-negative: var(--error-dark);
+  --gmp-mat-color-info: var(--information-dark);
+  --gmp-mat-color-neutral-container: var(--bg-soft-200);
+  --gmp-mat-color-on-neutral-container: var(--text-sub-600);
+  --gmp-mat-color-secondary-container: var(--bg-soft-200);
+  --gmp-mat-color-on-secondary-container: var(--text-strong-950);
+  --gmp-mat-color-outline-decorative: var(--stroke-soft-200);
+  display: block;
+  width: 100%;
+  border: 0;
+  background: transparent;
+}
+.place-details { min-height: 120px; }
+
+/* Dibby's place tiles, under its chat bubble */
+.place-tiles { list-style: none; margin: var(--space-2) 0 0; padding: 2px 2px var(--space-2); display: flex; gap: var(--space-2); overflow-x: auto; scrollbar-width: none; scroll-snap-type: x mandatory; max-width: calc(100vw - 88px); }
+.place-tiles::-webkit-scrollbar { display: none; }
+.place-tile { flex: none; width: 232px; scroll-snap-align: start; border: 1px solid var(--stroke-soft-200); border-radius: var(--radius-md); background: var(--bg-white-0); overflow: hidden; display: flex; flex-direction: column; }
+.place-tile .place-card--tile, .place-tile .place-summary--tile { width: 100%; }
+.place-tile__foot { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); padding: var(--space-1) var(--space-3) var(--space-2); margin-top: auto; }
+.place-tile__view { all: unset; min-height: var(--size-tap); padding: 0 var(--space-2); font: 600 14px/20px var(--font-sans); color: var(--primary-dark); cursor: pointer; display: inline-flex; align-items: center; }
+.place-tile__view:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; border-radius: var(--radius-xs); }

@@ -12,6 +12,8 @@ import { asTemplate, renderTemplate } from "@/lib/copy";
 import * as Button from "@/components/ui/button";
 import * as Badge from "@/components/ui/badge";
 import * as Avatar from "@/components/ui/avatar";
+import { PlaceTiles } from "@/components/maps/PlaceTiles";
+import { placesOf } from "@/lib/place-ids";
 
 const time = (iso: string) => new Intl.DateTimeFormat("en-AU", { timeZone: TZ, weekday: "short", hour: "numeric", minute: "2-digit" }).format(new Date(iso));
 
@@ -21,6 +23,7 @@ export function Thread({
   meId,
   canPost,
   readOnly,
+  placeNames,
   post,
   vibe,
   reactions = [],
@@ -39,6 +42,8 @@ export function Thread({
   canPost: boolean;
   /** Set when this person can only read along (a maybe, not replied, waitlisted): why. */
   readOnly?: string | null;
+  /** Names of the places on this plan's vote, by Google place ID, for Dibby's place tiles. */
+  placeNames?: Record<string, string>;
   post: (s: FormState, f: FormData) => Promise<FormState>;
 }) {
   const byId = new Map(members.map((m) => [m.id, m]));
@@ -83,6 +88,9 @@ export function Thread({
                           Dibby <Badge.Root color="accent" className="ai-tag">AI</Badge.Root>
                         </div>
                         <DibbyBody body={dibbyText(m, vibe)} />
+                        <PlaceTiles
+                          places={placesOf(m.template).map((id) => ({ placeId: id, name: placeNames?.[id] ?? "A place Dibby found", onVote: Boolean(placeNames?.[id]) }))}
+                        />
                         <Reactions messageId={m.id} all={reactions} meId={meId} react={react} />
                       </div>
                     </div>
