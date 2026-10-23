@@ -11,7 +11,8 @@ import { REACTIONS, type Reaction } from "@/lib/store/types";
 import { closeVote } from "@/lib/plan-ops";
 import { nudgeOnBail } from "@/lib/nudges";
 import { loadPlan } from "@/lib/viewer";
-import { localToIso } from "@/lib/time";
+import { formatShort, formatWhen, localToIso } from "@/lib/time";
+import { MAX_TIMES } from "@dibs/shared/when";
 import { DIBBY_HEADS_UP, planLinkLine } from "@/lib/thread-links";
 import { getPlace } from "@/lib/places";
 import { readNear } from "@/lib/near";
@@ -77,6 +78,8 @@ export async function setRsvp(slug: string, rsvp: Rsvp, form: FormData): Promise
   // takes their vote back so it doesn't decide a night they might not come to.
   const started = Boolean(view.plan.starts_at && Date.parse(view.plan.starts_at) <= Date.now());
   if (rsvp !== "in" && view.plan.status === "voting" && !started) await store.removeVote(view.plan.id, view.me.id);
+  // Same for "When works?": their ticks come off too.
+  if (rsvp !== "in" && !started) await store.removeTimeVotes(view.plan.id, view.me.id);
   // Was in, now can't go: Dibby gives the crew a heads-up (respects mute volume and the cap).
   if (rsvp === "out" && view.me.rsvp === "in" && !view.me.waitlisted) await nudgeOnBail(view.plan, view.me);
   revalidatePath(`/p/${slug}`);
@@ -336,4 +339,62 @@ export async function lockPlan(slug: string): Promise<void> {
   if (!view?.isHost) return;
   await closeVote(view.plan, "host");
   revalidatePath(`/p/${slug}`);
+}
+
+/* ---------- When works? (ARV-21) ---------- */
+
+type Result = { error?: string };
+const pollOpen = (status: string) => status === "voting" || status === "locked";
+
+/** Tick or untick that you're free at one of the times. Going (and hosts) only, like the vote. */
+export async function markFree(slug: string, timeId: string): Promise<Result> {
+  const view = await loadPlan(slug);
+  if (!view?.me || !pollOpen(view.plan.status)) return { error: "This plan's not taking answers any more." };
+  const no = blocked(view);
+  if (no) return { error: no };
+  await store.toggleTimeVote(view.plan.id, timeId, view.me.id);
+  revalidatePath(`/p/${slug}`);
+  return {};
+}
+
+/** The host puts a time to the crew (up to four, in the future). */
+export async function addTime(slug: string, local: string): Promise<Result> {
+  const view = await loadPlan(slug);
+  if (!view?.isHost || !pollOpen(view.plan.status)) return { error: "Only hosts can add times." };
+  const startsAt = localToIso(String(local ?? "").trim().slice(0, 16));
+  if (!startsAt) return { error: "Pick a day and a time." };
+  if (Date.parse(startsAt) <= Date.now()) return { error: "That time's already been. Pick one coming up." };
+  const times = await store.listTimes(view.plan.id);
+  if (times.some((t) => Date.parse(t.starts_at) === Date.parse(startsAt))) return { error: "That time's already up." };
+  if (times.length >= MAX_TIMES) return { error: `${MAX_TIMES} is plenty. Take one off to add another.` };
+  await store.addTime(view.plan.id, startsAt);
+  // One heads-up in the chat when the question first goes out.
+  if (times.length === 0) {
+    await store.addMessage({ planId: view.plan.id, memberId: null, kind: "system", body: `${view.me!.display_name.split(" ")[0]} wants to know when works. Tick the times you're free.` });
+  }
+  revalidatePath(`/p/${slug}`);
+  return {};
+}
+
+export async function removeTime(slug: string, timeId: string): Promise<Result> {
+  const view = await loadPlan(slug);
+  if (!view?.isHost || !pollOpen(view.plan.status)) return { error: "Only hosts can take times off." };
+  await store.removeTime(view.plan.id, timeId);
+  revalidatePath(`/p/${slug}`);
+  return {};
+}
+
+/** The host goes with a time: it becomes the plan's start, and the question's done. */
+export async function goWithTime(slug: string, timeId: string): Promise<Result & { label?: string }> {
+  const view = await loadPlan(slug);
+  if (!view?.isHost || !pollOpen(view.plan.status)) return { error: "Only hosts can set the time." };
+  const time = (await store.listTimes(view.plan.id)).find((t) => t.id === timeId);
+  if (!time) return { error: "That time's gone. Pick another." };
+  const label = formatWhen(time.starts_at) ?? "";
+  await store.updatePlan(view.plan.id, { starts_at: time.starts_at, version: view.plan.version + 1, updated_note: `It's ${label}.` });
+  await store.clearTimes(view.plan.id);
+  await store.addMessage({ planId: view.plan.id, memberId: null, kind: "system", body: `${view.me!.display_name.split(" ")[0]} set the time: ${formatShort(time.starts_at)}.` });
+  revalidatePath(`/p/${slug}`);
+  revalidatePath(`/p/${slug}/manage`);
+  return { label };
 }

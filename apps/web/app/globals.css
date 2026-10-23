@@ -378,3 +378,15 @@ gmp-place-details {
 .metrics-table { width: 100%; border-collapse: collapse; margin: var(--space-2) 0; }
 .metrics-table th { text-align: left; font-weight: 400; color: var(--text-sub-600); padding: var(--space-2) 0; border-bottom: 1px solid var(--stroke-soft-200); }
 .metric__count { text-align: right; font-family: var(--font-mono); color: var(--text-strong-950); border-bottom: 1px solid var(--stroke-soft-200); }
+
+/* When works? (ARV-21) */
+.when { display: flex; flex-direction: column; gap: var(--space-3); scroll-margin-top: var(--space-4); }
+.when__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.when__row { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3) 0; border-top: 1px solid var(--stroke-soft-200); }
+.when__top { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.when__top > button { flex: none; }
+.when__host { display: flex; align-items: center; gap: var(--space-1); }
+.when__row:first-child { border-top: 0; padding-top: 0; }
+.when__info { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.when__who { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); min-height: 32px; }
+.when__add { display: flex; flex-direction: column; gap: var(--space-2); }

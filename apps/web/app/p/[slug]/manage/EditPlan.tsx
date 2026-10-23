@@ -15,6 +15,8 @@ type Result = { error?: string };
 
 export interface EditPlanProps {
   status: "voting" | "locked";
+  /** "Ask the crew when works" on the plan page, while the plan hasn't started. */
+  askWhenHref?: string;
   title: string;
   /** Display values, already formatted on the server. */
   whenLabel: string | null;
@@ -102,6 +104,16 @@ export function EditPlan(p: EditPlanProps) {
         onClose={close}
         title="When"
         field={{ label: "Date and time", name: "starts_at", type: "datetime-local", defaultValue: p.whenInput, hint: "Sydney and Melbourne time. Leave it blank to sort it out later." }}
+        extra={
+          p.askWhenHref ? (
+            <Button.Root asChild variant="neutral" mode="ghost" size="small">
+              <a href={p.askWhenHref}>
+                <i className="ri-calendar-schedule-line db-icon" aria-hidden="true" />
+                Not sure? Ask the crew when works
+              </a>
+            </Button.Root>
+          ) : null
+        }
         save={p.actions.setWhen}
       />
       <TextSheet
@@ -257,6 +269,7 @@ function TextSheet({
   onClose,
   title,
   body,
+  extra,
   field,
   save,
 }: {
@@ -264,6 +277,8 @@ function TextSheet({
   onClose: () => void;
   title: string;
   body?: string;
+  /** Shown under the field, e.g. another way to set it. */
+  extra?: ReactNode;
   field: Parameters<typeof Field>[0];
   save: (v: string) => Promise<Result>;
 }) {
@@ -302,6 +317,7 @@ function TextSheet({
               {body && <p className="paragraph-sm muted">{body}</p>}
               <Field {...field} key={String(open)} />
               <FormError error={error} />
+              {extra}
             </div>
           </Modal.Body>
           <Modal.Footer>

@@ -112,3 +112,16 @@ export interface BillShare {
 export const MONOGRAM_COLOURS = ["violet", "lime", "sun", "mint", "tangerine", "sky", "coral", "rose", "aqua", "ivory"] as const;
 export type MonogramColour = (typeof MONOGRAM_COLOURS)[number];
 
+
+/** A time the host put to the crew ("When works?"). */
+export interface PlanTime {
+  id: string;
+  plan_id: string;
+  starts_at: string;
+}
+
+/** Someone ticked that they're free at a time. */
+export interface TimeVote {
+  time_id: string;
+  member_id: string;
+}

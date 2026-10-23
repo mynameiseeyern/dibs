@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { makeSlug, pickColour } from "@dibs/shared/plans";
 import type { LoggedEvent } from "@dibs/shared/metrics";
-import type { Bill, BillShare, Guest, Message, NewMember, NewPlan, Plan, PlanMember, PlanOption, Profile, Store, Subscription, Vote, RecapAnswer, Reaction } from "./types";
+import type { Bill, BillShare, Guest, Message, NewMember, NewPlan, Plan, PlanMember, PlanOption, PlanTime, Profile, Store, Subscription, TimeVote, Vote, RecapAnswer, Reaction } from "./types";
 
 // In-memory store for local runs without Supabase. Lost on restart.
 interface Db {
@@ -19,6 +19,8 @@ interface Db {
   reactions: (Reaction & { plan_id: string })[];
   lists: { list: string; email: string; userId: string | null; token: string; unsubscribed: boolean; source: string }[];
   events: LoggedEvent[];
+  times: PlanTime[];
+  timeVotes: (TimeVote & { plan_id: string })[];
 }
 
 const g = globalThis as unknown as { __dibsDb?: Db };
@@ -37,8 +39,12 @@ const db: Db = (g.__dibsDb ??= {
   reactions: [],
   lists: [],
   events: [],
+  times: [],
+  timeVotes: [],
 });
 db.events ??= [];
+db.times ??= [];
+db.timeVotes ??= [];
 db.nudges ??= [];
 db.reactions ??= [];
 
@@ -286,6 +292,33 @@ export const memoryStore: Store = {
   async countNudgesSince(planId, sinceIso) {
     const since = Date.parse(sinceIso);
     return db.nudges.filter((n) => n.plan_id === planId && n.at >= since).length;
+  },
+  async listTimes(planId) {
+    return db.times.filter((t) => t.plan_id === planId);
+  },
+  async listTimeVotes(planId) {
+    return db.timeVotes.filter((v) => v.plan_id === planId).map(({ time_id, member_id }) => ({ time_id, member_id }));
+  },
+  async addTime(planId, startsAt) {
+    if (db.times.some((t) => t.plan_id === planId && Date.parse(t.starts_at) === Date.parse(startsAt))) return;
+    db.times.push({ id: randomUUID(), plan_id: planId, starts_at: startsAt });
+  },
+  async removeTime(planId, timeId) {
+    db.times = db.times.filter((t) => !(t.plan_id === planId && t.id === timeId));
+    db.timeVotes = db.timeVotes.filter((v) => v.time_id !== timeId);
+  },
+  async toggleTimeVote(planId, timeId, memberId) {
+    if (!db.times.some((t) => t.plan_id === planId && t.id === timeId)) return;
+    const had = db.timeVotes.some((v) => v.time_id === timeId && v.member_id === memberId);
+    db.timeVotes = db.timeVotes.filter((v) => !(v.time_id === timeId && v.member_id === memberId));
+    if (!had) db.timeVotes.push({ plan_id: planId, time_id: timeId, member_id: memberId });
+  },
+  async removeTimeVotes(planId, memberId) {
+    db.timeVotes = db.timeVotes.filter((v) => !(v.plan_id === planId && v.member_id === memberId));
+  },
+  async clearTimes(planId) {
+    db.times = db.times.filter((t) => t.plan_id !== planId);
+    db.timeVotes = db.timeVotes.filter((v) => v.plan_id !== planId);
   },
   async logEvent(e) {
     db.events.push({ ...e, at: now() });

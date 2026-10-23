@@ -2,7 +2,7 @@ import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { makeSlug, pickColour } from "@dibs/shared/plans";
 import type { LoggedEvent } from "@dibs/shared/metrics";
-import type { Bill, BillShare, Message, NewMember, NewPlan, Plan, PlanMember, PlanOption, Store, Subscription, Vote, RecapAnswer, Reaction } from "./types";
+import type { Bill, BillShare, Message, NewMember, NewPlan, Plan, PlanMember, PlanOption, PlanTime, Store, Subscription, TimeVote, Vote, RecapAnswer, Reaction } from "./types";
 
 // Server-side Supabase store using the service key. Every caller checks access first
 // (lib/viewer.ts); row-level security still protects anything the browser reads directly.
@@ -296,6 +296,30 @@ export const supabaseStore: Store = {
       .gte("created_at", sinceIso);
     if (error) throw new Error(error.message);
     return count ?? 0;
+  },
+  async listTimes(planId) {
+    return must(await admin().from("plan_times").select("id, plan_id, starts_at").eq("plan_id", planId)) as PlanTime[];
+  },
+  async listTimeVotes(planId) {
+    return must(await admin().from("time_votes").select("time_id, member_id").eq("plan_id", planId)) as TimeVote[];
+  },
+  async addTime(planId, startsAt) {
+    must(await admin().from("plan_times").upsert({ plan_id: planId, starts_at: startsAt }, { onConflict: "plan_id,starts_at", ignoreDuplicates: true }));
+  },
+  async removeTime(planId, timeId) {
+    must(await admin().from("plan_times").delete().eq("plan_id", planId).eq("id", timeId));
+  },
+  async toggleTimeVote(planId, timeId, memberId) {
+    const time = must(await admin().from("plan_times").select("id").eq("plan_id", planId).eq("id", timeId).maybeSingle());
+    if (!time) return;
+    const gone = must(await admin().from("time_votes").delete().eq("time_id", timeId).eq("member_id", memberId).select("time_id")) as unknown[];
+    if (gone.length === 0) must(await admin().from("time_votes").insert({ time_id: timeId, plan_id: planId, member_id: memberId }));
+  },
+  async removeTimeVotes(planId, memberId) {
+    must(await admin().from("time_votes").delete().eq("plan_id", planId).eq("member_id", memberId));
+  },
+  async clearTimes(planId) {
+    must(await admin().from("plan_times").delete().eq("plan_id", planId));
   },
   async logEvent(e) {
     const { error } = await admin().from("events").insert({

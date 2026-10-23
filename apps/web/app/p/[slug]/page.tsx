@@ -22,11 +22,13 @@ import { owedToYou, youOwe } from "@/lib/copy";
 import { store } from "@/lib/store";
 import { formatShort, formatWhen } from "@/lib/time";
 import { loadPlan } from "@/lib/viewer";
-import { appInterest, trackShare, addOption, askDibbyMore, joinPlan, lockPlan, postMessage, removeMe, removeOption, setRsvp, toggleDibbyMute, toggleReaction, vote } from "./actions";
+import { addTime, goWithTime, markFree, removeTime, appInterest, trackShare, addOption, askDibbyMore, joinPlan, lockPlan, postMessage, removeMe, removeOption, setRsvp, toggleDibbyMute, toggleReaction, vote } from "./actions";
 import { setPlace } from "./manage/actions";
 import { JoinForm } from "./JoinForm";
 import { ShareButton } from "./ShareButton";
 import { GetTheApp } from "./GetTheApp";
+import { WhenWorks } from "./WhenWorks";
+import { MAX_TIMES, rankTimes } from "@dibs/shared/when";
 import { Thread } from "./Thread";
 import { VoteList } from "./Vote";
 import { siteUrl } from "@/lib/site";
@@ -35,7 +37,7 @@ import * as Button from "@/components/ui/button";
 import * as Badge from "@/components/ui/badge";
 import * as Alert from "@/components/ui/alert";
 
-type Props = { params: Promise<{ slug: string }> };
+type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ when?: string }> };
 
 export const dynamic = "force-dynamic";
 
@@ -47,8 +49,9 @@ const ORDER: (Rsvp | "waitlist" | "none")[] = ["in", "maybe", "waitlist", "none"
 const GROUP_LABEL = { in: "Going", maybe: "Maybe", waitlist: "Waitlist", none: "Hasn't said yet", out: "Can't make it" } as const;
 const groupOf = (m: PlanMember) => (m.waitlisted ? "waitlist" : m.rsvp ?? "none");
 
-export default async function PlanPage({ params }: Props) {
+export default async function PlanPage({ params, searchParams }: Props) {
   const { slug } = await params;
+  const askWhen = (await searchParams).when === "ask";
   let view = await loadPlan(slug);
   if (!view) notFound();
   // Votes close themselves once the deadline passes.
@@ -97,6 +100,21 @@ export default async function PlanPage({ params }: Props) {
   const baseStatus = planStatus(plan);
   const status = wrapped && allSquare ? { ...baseStatus, label: "Wrapped · all square", tone: "success" as const, icon: "ri-check-double-line" } : baseStatus;
   const voters = new Set(votes.map((v) => v.member_id)).size;
+
+  // When works? (ARV-21): only people who can take part count towards the best time.
+  const whenOpen = Boolean(me) && !started && (plan.status === "voting" || plan.status === "locked");
+  const [times, timeVotes] = whenOpen ? await Promise.all([store.listTimes(plan.id), store.listTimeVotes(plan.id)]) : [[], []];
+  const counted = new Set(members.filter((m) => planAccess(m).level === "full").map((m) => m.id));
+  const ranked = rankTimes(times, timeVotes, counted);
+  const byId = new Map(members.map((m) => [m.id, m]));
+  const whenRows = ranked.rows.map((r) => ({
+    id: r.time.id,
+    label: formatWhen(r.time.starts_at) ?? "",
+    short: formatShort(r.time.starts_at) ?? "",
+    free: r.free.flatMap((id) => (byId.get(id) ? [byId.get(id)!] : [])),
+    mine: Boolean(me && r.free.includes(me.id)),
+  }));
+  const showWhen = whenOpen && (times.length > 0 || (isHost && (!plan.starts_at || askWhen)));
 
   return (
     <>
@@ -326,6 +344,22 @@ export default async function PlanPage({ params }: Props) {
                 <Alert.Icon as="i" className="ri-eye-line" aria-hidden="true" />
                 <div>{readOnly}</div>
               </Alert.Root>
+            )}
+            {showWhen && (
+              <WhenWorks
+                rows={whenRows}
+                bestId={ranked.bestId}
+                outOf={counted.size}
+                me={me && access?.level !== "hidden" ? { id: me.id, display_name: me.display_name, colour: me.colour } : null}
+                readOnly={readOnly}
+                isHost={isHost}
+                max={MAX_TIMES}
+                startOpen={askWhen}
+                actions={{
+                  markFree: markFree.bind(null, slug),
+                  ...(isHost ? { add: addTime.bind(null, slug), remove: removeTime.bind(null, slug), go: goWithTime.bind(null, slug) } : {}),
+                }}
+              />
             )}
             <PlanTabs
               storageKey={`dibs:tab:${plan.id}`}
