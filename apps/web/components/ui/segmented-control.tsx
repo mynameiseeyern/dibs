@@ -73,12 +73,17 @@ const SegmentedControlTrigger = React.forwardRef<
         // base
         'peer',
         'relative z-10 min-h-9 cursor-pointer whitespace-nowrap rounded-[12px] px-3 font-sans text-label-sm text-text-sub-600',
+        // 44px to tap inside the list's 4px padding.
+        "before:absolute before:inset-x-0 before:-inset-y-1 before:content-['']",
         'flex items-center justify-center gap-1.5',
         'transition duration-300 ease-out',
         // focus
         'outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring',
         // active
         'not-data-[state=active]:hover:text-text-strong-950 data-[state=active]:text-text-white-0',
+        // The selected tab carries its own ink background too, so its white label never sits on the
+        // light list (before the sliding pill has measured, or for contrast checkers).
+        'data-[state=active]:bg-bg-strong-950',
         className,
       )}
       {...rest}

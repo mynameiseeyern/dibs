@@ -16,6 +16,8 @@ const Checkbox = React.forwardRef<
       ref={forwardedRef}
       className={cn(
         'peer relative grid size-[22px] shrink-0 cursor-pointer place-content-center rounded-xs',
+        // 22px to look at, 44px to tap.
+        "before:absolute before:-inset-[11px] before:content-['']",
         'border-[1.5px] border-stroke-sub-300 bg-bg-white-0',
         'transition-transform duration-160 ease-spring motion-reduce:transition-none',
         'data-[state=checked]:scale-[1.06] data-[state=checked]:border-primary-base data-[state=checked]:bg-primary-base',

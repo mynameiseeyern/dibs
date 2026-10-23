@@ -184,6 +184,12 @@ export function Gallery() {
             <SegmentedControl.Trigger value="chat">Chat</SegmentedControl.Trigger>
             <SegmentedControl.Trigger value="in">Who's in</SegmentedControl.Trigger>
           </SegmentedControl.List>
+          {/* Tabs need their panels: each trigger controls one (aria-controls). */}
+          {["vote", "chat", "in"].map((v) => (
+            <SegmentedControl.Content key={v} value={v} className="paragraph-sm muted pt-2">
+              The {v === "in" ? "who's in" : v} panel.
+            </SegmentedControl.Content>
+          ))}
         </SegmentedControl.Root>
         <TabMenu.Root defaultValue="plans">
           <TabMenu.List>
@@ -191,12 +197,17 @@ export function Gallery() {
             <TabMenu.Trigger value="bills">Bills</TabMenu.Trigger>
             <TabMenu.Trigger value="recap">Recap</TabMenu.Trigger>
           </TabMenu.List>
+          {["plans", "bills", "recap"].map((v) => (
+            <TabMenu.Content key={v} value={v} className="paragraph-sm muted pt-2">
+              The {v} panel.
+            </TabMenu.Content>
+          ))}
         </TabMenu.Root>
       </Section>
 
       <Section title="Progress and tooltip">
-        <ProgressBar.Root value={66} />
-        <ProgressBar.Root value={100} color="accent" />
+        <ProgressBar.Root value={66} aria-label="Voted" />
+        <ProgressBar.Root value={100} color="accent" aria-label="Settled" />
         <div>
           <Tooltip.Root defaultOpen>
             <Tooltip.Trigger asChild>
