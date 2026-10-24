@@ -51,6 +51,8 @@ export interface PlanMember {
   attended: boolean | null;
   /** Hide Dibby's automatic nudges for this member. */
   dibby_muted: boolean;
+  /** When they last opened the plan's chat (null: never). Drives the new-messages badge. */
+  chat_seen_at?: string | null;
   joined_at: string;
 }
 

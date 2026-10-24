@@ -84,7 +84,7 @@ export interface Store {
 
   listMembers(planId: string): Promise<PlanMember[]>;
   addMember(m: NewMember): Promise<PlanMember>;
-  updateMember(memberId: string, patch: Partial<Pick<PlanMember, "rsvp" | "plus_one" | "waitlisted" | "display_name" | "attended" | "dibby_muted">>): Promise<void>;
+  updateMember(memberId: string, patch: Partial<Pick<PlanMember, "rsvp" | "plus_one" | "waitlisted" | "display_name" | "attended" | "dibby_muted" | "chat_seen_at">>): Promise<void>;
 
   listOptions(planId: string): Promise<PlanOption[]>;
   addOption(o: { planId: string; label: string; placeId?: string | null; note?: string | null; addedBy?: string | null }): Promise<PlanOption>;

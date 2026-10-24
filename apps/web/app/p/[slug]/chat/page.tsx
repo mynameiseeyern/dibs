@@ -1,0 +1,72 @@
+import { notFound, redirect } from "next/navigation";
+import { planAccess, READ_ONLY_NOTE } from "@dibs/shared/plans";
+import * as Button from "@/components/ui/button";
+import { LiveRefresh } from "@/components/LiveRefresh";
+import { store } from "@/lib/store";
+import { formatWhen } from "@/lib/time";
+import { loadPlan } from "@/lib/viewer";
+import { countIn } from "@dibs/shared/plans";
+import { planPreview } from "@/lib/plan-preview";
+import { markChatSeen, postMessage, toggleDibbyMute, toggleReaction } from "../actions";
+import { MarkSeen } from "./MarkSeen";
+import { Thread } from "../Thread";
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  return planPreview((await params).slug, { label: "Chat", path: "/chat" });
+}
+export const dynamic = "force-dynamic";
+
+/** The plan's chat, on its own screen. The Chat button on the plan shows how many messages are new to you. */
+export default async function Chat({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const view = await loadPlan(slug);
+  if (!view) notFound();
+  const { plan, members, me } = view;
+  // Chat is for people on the plan; "can't go" don't see it (same as the plan page).
+  if (!me || planAccess(me).level === "hidden" || plan.status === "cancelled") redirect(`/p/${slug}`);
+  const access = planAccess(me);
+  const readOnly = access.level === "read" ? READ_ONLY_NOTE[access.why] : null;
+  const [messages, reactions, options] = await Promise.all([store.listMessages(plan.id, 100), store.listReactions(plan.id), store.listOptions(plan.id)]);
+  const wrapped = plan.status === "wrapped";
+
+  return (
+    <>
+      <LiveRefresh />
+      <MarkSeen latest={messages.at(-1)?.id ?? null} mark={markChatSeen.bind(null, slug)} />
+      <main className="page chat-page">
+        <header className="topbar">
+          <Button.Root asChild variant="neutral" mode="lighter" iconOnly>
+            <a href={`/p/${slug}`} aria-label={`Back to ${plan.title}`}>
+              <i className="ri-arrow-left-line db-icon" aria-hidden="true" />
+            </a>
+          </Button.Root>
+          <div className="chat-page__title">
+            <h1 className="label-lg">{plan.title}</h1>
+            <span className="paragraph-xs muted">Chat</span>
+          </div>
+        </header>
+        <Thread
+          messages={me.dibby_muted ? messages.filter((m) => !m.auto) : messages}
+          vibe={plan.vibe}
+          reactions={reactions}
+          react={me.user_id && !readOnly ? toggleReaction.bind(null, slug) : undefined}
+          summary={[plan.title, formatWhen(plan.starts_at), plan.venue_name ?? plan.area, `${countIn(members)} going`].filter(Boolean).join(" · ")}
+          members={members}
+          meId={me.id}
+          canPost={Boolean(me.user_id)}
+          readOnly={readOnly}
+          placeNames={Object.fromEntries(options.filter((o) => o.place_id).map((o) => [o.place_id!, o.label]))}
+          post={postMessage.bind(null, slug)}
+        />
+        {!wrapped && (
+          <form action={toggleDibbyMute.bind(null, slug)} className="dibby-mute">
+            <Button.Root mode="ghost" aria-pressed={me.dibby_muted}>
+              <i className={`${me.dibby_muted ? "ri-notification-3-line" : "ri-notification-off-line"} db-icon`} aria-hidden="true" />
+              {me.dibby_muted ? "Show Dibby's nudges" : "Mute Dibby's nudges"}
+            </Button.Root>
+          </form>
+        )}
+      </main>
+    </>
+  );
+}

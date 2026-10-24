@@ -22,6 +22,12 @@ import { report } from "@/lib/report";
 
 export type FormState = { error?: string } | undefined;
 
+/** The plan page and its chat screen both show what changed. */
+function revalidatePlan(slug: string) {
+  revalidatePath(`/p/${slug}`);
+  revalidatePath(`/p/${slug}/chat`);
+}
+
 const clean = (v: FormDataEntryValue | null, max = 40) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, max);
 
 /** Guest (or signed-in organiser) joins a plan from its link with just their name. */
@@ -36,7 +42,7 @@ export async function joinPlan(slug: string, _prev: FormState, form: FormData): 
     if (profile) {
       await store.addMember({ planId: view.plan.id, userId: view.organiser.id, name: `${profile.first_name} ${profile.last_name}`, role: "guest" });
       await track({ name: "member_joined", planId: view.plan.id, userId: view.organiser.id });
-      revalidatePath(`/p/${slug}`);
+      revalidatePlan(slug);
       return undefined;
     }
   }
@@ -49,14 +55,14 @@ export async function joinPlan(slug: string, _prev: FormState, form: FormData): 
   if (view.organiser) {
     await store.addMember({ planId: view.plan.id, userId: view.organiser.id, name: `${first} ${last}`, role: "guest" });
     await track({ name: "member_joined", planId: view.plan.id, userId: view.organiser.id });
-    revalidatePath(`/p/${slug}`);
+    revalidatePlan(slug);
     return undefined;
   }
 
   const guest = view.guest ?? (await createGuestSession(first, last));
   await store.addMember({ planId: view.plan.id, guestId: guest.id, name: `${first} ${last}`, role: "guest" });
   await track({ name: "member_joined", planId: view.plan.id, guestId: guest.id });
-  revalidatePath(`/p/${slug}`);
+  revalidatePlan(slug);
   return undefined;
 }
 
@@ -83,7 +89,7 @@ export async function setRsvp(slug: string, rsvp: Rsvp, form: FormData): Promise
   if (rsvp !== "in" && !started) await store.removeTimeVotes(view.plan.id, view.me.id);
   // Was in, now can't go: Dibby gives the crew a heads-up (respects mute volume and the cap).
   if (rsvp === "out" && view.me.rsvp === "in" && !view.me.waitlisted) await nudgeOnBail(view.plan, view.me);
-  revalidatePath(`/p/${slug}`);
+  revalidatePlan(slug);
 }
 
 /** Someone tapped a share button. Counted, nothing else: the share sheet itself is the phone's. */
@@ -147,7 +153,7 @@ export async function postMessage(slug: string, _prev: FormState, form: FormData
     }
     await runDibby(view.plan.id, slug, body, view.me, readNear(form));
   }
-  revalidatePath(`/p/${slug}`);
+  revalidatePlan(slug);
   return undefined;
 }
 
@@ -225,7 +231,7 @@ export async function toggleDibbyMute(slug: string): Promise<void> {
   const view = await loadPlan(slug);
   if (!view?.me) return;
   await store.updateMember(view.me.id, { dibby_muted: !view.me.dibby_muted });
-  revalidatePath(`/p/${slug}`);
+  revalidatePlan(slug);
 }
 
 /** React to a message in the thread. Signed-in members only, like posting. */
@@ -235,7 +241,7 @@ export async function toggleReaction(slug: string, messageId: string, emoji: str
   const messages = await store.listMessages(view.plan.id, 200);
   if (!messages.some((m) => m.id === messageId)) return;
   await store.toggleReaction({ planId: view.plan.id, message_id: messageId, member_id: view.me.id, emoji: emoji as Reaction["emoji"] });
-  revalidatePath(`/p/${slug}`);
+  revalidatePlan(slug);
 }
 
 // ---------- Voting ----------
@@ -246,7 +252,7 @@ export async function vote(slug: string, optionId: string): Promise<void> {
   const options = await store.listOptions(view.plan.id);
   if (!options.some((o) => o.id === optionId)) return;
   await store.castVote(view.plan.id, optionId, view.me.id);
-  revalidatePath(`/p/${slug}`);
+  revalidatePlan(slug);
 }
 
 /** Anyone on the plan adds a place to the vote: a real, open business from the map, or one they type in. */
@@ -265,7 +271,7 @@ export async function addOption(slug: string, _prev: FormState, form: FormData):
   const label = custom?.name ?? place!.name;
   if (options.some((o) => (place && o.place_id === place.placeId) || o.label.toLowerCase() === label.toLowerCase())) return { error: "That one's already on the list." };
   await store.addOption({ planId: view.plan.id, label, placeId: place?.placeId ?? null, note: custom ? custom.address : place!.address, addedBy: view.me.id });
-  revalidatePath(`/p/${slug}`);
+  revalidatePlan(slug);
   return undefined;
 }
 
@@ -311,7 +317,7 @@ export async function askDibbyMore(slug: string, form: FormData): Promise<{ erro
     body,
     template: withPlaces({ k: "search", query: more.query, area: more.area, near: more.near }, venues.map((v) => v.placeId)),
   });
-  revalidatePath(`/p/${slug}`);
+  revalidatePlan(slug);
   return { added: names };
 }
 
@@ -330,7 +336,7 @@ export async function removeOption(slug: string, optionId: string): Promise<{ er
   if (no) return { error: no };
   await store.removeOption(view.plan.id, option.id);
   await store.addMessage({ planId: view.plan.id, memberId: null, kind: "system", body: `${view.me!.display_name.split(" ")[0]} took ${option.label} off the vote.` });
-  revalidatePath(`/p/${slug}`);
+  revalidatePlan(slug);
   return { label: option.label };
 }
 
@@ -339,7 +345,7 @@ export async function lockPlan(slug: string): Promise<void> {
   const view = await loadPlan(slug);
   if (!view?.isHost) return;
   await closeVote(view.plan, "host");
-  revalidatePath(`/p/${slug}`);
+  revalidatePlan(slug);
 }
 
 /* ---------- When works? (ARV-21) ---------- */
@@ -354,7 +360,7 @@ export async function markFree(slug: string, timeId: string): Promise<Result> {
   const no = blocked(view);
   if (no) return { error: no };
   await store.toggleTimeVote(view.plan.id, timeId, view.me.id);
-  revalidatePath(`/p/${slug}`);
+  revalidatePlan(slug);
   return {};
 }
 
@@ -373,7 +379,7 @@ export async function addTime(slug: string, local: string): Promise<Result> {
   if (times.length === 0) {
     await store.addMessage({ planId: view.plan.id, memberId: null, kind: "system", body: `${view.me!.display_name.split(" ")[0]} wants to know when works. Tick the times you're free.` });
   }
-  revalidatePath(`/p/${slug}`);
+  revalidatePlan(slug);
   return {};
 }
 
@@ -381,7 +387,7 @@ export async function removeTime(slug: string, timeId: string): Promise<Result> 
   const view = await loadPlan(slug);
   if (!view?.isHost || !pollOpen(view.plan.status)) return { error: "Only hosts can take times off." };
   await store.removeTime(view.plan.id, timeId);
-  revalidatePath(`/p/${slug}`);
+  revalidatePlan(slug);
   return {};
 }
 
@@ -395,7 +401,21 @@ export async function goWithTime(slug: string, timeId: string): Promise<Result &
   await store.updatePlan(view.plan.id, { starts_at: time.starts_at, version: view.plan.version + 1, updated_note: `It's ${label}.` });
   await store.clearTimes(view.plan.id);
   await store.addMessage({ planId: view.plan.id, memberId: null, kind: "system", body: `${view.me!.display_name.split(" ")[0]} set the time: ${formatShort(time.starts_at)}.` });
-  revalidatePath(`/p/${slug}`);
+  revalidatePlan(slug);
   revalidatePath(`/p/${slug}/manage`);
   return { label };
+}
+
+/**
+ * They've seen the chat up to now: clears their new-messages badge. Called from the chat screen when
+ * it opens and when new messages arrive while it's open. Quiet if it can't save (the badge just stays).
+ */
+export async function markChatSeen(slug: string): Promise<void> {
+  const view = await loadPlan(slug);
+  if (!view?.me) return;
+  try {
+    await store.updateMember(view.me.id, { chat_seen_at: new Date().toISOString() });
+  } catch (e) {
+    console.warn("[chat seen]", e);
+  }
 }
