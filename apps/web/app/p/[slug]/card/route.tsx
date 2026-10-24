@@ -2,15 +2,19 @@ import { ImageResponse } from "next/og";
 import { countIn, monogram } from "@dibs/shared/plans";
 import { store } from "@/lib/store";
 import { formatWhen } from "@/lib/time";
-import { OG, OG_FILL, OG_HEADERS, OgMark, ogFonts } from "@/lib/og";
+import { OG, OG_FILL, OgMark, ogFonts } from "@/lib/og";
 
-// The WhatsApp / iMessage preview card. The share link carries ?v=<version>, so a changed
-// plan gets a fresh card instead of WhatsApp's cached one. Only what anyone with the link sees.
-export const alt = "A plan on Dibby: what, when, where and who's in";
-export const size = OG.size;
-export const contentType = "image/png";
+/**
+ * The WhatsApp / iMessage preview card for a plan. Its link carries ?k=<card key> (lib/plan-preview.ts),
+ * a fingerprint of everything drawn on it, so when someone joins or the plan changes the card has a
+ * new address and WhatsApp fetches it fresh instead of reusing the picture it cached. Because the key
+ * pins the content, each version can be cached for good. Only what anyone with the link sees.
+ */
+export async function GET(_req: Request, { params }: { params: Promise<{ slug: string }> }) {
+  return Image({ params });
+}
 
-export default async function Image({ params }: { params: Promise<{ slug: string }> }) {
+async function Image({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const plan = await store.getPlanBySlug(slug);
   const members = plan ? await store.listMembers(plan.id) : [];
@@ -50,6 +54,6 @@ export default async function Image({ params }: { params: Promise<{ slug: string
         </div>
       </div>
     ),
-    { ...size, fonts: await ogFonts(), headers: OG_HEADERS }
+    { ...OG.size, fonts: await ogFonts(), headers: { "cache-control": "public, max-age=86400, s-maxage=31536000, immutable" } }
   );
 }

@@ -33,9 +33,6 @@ export async function ogFonts() {
   ];
 }
 
-/** Cards change when the plan does, so the CDN keeps them for a minute and serves stale while it redraws. */
-export const OG_HEADERS = { "cache-control": "public, max-age=0, s-maxage=60, stale-while-revalidate=86400" };
-
 /** The "hands up" mark: three friends, one popping up to call dibs. `tile` is the violet square. */
 export function OgMark({ size, tile = OG.violet, rounded = true }: { size: number; tile?: string; rounded?: boolean }) {
   return (
