@@ -142,7 +142,7 @@
 
 /* ---------- Card ---------- */
 .db-card { background: var(--bg-white-0); border: 1px solid var(--stroke-soft-200); border-radius: var(--radius-lg); padding: var(--space-4); box-shadow: var(--shadow-sm); }
-.db-card--sticker { border: 2px solid var(--stroke-strong-950); box-shadow: var(--shadow-pop); }
+.db-card--sticker { background: var(--bg-sticker); border: 1.5px solid var(--stroke-sticker); box-shadow: var(--shadow-clay); }
 .db-card--violet { background: var(--primary-base); border-color: transparent; color: var(--static-white); }
 .db-card--ink { background: var(--bg-strong-950); border-color: transparent; color: var(--text-white-0); }
 @media (min-width: 768px) { .db-card { padding: var(--space-5); } }
@@ -161,7 +161,7 @@
 .db-vote__bar > span { display: block; height: 100%; background: var(--primary-bar); transition: width 320ms cubic-bezier(.2,.8,.2,1); }
 .db-vote[aria-pressed=true] { border-color: var(--primary-base); background: var(--primary-lighter); }
 .db-vote[aria-pressed=true] .db-vote__count { color: var(--primary-base); font-weight: 600; }
-.db-vote--winning { border: 2px solid var(--stroke-strong-950); box-shadow: var(--shadow-pop); }
+.db-vote--winning { background: var(--bg-sticker); border: 1.5px solid var(--stroke-sticker); box-shadow: var(--shadow-clay); }
 .db-vote--winning .db-vote__bar > span { background: var(--accent-base); }
 
 /* ---------- Plan card ---------- */

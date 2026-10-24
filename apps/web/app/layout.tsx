@@ -13,6 +13,7 @@ import "remixicon/fonts/remixicon.css";
 import "./globals.css";
 import { siteUrl } from "@/lib/site";
 import { SITE_DESCRIPTION, SITE_NAME, TAGLINE } from "@/lib/og";
+import { THEME_SCRIPT } from "@/lib/theme";
 import { FinishSignIn } from "@/components/FinishSignIn";
 import { Toaster } from "@/components/ui/toast";
 import { OfflineBanner } from "@/components/OfflineBanner";
@@ -42,7 +43,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en-AU">
+    // The theme script sets data-theme before React loads, so <html> differs from the server render on purpose.
+    <html lang="en-AU" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body>
         <OfflineBanner />
         {children}

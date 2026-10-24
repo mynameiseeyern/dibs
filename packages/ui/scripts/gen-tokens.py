@@ -30,7 +30,9 @@ tok('text-sub-600', '#57525c', '#c2bdc8', 'Secondary copy, taglines, helper text
 tok('text-soft-400', '#6b6570', '#9a94a0', 'Meta, timestamps, placeholders on bg-white-0 and bg-weak-50.')
 tok('text-disabled-300', '#bdb8c3', '#5a5560', 'Disabled labels only, deliberately low contrast; never for content.')
 tok('text-white-0', '#ffffff', '#141216', 'Text on bg-strong-950 and bg-surface-800.')
-tok('stroke-strong-950', '#141216', '#ffffff', 'Chunky outlines on sticker cards; selected vote option border.')
+tok('stroke-strong-950', '#141216', '#ffffff', 'Chunky outlines: the progress-bar inset and anything that must read as ink. Sticker cards use stroke-sticker.')
+tok('stroke-sticker', rgba('#6d4aff', .18), rgba('#6d4aff', .38), 'The clay card edge (the plan that matters now, the winning vote): a faint violet line that, with shadow-clay, sets the hero card apart without a hard outline.')
+tok('bg-sticker', '#ffffff', '#221d30', 'Clay card fill. White in Light; a touch of violet in Dark, so the hero card reads as raised without a bright outline.')
 tok('stroke-sub-300', '#8f8997', '#6e6876', 'Input, checkbox and radio borders (3:1 on bg-white-0).')
 tok('stroke-soft-200', '#e8e5ec', '#2c2832', 'Hairline dividers and card borders.')
 tok('stroke-white-0', '#ffffff', '#141216', 'Ring around stacked avatars.')
@@ -181,7 +183,9 @@ tokens = {
     {"name": "shadow-xs", "value": {"light": "0 1px 2px 0 rgba(20, 18, 22, 0.06)", "dark": "0 1px 2px 0 rgba(0, 0, 0, 0.4)"}, "usage": "Inputs and resting buttons."},
     {"name": "shadow-sm", "value": {"light": "0 4px 12px -2px rgba(20, 18, 22, 0.10)", "dark": "0 4px 12px -2px rgba(0, 0, 0, 0.5)"}, "usage": "Cards that float over the cream page."},
     {"name": "shadow-md", "value": {"light": "0 16px 32px -12px rgba(20, 18, 22, 0.20)", "dark": "0 16px 32px -12px rgba(0, 0, 0, 0.6)"}, "usage": "Popovers, dropdowns, tooltips, sheets."},
-    {"name": "shadow-pop", "value": {"light": "0 4px 0 0 #141216", "dark": "0 4px 0 0 #000000"}, "usage": "Sticker shadow for the one lime or violet hero action on a screen and sticker cards with a stroke-strong-950 border. Collapses to 0 on press."}]}
+    {"name": "shadow-pop", "value": {"light": "0 4px 0 0 #141216", "dark": "0 4px 0 0 #000000"}, "usage": "Sticker shadow for the one lime or violet hero action on a screen. Collapses to 0 on press."},
+    {"name": "shadow-clay", "value": {"light": "inset 0 2px 0 rgba(255, 255, 255, 0.9), inset 0 -6px 14px rgba(109, 74, 255, 0.07), 0 16px 28px -16px rgba(109, 74, 255, 0.45), 0 2px 6px rgba(20, 18, 22, 0.05)", "dark": "inset 0 1px 0 rgba(255, 255, 255, 0.09), inset 0 -8px 16px rgba(0, 0, 0, 0.28), 0 18px 32px -16px rgba(109, 74, 255, 0.4)"}, "usage": "Clay, like the mascot moments: lit from above, soft shading at the bottom edge, a soft violet glow under. Only for the hero card (with stroke-sticker and bg-sticker) and the winning vote."},
+    {"name": "shadow-clay-sm", "value": {"light": "inset 0 2px 0 rgba(255, 255, 255, 0.75), inset 0 -3px 6px rgba(20, 18, 22, 0.08), 0 4px 10px -4px rgba(20, 18, 22, 0.18)", "dark": "inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -3px 6px rgba(0, 0, 0, 0.3), 0 4px 10px -4px rgba(0, 0, 0, 0.5)"}, "usage": "Puffy clay for small round controls: the circle actions on the plan card."}]}
 }
 json.dump(tokens, open(OUT, 'w'), indent=1, ensure_ascii=False)
 print('tokens', len(T))

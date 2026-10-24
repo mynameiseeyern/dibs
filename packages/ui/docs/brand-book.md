@@ -42,7 +42,9 @@ Dibby is the friend-group app where a crew talks, decides, turns up and squares 
 
 **Depth.**
 - Mostly flat. Cards float on `shadow-sm`, and popovers and tooltips on `shadow-md`.
-- The playful signature is the **sticker**: a `stroke-strong-950` 2px border plus `shadow-pop` (a hard 4px ink drop). It is only for the one hero action (the lime “call dibs” button) and the plan card that matters right now.
+- **Clay**, borrowed from the mascot moments: soft, lit from above, gently shaded at the bottom edge, with a soft violet glow underneath (`shadow-clay` on `bg-sticker`, with a faint 1.5px `stroke-sticker` edge). It's only for the plan card that matters right now and the winning vote; small round controls (the circle actions) get `shadow-clay-sm`. Everything else stays flat. Don't stack clay inside clay.
+- The **sticker** (an ink outline plus `shadow-pop`, a hard 4px drop) is now only for the lime “call dibs” button, so that one moment stays loud.
+- People can pick Light, Dark or System on their You page. The choice sets `data-theme` on `<html>`; tokens.css already switches on it.
 
 **Touch.** Every tappable thing is at least `size-tap` (44px). Default controls are `size-control-md`, and the main phone action is `size-control-lg`.
 

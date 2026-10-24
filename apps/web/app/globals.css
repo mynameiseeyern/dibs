@@ -335,7 +335,7 @@ gmp-place-details-compact {
 /* ---------- Vote option as a card: the place, the tally, then Vote / View / Delete ---------- */
 .vote-card { border: 1.5px solid var(--stroke-soft-200); border-radius: var(--radius-md); background: var(--bg-white-0); overflow: hidden; }
 .vote-card[data-mine] { border-color: var(--primary-base); }
-.vote-card[data-winning] { border: 2px solid var(--stroke-strong-950); box-shadow: var(--shadow-pop); }
+.vote-card[data-winning] { background: var(--bg-sticker); border: 1.5px solid var(--stroke-sticker); box-shadow: var(--shadow-clay); }
 .vote-card__tally { display: flex; flex-direction: column; gap: var(--space-1); padding: 0 var(--space-3); }
 .vote-card__bar { display: block; height: 6px; border-radius: var(--radius-full); background: var(--bg-soft-200); overflow: hidden; }
 .vote-card__bar > span { display: block; height: 100%; border-radius: inherit; background: var(--primary-bar, var(--primary-base)); transition: width var(--motion-expressive) var(--ease-standard); }
@@ -429,7 +429,7 @@ gmp-place-details {
 .plan-weather { color: var(--text-sub-600); }
 .plan-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); padding-top: var(--space-1); }
 .circle-action { all: unset; box-sizing: border-box; display: inline-flex; flex-direction: column; align-items: center; gap: 6px; min-width: 64px; cursor: pointer; color: var(--text-strong-950); -webkit-tap-highlight-color: transparent; }
-.circle-action__icon { position: relative; display: grid; place-content: center; width: 48px; height: 48px; border-radius: var(--radius-full); background: var(--bg-soft-200); font-size: 22px; transition: background-color 160ms ease, transform 160ms cubic-bezier(.34,1.56,.64,1); }
+.circle-action__icon { position: relative; display: grid; place-content: center; width: 48px; height: 48px; border-radius: var(--radius-full); background: var(--bg-soft-200); box-shadow: var(--shadow-clay-sm); font-size: 22px; transition: background-color 160ms ease, transform 160ms cubic-bezier(.34,1.56,.64,1); }
 .circle-action:hover .circle-action__icon { background: var(--bg-sub-300); }
 .circle-action:active .circle-action__icon { transform: scale(0.94); }
 .circle-action:focus-visible .circle-action__icon { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
