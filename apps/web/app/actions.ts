@@ -145,6 +145,8 @@ export async function saveProfile(_prev: FormState, form: FormData): Promise<For
     console.error("[onboarding] save profile failed", me.id, e);
     return { error: "Couldn't save that. Try again in a sec, and if it keeps happening, tell Ee." };
   }
+  // The sign-up box is their answer to beta updates either way, so the home card never asks.
+  await store.answerBetaPrompt(me.id).catch((e) => console.error("[onboarding] beta prompt", me.id, e));
   // Opt-in only: the box starts unticked, and ticking it is the consent we keep a record of.
   if (form.get("beta_updates") === "on" && me.email) {
     try {

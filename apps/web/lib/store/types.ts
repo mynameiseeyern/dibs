@@ -8,6 +8,8 @@ export interface Profile {
   dob: string;
   payid: string | null;
   payid_name: string | null;
+  /** When they said yes or no to beta updates anywhere. Null: show the one-time card. */
+  beta_prompt_answered_at?: string | null;
 }
 
 export interface Subscription {
@@ -71,7 +73,9 @@ export interface Store {
    * and unsubscribing keeps the row with unsubscribed_at as the record that we stopped.
    */
   getSubscription(list: string, who: { userId: string } | { token: string }): Promise<Subscription | null>;
-  subscribe(list: string, s: { email: string; userId: string | null; source: "onboarding" | "account" | "resubscribe" }): Promise<Subscription>;
+  subscribe(list: string, s: { email: string; userId: string | null; source: "onboarding" | "account" | "resubscribe" | "home-card" }): Promise<Subscription>;
+  /** They answered the beta updates question (yes or no), so the card stops showing. */
+  answerBetaPrompt(userId: string): Promise<void>;
   unsubscribe(list: string, who: { userId: string } | { token: string }): Promise<Subscription | null>;
 
   createPlan(p: NewPlan): Promise<Plan>;
