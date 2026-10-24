@@ -79,11 +79,11 @@ export function Thread({
                 return (
                   <div key={m.id} data-fresh-id={m.id}>
                     {stamp}
-                    <div className="db-msg db-msg--ai">
+                    <div className={`db-msg db-msg--ai${placesOf(m.template).length ? " db-msg--wide" : ""}`}>
                       <Avatar.Root size="32" className="bg-transparent" aria-hidden="true">
                         <DibbyMark size={32} />
                       </Avatar.Root>
-                      <div>
+                      <div className="db-msg__body">
                         <div className="db-msg__name">
                           Dibby <Badge.Root color="accent" className="ai-tag">AI</Badge.Root>
                         </div>
