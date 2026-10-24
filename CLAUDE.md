@@ -17,7 +17,7 @@ Build plan: https://claude.ai/artifact/2Lce9vh9ZvGunTKngL6sWX · Linear project 
 
 ## Design system
 
-The source of truth is the design system on claude.ai (published when the app was called dibs) (https://claude.ai/artifact/77AdHKZGgDU4j19fqSsYdz).
+The source of truth is the Dibby design system on claude.ai (https://claude.ai/artifact/77AdHKZGgDU4j19fqSsYdz).
 In this repo: read `packages/ui/docs/brand-book.md` before building UI, and `packages/ui/docs/components/<Name>.md` for each component.
 Open `packages/ui/design-system/index.html` in a browser to see every component rendered. Token values come from `packages/ui/scripts/gen-tokens.py` (see `packages/ui/README.md`).
 
@@ -33,7 +33,7 @@ Open `packages/ui/design-system/index.html` in a browser to see every component 
 - The app is called **Dibby** (capital D in sentences; the logo is lowercase **dibby**). Dibby is both the app and the AI member in the chat: one character. "dibs" is only the verb ("call dibs", the lime moment), never the product name.
 - Internal names keep the old name on purpose: `@dibs/*` packages, `.db-` classes, `variant="dibs"` (the call-dibs button), `dibs:` storage keys, `dibs-*.svg` logo files. Don't rename them: storage keys would reset people's state.
 - Copy: Australian spelling, sentence case, sounds like a mate in the group chat. Never pushy about money.
-- Logos are in `packages/ui/assets/logos/`. `dibs-ai-member.svg` (the lime smiley) is Dibby's face in the chat; the app logo is the "hands up" mark.
+- Logos are in `packages/ui/assets/logos/`. `dibs-ai-member.svg` (the raised lime friend from the logo, with a face, on violet) is Dibby's face in the chat; the app logo is the "hands up" mark with solid side friends. Exports (App Store, favicons, social avatar, wordmarks) are in `logos/export/`.
 
 ## Email
 
