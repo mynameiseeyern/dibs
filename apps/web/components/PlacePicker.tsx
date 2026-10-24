@@ -8,6 +8,7 @@ import * as Button from "@/components/ui/button";
 import * as Input from "@/components/ui/input";
 import * as Hint from "@/components/ui/hint";
 import { Field } from "@/components/Field";
+import { resolvedTheme } from "@/lib/theme";
 import { CUSTOM_PLACE_LIMITS, looksLikeAddress, type CustomPlace } from "@dibs/shared/plans";
 
 /** A business picked on the map. The server checks the ID again before it's saved. */
@@ -265,7 +266,7 @@ function PlaceMap({
   onPick: (p: PickedPlace) => void;
   onCentre: (c: google.maps.LatLngLiteral) => void;
 }) {
-  const dark = useMemo(() => typeof window !== "undefined" && window.matchMedia?.("(prefers-color-scheme: dark)").matches, []);
+  const dark = useMemo(() => resolvedTheme() === "dark", []);
   return (
     <Map
       mapId={MAP_ID}

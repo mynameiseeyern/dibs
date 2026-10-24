@@ -15,6 +15,8 @@
   --color-text-disabled-300: var(--text-disabled-300);
   --color-text-white-0: var(--text-white-0);
   --color-stroke-strong-950: var(--stroke-strong-950);
+  --color-stroke-sticker: var(--stroke-sticker);
+  --color-bg-sticker: var(--bg-sticker);
   --color-stroke-sub-300: var(--stroke-sub-300);
   --color-stroke-soft-200: var(--stroke-soft-200);
   --color-stroke-white-0: var(--stroke-white-0);
@@ -198,6 +200,8 @@
   --shadow-sm: var(--shadow-sm);
   --shadow-md: var(--shadow-md);
   --shadow-pop: var(--shadow-pop);
+  --shadow-clay: var(--shadow-clay);
+  --shadow-clay-sm: var(--shadow-clay-sm);
   --shadow-regular-xs: var(--shadow-xs);
   --shadow-regular-sm: var(--shadow-sm);
   --shadow-regular-md: var(--shadow-md);

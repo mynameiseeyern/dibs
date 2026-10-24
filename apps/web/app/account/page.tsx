@@ -6,6 +6,7 @@ import { whoIsHere } from "@/lib/viewer";
 import { formatAud, rouletteTally } from "@dibs/shared/bills";
 import { deleteAccountAction, forgetDeviceAction, signOutAction, switchAccountAction } from "../actions";
 import { DeleteAccount } from "./DeleteAccount";
+import { ThemePicker } from "./ThemePicker";
 import { SiteFooter } from "@/components/SiteFooter";
 import { KeepPlansForm } from "./KeepPlansForm";
 import { BetaUpdatesToggle } from "./BetaUpdatesToggle";
@@ -89,6 +90,11 @@ export default async function Account() {
           <BetaUpdatesToggle initial={betaUpdates?.subscribed ?? false} email={organiser.email} />
         </section>
       )}
+
+      <section className="db-card section" aria-labelledby="theme-h">
+        <h2 id="theme-h" className="title-h5">Appearance</h2>
+        <ThemePicker />
+      </section>
 
       {name && (
         <section className="section">
