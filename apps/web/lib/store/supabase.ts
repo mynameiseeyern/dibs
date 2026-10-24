@@ -54,6 +54,9 @@ export const supabaseStore: Store = {
   async upsertProfile(p) {
     must(await admin().from("profiles").upsert(p));
   },
+  async answerBetaPrompt(userId) {
+    must(await admin().from("profiles").update({ beta_prompt_answered_at: new Date().toISOString() }).eq("user_id", userId).is("beta_prompt_answered_at", null));
+  },
 
   async findGuestByTokenHash(hash) {
     return must(

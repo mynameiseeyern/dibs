@@ -13,6 +13,7 @@ import { planStatus } from "@/lib/status";
 import * as Button from "@/components/ui/button";
 import * as Badge from "@/components/ui/badge";
 import * as Alert from "@/components/ui/alert";
+import { answerBetaCard } from "../email-actions";
 
 export const metadata = { title: "Your plans" };
 export const dynamic = "force-dynamic";
@@ -61,6 +62,11 @@ export default async function Home() {
   const squareUp = rows.filter((r) => !isUpcoming(r) && (r.iOwe > 0 || r.owedToMe > 0 || (r.plan.status === "locked" && r.me.role === "organiser")));
   const past = rows.filter((r) => !upcoming.includes(r) && !squareUp.includes(r)).reverse().slice(0, 5);
 
+  // ARV-61: ask once, only accounts that have never said yes or no to beta updates.
+  const profile = organiser?.email ? await store.getProfile(organiser.id).catch(() => null) : null;
+  // Hidden until the 0016 migration adds the column, so an answer always has somewhere to save.
+  const askBeta = !!profile && "beta_prompt_answered_at" in profile && !profile.beta_prompt_answered_at;
+
   const iOwe = rows.reduce((n, r) => n + r.iOwe, 0);
   const owedToMe = rows.reduce((n, r) => n + r.owedToMe, 0);
 
@@ -81,6 +87,25 @@ export default async function Home() {
             </div>
           </Alert.Root>
         </a>
+      )}
+
+      {askBeta && (
+        <form action={answerBetaCard} className="db-card db-stack" aria-labelledby="beta-card-h">
+          <div>
+            <h2 id="beta-card-h" className="label-md">
+              Want a short email when we ship something new?
+            </h2>
+            <p className="paragraph-sm muted">Every now and then, never about money. Unsubscribe any time.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Button.Root name="answer" value="yes" type="submit">
+              Turn on
+            </Button.Root>
+            <Button.Root name="answer" value="no" type="submit" variant="neutral" mode="lighter">
+              No thanks
+            </Button.Root>
+          </div>
+        </form>
       )}
 
       {/* Only when there's money in play. Nothing owed either way: say nothing. */}

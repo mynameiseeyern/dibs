@@ -23,8 +23,24 @@ export async function setBetaUpdates(_prev: ListState, form: FormData): Promise<
     console.error("[email settings]", me.id, e);
     return { subscribed: !on, error: "Couldn't save that. Try again in a sec." };
   }
+  await store.answerBetaPrompt(me.id).catch(() => {});
   revalidatePath("/account");
   return { subscribed: on };
+}
+
+/** The one-time card on Your plans. Either answer saves, and the card never shows again. */
+export async function answerBetaCard(form: FormData): Promise<void> {
+  const me = await currentOrganiser();
+  if (!me) return;
+  try {
+    if (form.get("answer") === "yes" && me.email) {
+      await store.subscribe(BETA_LIST, { email: me.email, userId: me.id, source: "home-card" });
+    }
+    await store.answerBetaPrompt(me.id);
+  } catch (e) {
+    console.error("[beta card]", me.id, e);
+  }
+  revalidatePath("/home");
 }
 
 /** The button on /unsubscribe. The token in the email is the only thing needed, no sign-in. */

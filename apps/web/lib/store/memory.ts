@@ -63,7 +63,11 @@ export const memoryStore: Store = {
     return db.profiles.get(userId) ?? null;
   },
   async upsertProfile(p) {
-    db.profiles.set(p.user_id, p);
+    db.profiles.set(p.user_id, { beta_prompt_answered_at: null, ...db.profiles.get(p.user_id), ...p });
+  },
+  async answerBetaPrompt(userId) {
+    const p = db.profiles.get(userId);
+    if (p && !p.beta_prompt_answered_at) p.beta_prompt_answered_at = new Date().toISOString();
   },
 
   async findGuestByTokenHash(hash) {
