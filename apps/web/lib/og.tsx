@@ -12,6 +12,8 @@ export const OG = {
   lime: "#C8F03C",
   ink: "#141216",
   white: "#FFFFFF",
+  /** The two side friends in the mark: solid so they hold at small sizes (ARV-39). */
+  side: "#DDD4FF",
   sub: "#5C5866",
   size: { width: 1200, height: 630 },
 } as const;
@@ -38,8 +40,8 @@ export function OgMark({ size, tile = OG.violet, rounded = true }: { size: numbe
   return (
     <svg width={size} height={size} viewBox="0 0 200 200">
       <rect width="200" height="200" rx={rounded ? 48 : 0} fill={tile} />
-      <circle cx="62" cy="118" r="22" fill={OG.white} fillOpacity="0.55" />
-      <circle cx="138" cy="118" r="22" fill={OG.white} fillOpacity="0.55" />
+      <circle cx="62" cy="118" r="22" fill={OG.side} />
+      <circle cx="138" cy="118" r="22" fill={OG.side} />
       <circle cx="100" cy="82" r="26" fill={OG.lime} />
       <rect x="92" y="114" width="16" height="36" rx="8" fill={OG.lime} />
     </svg>
