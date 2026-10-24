@@ -8,6 +8,7 @@ import { AccountButton } from "@/components/AccountButton";
 import { Suspense } from "react";
 import { Weather } from "./Weather";
 import { RsvpPicker } from "./RsvpPicker";
+import { HostMenu } from "./HostMenu";
 import { AddToCalendar } from "./AddToCalendar";
 import { canAddToCalendar, googleCalendarLink, outlookCalendarLink } from "@/lib/calendar";
 import { Once } from "@/components/moments/Once";
@@ -22,7 +23,7 @@ import { store } from "@/lib/store";
 import { formatShort, formatWhen } from "@/lib/time";
 import { loadPlan } from "@/lib/viewer";
 import { removeMyPhoto, addTime, goWithTime, markFree, removeTime, appInterest, trackShare, addOption, askDibbyMore, joinPlan, lockPlan, removeMe, removeOption, setRsvp, vote } from "./actions";
-import { setPlace } from "./manage/actions";
+import { setHost, setPlace } from "./manage/actions";
 import { JoinForm } from "./JoinForm";
 import { ShareButton } from "./ShareButton";
 import { GetTheApp } from "./GetTheApp";
@@ -357,6 +358,15 @@ export default async function PlanPage({ params, searchParams }: Props) {
                               {m.plus_one ? " · +1" : ""}
                             </small>
                           </span>
+                          {me?.role === "organiser" && m.id !== me.id && m.role !== "organiser" && (g === "in" || m.role === "cohost") && (
+                            <HostMenu
+                              name={m.display_name}
+                              role={m.role === "cohost" ? "cohost" : "guest"}
+                              canRun={g === "in" && Boolean(m.user_id)}
+                              why={g !== "in" ? `${m.display_name.split(" ")[0]} isn't going right now.` : `${m.display_name.split(" ")[0]} joined without the app. They need it to help run a plan.`}
+                              setHost={setHost.bind(null, slug, m.id)}
+                            />
+                          )}
                         </li>
                       ))
                   )}

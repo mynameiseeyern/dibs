@@ -49,6 +49,7 @@ Open `packages/ui/design-system/index.html` in a browser to see every component 
 - Dibby reads only messages it's tagged in, keeps no memory between plans, and never mentions money owed or anything personal.
 - Guests have no account by default: signed device cookie (`lib/guest.ts`), every guest write goes through a server action or route.
 - A guest can add an email (`/account`). When someone signs in with it within an hour, or signs in on the browser holding the guest cookie, `store.claimGuests` moves those memberships onto the account (`lib/viewer.ts` `whoIsHere`). Signing out also clears the guest cookie.
+- The organiser can make someone a co-host or hand the plan over from the who's going list (`setHost` in `manage/actions.ts`, `HostMenu`). Only to people going who have an account; handing over makes the old organiser a co-host. Co-hosts can do everything but hand over.
 - Amounts are integer cents with a currency code (default AUD).
 - Only people going (and hosts) vote, chat, react or add places. Maybe, not replied or waitlisted: read only. Can't go: vote, chat and who's in are hidden. `planAccess` in `packages/shared/src/plans.ts`, checked in every server action. Stepping down from going before the plan starts takes your vote back.
 - Dibby never makes up a day or a time. Ask Dibby chips (day, time, budget, near me) are fixed facts; `resolveStart` in `packages/shared/src/when.ts` decides the start.

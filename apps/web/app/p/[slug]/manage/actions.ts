@@ -204,3 +204,38 @@ export async function setVibe(slug: string, vibe: Vibe): Promise<void> {
   revalidatePath(`/p/${slug}`);
   revalidatePath(`/p/${slug}/manage`);
 }
+
+/**
+ * The organiser shares or hands over the running of the plan, from the who's going list.
+ * Co-host: runs it alongside you. Hand over: they become the organiser and you stay on as a
+ * co-host. Only people going who have the app (a plan's organiser needs an account).
+ */
+export async function setHost(slug: string, memberId: string, to: "cohost" | "guest" | "organiser"): Promise<Result & { name?: string }> {
+  const view = await loadPlan(slug);
+  if (!view?.me || view.me.role !== "organiser") return { error: "Only the organiser can do that." };
+  const { plan, me } = view;
+  if (plan.status === "cancelled" || plan.status === "wrapped") return { error: "This plan's finished, so it can't be changed." };
+  const them = view.members.find((m) => m.id === memberId);
+  if (!them || them.id === me.id) return { error: "Couldn't find them on the plan." };
+  const first = them.display_name.split(" ")[0];
+  if (to !== "guest" && (them.rsvp !== "in" || them.waitlisted)) return { error: `${first} needs to be going first.` };
+  if (to !== "guest" && !them.user_id) return { error: `${first} needs the app to help run a plan.` };
+  const mine = me.display_name.split(" ")[0];
+
+  if (to === "organiser") {
+    await store.updateMember(them.id, { role: "organiser" });
+    await store.updateMember(me.id, { role: "cohost" });
+    await store.updatePlan(plan.id, { organiser_id: them.user_id });
+    await store.addMessage({ planId: plan.id, memberId: null, kind: "system", body: `${mine} handed the plan over to ${first}. ${first}'s running it now, with ${mine} as co-host.` });
+  } else if (to === "cohost") {
+    if (them.role !== "guest") return { name: first };
+    await store.updateMember(them.id, { role: "cohost" });
+    await store.addMessage({ planId: plan.id, memberId: null, kind: "system", body: `${mine} made ${first} a co-host.` });
+  } else {
+    if (them.role !== "cohost") return { name: first };
+    await store.updateMember(them.id, { role: "guest" });
+  }
+  revalidatePath(`/p/${slug}`);
+  revalidatePath(`/p/${slug}/manage`);
+  return { name: first };
+}

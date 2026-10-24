@@ -80,11 +80,11 @@ export interface Store {
   /** Plans this device has joined as a guest. */
   listPlansForGuest(guestId: string): Promise<{ plan: Plan; member: PlanMember }[]>;
 
-  updatePlan(planId: string, patch: Partial<Pick<Plan, "status" | "venue_name" | "venue_place_id" | "venue_address" | "no_bills" | "starts_at" | "vote_deadline" | "version" | "updated_note" | "title" | "area" | "dibby_volume" | "vibe" | "capacity" | "plus_ones">>): Promise<Plan>;
+  updatePlan(planId: string, patch: Partial<Pick<Plan, "status" | "venue_name" | "venue_place_id" | "venue_address" | "no_bills" | "starts_at" | "vote_deadline" | "version" | "updated_note" | "title" | "area" | "dibby_volume" | "vibe" | "capacity" | "plus_ones" | "organiser_id">>): Promise<Plan>;
 
   listMembers(planId: string): Promise<PlanMember[]>;
   addMember(m: NewMember): Promise<PlanMember>;
-  updateMember(memberId: string, patch: Partial<Pick<PlanMember, "rsvp" | "plus_one" | "waitlisted" | "display_name" | "attended" | "dibby_muted" | "chat_seen_at">>): Promise<void>;
+  updateMember(memberId: string, patch: Partial<Pick<PlanMember, "role" | "rsvp" | "plus_one" | "waitlisted" | "display_name" | "attended" | "dibby_muted" | "chat_seen_at">>): Promise<void>;
 
   listOptions(planId: string): Promise<PlanOption[]>;
   addOption(o: { planId: string; label: string; placeId?: string | null; note?: string | null; addedBy?: string | null }): Promise<PlanOption>;

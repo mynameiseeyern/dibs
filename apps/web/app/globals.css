@@ -528,3 +528,4 @@ gmp-place-details {
 .roll__stamp { position: absolute; right: var(--space-2); top: var(--space-2); font: 500 11px/14px var(--font-mono); letter-spacing: 0.04em; color: var(--accent-base); text-shadow: 0 1px 2px rgb(0 0 0 / 0.7); }
 .roll__full { position: relative; border-radius: var(--radius-lg); overflow: hidden; }
 .roll__full img { height: auto; max-height: 70dvh; object-fit: contain; background: var(--static-black); }
+.person__menu { margin-left: auto; flex: none; }
