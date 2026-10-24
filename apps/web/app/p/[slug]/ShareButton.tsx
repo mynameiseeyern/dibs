@@ -38,8 +38,13 @@ export function ShareButton({
       window.location.href = `https://wa.me/?text=${encodeURIComponent(text)}`;
       return;
     }
-    await navigator.clipboard.writeText(url);
-    toast.success("Link copied", { description: "Paste it in the group chat." });
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Link copied", { description: "Paste it in the group chat." });
+    } catch {
+      // Clipboard blocked (some browsers, in-app webviews): show the link to copy by hand.
+      toast.info("Copy this link to the group chat", { description: url, duration: 10000 });
+    }
   }
 
   return (
