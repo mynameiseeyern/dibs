@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { playRouletteSpin } from "@/lib/feedback";
 
 const FILLS = ["lime", "violet", "sun", "mint", "tangerine", "sky", "coral", "rose", "aqua", "ivory"].map((c) => `var(--crew-${c})`);
 const SPIN_MS = 4000;
@@ -36,7 +37,12 @@ export function Wheel({
     if (mode !== "spin") return;
     const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     const t = setTimeout(() => onLanded?.(), reduced ? 0 : SPIN_MS + 150);
-    return () => clearTimeout(t);
+    // Ticks and a reveal, only if they've turned roulette sound on (ARV-51).
+    const stop = playRouletteSpin(SPIN_MS);
+    return () => {
+      clearTimeout(t);
+      stop();
+    };
   }, [mode, onLanded]);
 
   const r = 125;

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Wheel, type WheelMode } from "./Wheel";
 import * as Button from "@/components/ui/button";
+import { buzz, HAPTICS, rouletteSoundOn, setRouletteSound } from "@/lib/feedback";
 
 const seenKey = (billId: string) => `dibs:spin-seen:${billId}`;
 
@@ -45,8 +46,16 @@ export function RouletteResult({
     return () => clearTimeout(t);
   }, [billId]);
 
+  const [sound, setSound] = useState(false);
+  useEffect(() => setSound(rouletteSoundOn()), []);
+  const toggleSound = () => {
+    setRouletteSound(!sound);
+    setSound(!sound);
+  };
+
   const landed = useCallback(() => {
     setMode("landed");
+    buzz(HAPTICS.roulette);
     try {
       localStorage.setItem(seenKey(billId), "1");
     } catch {}
@@ -68,10 +77,16 @@ export function RouletteResult({
             <p className="muted">
               {loserName} covers <span className="money">{amount}</span>. Everyone else is square on this one.
             </p>
-            <Button.Root type="button" mode="ghost" size="small" onClick={replay}>
-              <i className="ri-replay-line db-icon" aria-hidden="true" />
-              Watch it again
-            </Button.Root>
+            <div className="db-row justify-center">
+              <Button.Root type="button" mode="ghost" size="small" onClick={replay}>
+                <i className="ri-replay-line db-icon" aria-hidden="true" />
+                Watch it again
+              </Button.Root>
+              <Button.Root type="button" mode="ghost" size="small" onClick={toggleSound} aria-pressed={sound}>
+                <i className={`${sound ? "ri-volume-up-line" : "ri-volume-mute-line"} db-icon`} aria-hidden="true" />
+                {sound ? "Sound on" : "Sound off"}
+              </Button.Root>
+            </div>
           </>
         ) : (
           <p className="paragraph-sm muted typing">
