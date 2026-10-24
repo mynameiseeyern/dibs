@@ -32,7 +32,8 @@ Regenerate with `python3 gen.py` (writes HTML next to it), then screenshot.
 | 15–18 | Guest: lands on the link, joins with a name, RSVPs and votes |
 | 19–20 | Plan chat |
 | 21–22 | Locked in |
-| 23–24 | Your plans |
+| 23–24 | Organiser's menu on someone in who's going (co-host or hand over; a guest needs the app first) |
+| 25–26 | Your plans |
 
 Bills, card roulette, settle-up and the recap need a plan that has happened, so they're shown state by state on `/ui` (Dibs pieces, ARV-38) rather than here.
 

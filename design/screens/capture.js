@@ -84,6 +84,10 @@ async function ctx(b) {
   const confirm = p.locator('[role=dialog] button', { hasText: /Lock/ }); if (await confirm.count()) await confirm.last().click();
   await p.waitForTimeout(3000);
   await snap(p, 'plan-locked');
+  // Co-hosts: open who's going and the organiser's menu on Sam.
+  await p.getByText("Who's going", { exact: true }).first().click(); await p.waitForTimeout(800);
+  const menu = p.getByRole('button', { name: /^Options for Sam/ });
+  if (await menu.count()) { await menu.first().click(); await p.waitForTimeout(1000); await snap(p, 'co-host-menu'); await p.keyboard.press('Escape'); }
   await p.goto(BASE + '/home', { waitUntil: 'networkidle' }); await p.waitForTimeout(1200);
   await snap(p, 'your-plans');
   await p.goto(BASE + '/ui', { waitUntil: 'networkidle' }); await p.waitForTimeout(1500);
