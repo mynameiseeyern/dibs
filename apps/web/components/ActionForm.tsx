@@ -3,6 +3,7 @@
 import { useTransition, type ReactNode } from "react";
 import * as Button from "@/components/ui/button";
 import { send } from "@/lib/send";
+import { buzz } from "@/lib/feedback";
 
 /**
  * A one-button form for a server action (mark paid, confirm), with "Saving…", a retry when the
@@ -17,6 +18,7 @@ export function ActionForm({
   block,
   size,
   ariaLabel,
+  haptic,
 }: {
   action: () => Promise<unknown>;
   /** "that payment": used in "Couldn't save that payment". */
@@ -27,6 +29,8 @@ export function ActionForm({
   block?: boolean;
   size?: "small" | "medium" | "large";
   ariaLabel?: string;
+  /** A little buzz when it saves, on phones that support it. */
+  haptic?: readonly number[];
 }) {
   const [pending, start] = useTransition();
   return (
@@ -35,7 +39,13 @@ export function ActionForm({
       onSubmit={(e) => {
         e.preventDefault();
         start(async () => {
-          await send(action, { retry, what });
+          let ok = false;
+          await send(async () => {
+            const r = await action();
+            ok = true;
+            return r;
+          }, { retry, what });
+          if (haptic && ok) buzz(haptic);
         });
       }}
     >

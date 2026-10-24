@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Moment } from "./Moment";
 import type { MomentKind } from "./plays";
+import { buzz, HAPTICS } from "@/lib/feedback";
 
 /**
  * Plays a moment the first time this browser sees a given state (keyed), then never again.
@@ -35,7 +36,8 @@ export function Once({
       seen = localStorage.getItem(key) === "1";
     } catch {}
     setState(seen ? "done" : "play");
-  }, [key]);
+    if (!seen && kind === "lock") buzz(HAPTICS.locked);
+  }, [key, kind]);
 
   if (state === "unknown") return <>{after}</>;
   if (state === "done") return <>{after}</>;
