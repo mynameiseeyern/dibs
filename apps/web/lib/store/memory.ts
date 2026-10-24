@@ -309,8 +309,8 @@ export const memoryStore: Store = {
   async listPhotos(planId) {
     return db.photos.filter((x) => x.photo.plan_id === planId).map((x) => x.photo);
   },
-  async addPhoto({ planId, memberId, bytes, width, height }) {
-    const photo: PlanPhoto = { id: randomUUID(), plan_id: planId, member_id: memberId, width, height, created_at: now() };
+  async addPhoto({ planId, memberId, bytes, width, height, glow }) {
+    const photo: PlanPhoto = { id: randomUUID(), plan_id: planId, member_id: memberId, width, height, glow, created_at: now() };
     db.photos.push({ photo, bytes });
     return photo;
   },

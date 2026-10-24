@@ -8,6 +8,8 @@ create table if not exists plan_photos (
   path text not null,
   width int,
   height int,
+  -- Four colours from the shot's corners, worked out on the phone: the developing tile glows with them.
+  glow text check (glow ~ '^[0-9a-f]{6}(,[0-9a-f]{6}){3}$'),
   created_at timestamptz not null default now()
 );
 create index if not exists plan_photos_plan_idx on plan_photos (plan_id);

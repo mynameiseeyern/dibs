@@ -316,14 +316,14 @@ export const supabaseStore: Store = {
     if (error) throw new Error(error.message);
   },
   async listPhotos(planId) {
-    return must(await admin().from("plan_photos").select("id, plan_id, member_id, width, height, created_at").eq("plan_id", planId).order("created_at")) as PlanPhoto[];
+    return must(await admin().from("plan_photos").select("id, plan_id, member_id, width, height, glow, created_at").eq("plan_id", planId).order("created_at")) as PlanPhoto[];
   },
-  async addPhoto({ planId, memberId, bytes, width, height }) {
+  async addPhoto({ planId, memberId, bytes, width, height, glow }) {
     const id = crypto.randomUUID();
     const path = `${planId}/${id}.jpg`;
     const up = await admin().storage.from(PHOTO_BUCKET).upload(path, bytes, { contentType: "image/jpeg", upsert: false });
     if (up.error) throw new Error(up.error.message);
-    return must(await admin().from("plan_photos").insert({ id, plan_id: planId, member_id: memberId, path, width, height }).select("id, plan_id, member_id, width, height, created_at").single()) as PlanPhoto;
+    return must(await admin().from("plan_photos").insert({ id, plan_id: planId, member_id: memberId, path, width, height, glow }).select("id, plan_id, member_id, width, height, glow, created_at").single()) as PlanPhoto;
   },
   async photoBytes(photo) {
     const row = must(await admin().from("plan_photos").select("path").eq("id", photo.id).maybeSingle()) as { path: string } | null;

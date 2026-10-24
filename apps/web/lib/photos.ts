@@ -13,7 +13,7 @@ export async function loadRoll(plan: Plan, members: PlanMember[], me: PlanMember
   const photos: RollPhoto[] = all.flatMap((p) => {
     const who = byId.get(p.member_id);
     if (!who) return [];
-    return [{ id: p.id, name: p.member_id === me.id ? "You" : who.display_name.split(" ")[0] ?? who.display_name, colour: who.colour, mine: p.member_id === me.id, stamp: formatStamp(p.created_at), width: p.width, height: p.height }];
+    return [{ id: p.id, name: p.member_id === me.id ? "You" : who.display_name.split(" ")[0] ?? who.display_name, colour: who.colour, mine: p.member_id === me.id, stamp: formatStamp(p.created_at), width: p.width, height: p.height, glow: p.glow }];
   });
   return {
     photos,

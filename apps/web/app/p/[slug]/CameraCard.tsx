@@ -29,6 +29,7 @@ export function CameraCard({ slug, taken, max, revealed }: { slug: string; taken
       form.set("photo", photo.blob, "photo.jpg");
       form.set("width", String(photo.width));
       form.set("height", String(photo.height));
+      if (photo.glow) form.set("glow", photo.glow);
       const res = await fetch(`/p/${slug}/photos`, { method: "POST", body: form }).catch(() => null);
       const body = (await res?.json().catch(() => null)) as { left?: number; error?: string } | null;
       if (!res?.ok) return void toast.error(body?.error ?? "Couldn't send that one", { description: res ? undefined : "Looks like you're offline." });

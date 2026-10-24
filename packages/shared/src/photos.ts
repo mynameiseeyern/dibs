@@ -7,6 +7,13 @@ import type { Plan, PlanMember } from "./types";
 /** Shots per person per plan. */
 export const MAX_PHOTOS = 3;
 
+/** A photo's glow: exactly four 6-digit hex colours, comma separated. Anything else is dropped. */
+export function cleanGlow(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const s = raw.trim().toLowerCase();
+  return /^[0-9a-f]{6}(,[0-9a-f]{6}){3}$/.test(s) ? s : null;
+}
+
 /** Photos develop when the host wraps the plan up. */
 export function photosRevealed(plan: Pick<Plan, "status">): boolean {
   return plan.status === "wrapped";

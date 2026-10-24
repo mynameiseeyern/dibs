@@ -128,7 +128,7 @@ export interface Store {
   /** The Dibby camera: photos on a plan (metadata), newest last. */
   listPhotos(planId: string): Promise<PlanPhoto[]>;
   /** Saves a JPEG to private storage and records it. */
-  addPhoto(p: { planId: string; memberId: string; bytes: Uint8Array; width: number | null; height: number | null }): Promise<PlanPhoto>;
+  addPhoto(p: { planId: string; memberId: string; bytes: Uint8Array; width: number | null; height: number | null; glow: string | null }): Promise<PlanPhoto>;
   /** The image itself, for the app's own photo route. */
   photoBytes(photo: PlanPhoto): Promise<Uint8Array | null>;
   /** Deletes a photo and its file. */

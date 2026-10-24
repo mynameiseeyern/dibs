@@ -33,3 +33,11 @@ describe("who sees and takes photos", () => {
     expect(canAddPhotos({ status: "voting", starts_at: started.starts_at }, going, during)).toBe(false);
   });
 });
+
+import { cleanGlow } from "./photos";
+describe("cleanGlow", () => {
+  it("keeps four hex colours", () => expect(cleanGlow("AABBCC,112233,445566,778899")).toBe("aabbcc,112233,445566,778899"));
+  it("drops anything else", () => {
+    for (const bad of [null, "", "aabbcc", "aabbcc,112233,445566", "red,blue,green,pink", "aabbcc,112233,445566,778899;x"]) expect(cleanGlow(bad)).toBeNull();
+  });
+});

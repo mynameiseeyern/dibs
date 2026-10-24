@@ -1,5 +1,5 @@
 import { revalidatePath } from "next/cache";
-import { canAddPhotos, MAX_PHOTOS } from "@dibs/shared/photos";
+import { canAddPhotos, cleanGlow, MAX_PHOTOS } from "@dibs/shared/photos";
 import { store } from "@/lib/store";
 import { loadPlan } from "@/lib/viewer";
 import { report } from "@/lib/report";
@@ -34,7 +34,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   };
 
   try {
-    await store.addPhoto({ planId: plan.id, memberId: me.id, bytes, width: num("width"), height: num("height") });
+    await store.addPhoto({ planId: plan.id, memberId: me.id, bytes, width: num("width"), height: num("height"), glow: cleanGlow(form?.get("glow")) });
   } catch (e) {
     report("photo upload", e);
     return err(500, "Couldn't save that one. Try again.");
