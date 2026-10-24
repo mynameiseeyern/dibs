@@ -529,3 +529,23 @@ gmp-place-details {
 .roll__full { position: relative; border-radius: var(--radius-lg); overflow: hidden; }
 .roll__full img { height: auto; max-height: 70dvh; object-fit: contain; background: var(--static-black); }
 .person__menu { margin-left: auto; flex: none; }
+
+/* Landing page (ARV-55): phone first, one column; steps go three across on wide screens. */
+.landing { gap: var(--space-8); }
+.landing__hero { display: flex; flex-direction: column; gap: var(--space-4); }
+.landing__crew { display: flex; align-items: flex-end; height: 132px; margin-bottom: var(--space-2); }
+.landing__crew img { width: 112px; height: auto; margin-right: -28px; }
+.landing__crew img:nth-child(2) { width: 132px; position: relative; z-index: 1; }
+.landing__steps { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
+.landing__step { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: var(--space-4); align-items: center; }
+.landing__step img { width: 64px; height: 64px; }
+.landing__step h3 { margin: 2px 0; }
+.landing__soon { display: flex; gap: var(--space-3); align-items: flex-start; padding: var(--space-4); border-radius: var(--radius-lg); border: 1.5px dashed var(--stroke-sub-300); }
+.landing__soon .db-icon { font-size: 22px; color: var(--primary-base); }
+@media (min-width: 720px) {
+  .landing { max-width: 960px; }
+  .landing__hero { max-width: 520px; }
+  .landing__steps { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .landing__step { grid-template-columns: 1fr; align-items: start; }
+  .landing__step img { width: 88px; height: 88px; }
+}
