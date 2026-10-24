@@ -17,7 +17,7 @@ export function LegalPage({ title, updated, children }: { title: string; updated
       <Alert.Root status="warning">
         <Alert.Icon as="i" className="ri-draft-line" aria-hidden="true" />
         <div>
-          <strong>Draft</strong>dibs is in beta. This is a plain-English draft and hasn&rsquo;t had a legal review yet. It&rsquo;ll be finalised before launch.
+          <strong>Draft</strong>Dibby is in beta. This is a plain-English draft and hasn&rsquo;t had a legal review yet. It&rsquo;ll be finalised before launch.
         </div>
       </Alert.Root>
       <div className="legal__body">{children}</div>

@@ -1,6 +1,6 @@
-# Dibs — notes for Claude Code
+# Dibby — notes for Claude Code
 
-Hackathon POC for Dibs, a group plans app: plan → share to WhatsApp → vote and RSVP → bills, PayID, card roulette → recap.
+Dibby, a group plans app, heading for a web V1 (dibby.social): plan → share to WhatsApp → vote and RSVP → bills, PayID, card roulette → recap.
 Build plan: https://claude.ai/artifact/2Lce9vh9ZvGunTKngL6sWX · Linear project "Dibs — Hackathon" (P-ARV-1).
 
 ## Commits
@@ -17,21 +17,23 @@ Build plan: https://claude.ai/artifact/2Lce9vh9ZvGunTKngL6sWX · Linear project 
 
 ## Design system
 
-The source of truth is the Dibs design system on claude.ai (https://claude.ai/artifact/77AdHKZGgDU4j19fqSsYdz).
+The source of truth is the design system on claude.ai (published when the app was called dibs) (https://claude.ai/artifact/77AdHKZGgDU4j19fqSsYdz).
 In this repo: read `packages/ui/docs/brand-book.md` before building UI, and `packages/ui/docs/components/<Name>.md` for each component.
 Open `packages/ui/design-system/index.html` in a browser to see every component rendered. Token values come from `packages/ui/scripts/gen-tokens.py` (see `packages/ui/README.md`).
 
-- Components are AlignUI (React + Tailwind v4), themed to Dibs: `apps/web/components/ui/*` (`import * as Button from "@/components/ui/button"`). Button, Badge, Avatar, Alert, Input/Label/Hint, Checkbox, Radio, Switch, Segmented control, Tab menu, Progress, Tooltip, Modal (the bottom sheet) and Toast (`toast.success(…)`). See them all at `/ui` in dev.
-- Their Tailwind theme (`packages/ui/src/tailwind-theme.css`) is generated from `tokens.json` by `pnpm tokens`, so `bg-primary-base`, `text-label-sm`, `rounded-lg` etc. are Dibs values. To change a component's look, edit its `tv()` styles in `components/ui`, not the app.
-- Dibs-only pieces with no AlignUI equivalent stay as `.db-` classes in `packages/ui/src/components.css`: card, plan card, vote option, bill split, chat bubble, stack/row, icon. The other `.db-` classes there are superseded by the components above.
+- Components are AlignUI (React + Tailwind v4), themed to Dibby: `apps/web/components/ui/*` (`import * as Button from "@/components/ui/button"`). Button, Badge, Avatar, Alert, Input/Label/Hint, Checkbox, Radio, Switch, Segmented control, Tab menu, Progress, Tooltip, Modal (the bottom sheet) and Toast (`toast.success(…)`). See them all at `/ui` in dev.
+- Their Tailwind theme (`packages/ui/src/tailwind-theme.css`) is generated from `tokens.json` by `pnpm tokens`, so `bg-primary-base`, `text-label-sm`, `rounded-lg` etc. are Dibby values. To change a component's look, edit its `tv()` styles in `components/ui`, not the app.
+- Dibby-only pieces with no AlignUI equivalent stay as `.db-` classes in `packages/ui/src/components.css`: card, plan card, vote option, bill split, chat bubble, stack/row, icon. The other `.db-` classes there are superseded by the components above.
 - `.db-` classes and the app's own classes are unlayered, so they beat Tailwind utilities. Don't put a `.db-`/app class and a utility for the same property on one element (e.g. use the `hidden` attribute, not the `hidden` class, on a `.section`).
 - No raw hex values in app code.
 - Violet `primary-base` is the brand; lime `accent-base` is the "calling dibs" moment, at most once per screen, always with black text.
 - Headings in Bricolage Grotesque, everything else Figtree, money and codes in DM Mono.
 - Phone first: 16px gutter, one column, main action pinned at the bottom as `<Button.Root size="large" block>`. Tap targets at least 44px.
 - Icons: Remix Icon, either the font (`<i className="ri-… db-icon" aria-hidden="true">`, or `<Button.Icon as="i" className="ri-…" />` inside a component) or `@remixicon/react`. Never emoji as icons.
-- Copy: Australian spelling, sentence case, lowercase **dibs**, sounds like a mate in the group chat. Never pushy about money.
-- Logos are in `packages/ui/assets/logos/`. `dibs-ai-member.svg` is only for Dibby.
+- The app is called **Dibby** (capital D in sentences; the logo is lowercase **dibby**). Dibby is both the app and the AI member in the chat: one character. "dibs" is only the verb ("call dibs", the lime moment), never the product name.
+- Internal names keep the old name on purpose: `@dibs/*` packages, `.db-` classes, `variant="dibs"` (the call-dibs button), `dibs:` storage keys, `dibs-*.svg` logo files. Don't rename them: storage keys would reset people's state.
+- Copy: Australian spelling, sentence case, sounds like a mate in the group chat. Never pushy about money.
+- Logos are in `packages/ui/assets/logos/`. `dibs-ai-member.svg` (the lime smiley) is Dibby's face in the chat; the app logo is the "hands up" mark.
 
 ## Email
 
@@ -41,7 +43,7 @@ Open `packages/ui/design-system/index.html` in a browser to see every component 
 
 ## Rules that must not break
 
-- Dibs never holds or moves money. Settle-up is PayID details only.
+- Dibby never holds or moves money. Settle-up is PayID details only.
 - PayID is shown only to people with a share on that bill who were confirmed at wrap-up (`get_payid`).
 - Balances are private: you see your own share; the payer sees their bill; everyone else sees "4 of 6 settled".
 - Dibby reads only messages it's tagged in, keeps no memory between plans, and never mentions money owed or anything personal.
@@ -60,6 +62,6 @@ Open `packages/ui/design-system/index.html` in a browser to see every component 
 
 - `apps/web` — Next.js 16 App Router. `lib/store` has the data layer (Supabase or in-memory), `lib/viewer.ts` works out who is looking at a plan.
 - `packages/shared` — bill maths, plan helpers, types.
-- `packages/ui` — tokens (and the generated Tailwind theme), Dibs-only component CSS, design-system copy.
-- `apps/web/components/ui` — the AlignUI components, Dibs-themed.
+- `packages/ui` — tokens (and the generated Tailwind theme), Dibby-only component CSS, design-system copy.
+- `apps/web/components/ui` — the AlignUI components, Dibby-themed.
 - `supabase/migrations` — schema and row-level security.

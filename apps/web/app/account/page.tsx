@@ -77,7 +77,7 @@ export default async function Account() {
         <section className="db-card section" aria-labelledby="keep-h">
           <h2 id="keep-h" className="title-h5">Keep your plans on every device</h2>
           <p className="paragraph-sm muted">
-            Right now dibs only knows you on this browser. Add your email and your plans come with you to your phone, laptop or the WhatsApp browser.
+            Right now Dibby only knows you on this browser. Add your email and your plans come with you to your phone, laptop or the WhatsApp browser.
           </p>
           <KeepPlansForm demo={!usingSupabase} />
         </section>
@@ -85,7 +85,7 @@ export default async function Account() {
 
       {organiser && (
         <section id="email" className="db-card section" aria-labelledby="email-h">
-          <h2 id="email-h" className="title-h5">Emails from dibs</h2>
+          <h2 id="email-h" className="title-h5">Emails from Dibby</h2>
           <BetaUpdatesToggle initial={betaUpdates?.subscribed ?? false} email={organiser.email} />
         </section>
       )}

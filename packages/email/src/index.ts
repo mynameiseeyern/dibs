@@ -10,7 +10,7 @@ export const BETA_LIST = "beta_updates";
 export function senderFromEnv(site: string) {
   return {
     site: site.replace(/\/$/, ""),
-    name: process.env.EMAIL_SENDER_NAME || "dibs, Sydney NSW",
+    name: process.env.EMAIL_SENDER_NAME || "Dibby, Sydney NSW",
     contact: process.env.EMAIL_REPLY_TO || "hello@dibby.social",
   };
 }

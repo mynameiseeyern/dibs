@@ -112,7 +112,7 @@ for th in ('light','dark'):
 print('FAILS', fails)
 
 tokens = {
-  "name": "Dibs", "version": 1,
+  "name": "Dibby", "version": 1,
   "meta": {"source": "code", "note": "Structure (semantic bg/text/stroke ladder, status families, type-scale names, control sizes) derived from the Align UI-based finance, HR, marketing and AI templates; values come from the Dibs V3 logo (violet #6D4AFF, lime #C8F03C, ink #141216) and the Friends App product plan.", "synced": "2026-10-21"},
   "color": {"themes": [{"id": "light", "name": "Light"}, {"id": "dark", "name": "Dark"}], "tokens": T},
   "type": {

@@ -83,7 +83,7 @@ const sentence = (c: Condition | undefined, fallback: string) => {
   return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
 };
 
-/** Plan start as the local date and hour where dibs runs (Sydney and Melbourne). */
+/** Plan start as the local date and hour where Dibby runs (Sydney and Melbourne). */
 function localParts(iso: string) {
   const p = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "numeric", day: "numeric", hour: "numeric", hourCycle: "h23" }).formatToParts(new Date(iso));
   const get = (t: string) => Number(p.find((x) => x.type === t)?.value);

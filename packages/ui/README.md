@@ -1,12 +1,12 @@
 # @dibs/ui
 
-The Dibs design system in code. The published copy, with live previews of every component, is on claude.ai: https://claude.ai/artifact/77AdHKZGgDU4j19fqSsYdz
+The Dibby design system in code. The published copy, with live previews of every component, is on claude.ai: https://claude.ai/artifact/77AdHKZGgDU4j19fqSsYdz
 
 ## What's here
 
 - `tokens.json`: every token (colours in light and dark, type, spacing, radii, sizes, shadows).
 - `src/tokens.css`: generated from `tokens.json` by `pnpm tokens`. Don't edit it by hand.
-- `src/tailwind-theme.css`: generated with `tokens.css`. The Tailwind v4 theme that makes the AlignUI components in `apps/web/components/ui` use Dibs colours, type, radii and shadows.
+- `src/tailwind-theme.css`: generated with `tokens.css`. The Tailwind v4 theme that makes the AlignUI components in `apps/web/components/ui` use Dibby colours, type, radii and shadows.
 - `src/components.css`: the `.db-` component classes. Card, plan card, vote option, bill split and chat bubble are still used by the app; the rest are superseded by the AlignUI components. Fonts and icons load in the app layout.
 - `docs/brand-book.md`: voice, colour, type, layout, shape, motion and icon rules. Read this first.
 - `docs/components/<Name>.md`: when to use each component and what markup it expects.

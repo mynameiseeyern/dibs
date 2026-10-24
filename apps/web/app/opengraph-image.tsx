@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import { OG, OG_FILL, OgMark, TAGLINE, ogFonts } from "@/lib/og";
 
 // The card for a bare dibby.social link (and every page without its own card).
-export const alt = "dibs: plans sorted, money square. A plan card with four friends in.";
+export const alt = "Dibby: plans sorted, money square. A plan card with four friends in.";
 export const size = OG.size;
 export const contentType = "image/png";
 
@@ -20,7 +20,7 @@ export default async function Image() {
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", width: 620 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16, fontFamily: "Bricolage", fontSize: 48, letterSpacing: "-0.04em" }}>
             <OgMark size={64} tile="rgba(255,255,255,0.14)" />
-            dibs
+            dibby
           </div>
           <div style={{ display: "flex", flexDirection: "column" }}>
             <div style={{ display: "flex", flexDirection: "column", fontFamily: "Bricolage", fontSize: 84, lineHeight: 0.98, letterSpacing: "-0.035em" }}>

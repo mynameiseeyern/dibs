@@ -28,9 +28,9 @@ export function DibbyMark({ size = 32 }: { size?: number }) {
 
 export function Wordmark({ href = "/" }: { href?: string }) {
   return (
-    <a className="wordmark" href={href} aria-label="dibs home">
+    <a className="wordmark" href={href} aria-label="Dibby home">
       <LogoMark size={32} />
-      dibs
+      dibby
     </a>
   );
 }

@@ -7,7 +7,7 @@ export function SiteFooter() {
         <a href="/terms">Terms</a>
         <a href="mailto:hello@dibby.social">Contact</a>
       </nav>
-      <p className="paragraph-xs muted">dibs never holds or moves your money.</p>
+      <p className="paragraph-xs muted">Dibby never holds or moves your money.</p>
     </footer>
   );
 }

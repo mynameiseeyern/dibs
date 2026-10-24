@@ -122,7 +122,7 @@ export function Thread({
         ) : canPost ? (
           <Composer action={post} />
         ) : (
-          <p className="paragraph-sm muted thread__readonly">Get the dibs app to chat here. You can still vote and RSVP.</p>
+          <p className="paragraph-sm muted thread__readonly">Get the Dibby app to chat here. You can still vote and RSVP.</p>
         )}
       </div>
     </section>

@@ -182,7 +182,7 @@ export function PlacePicker({
 
           <div aria-live="polite">
             {status === "loading" && <Hint.Root>Looking…</Hint.Root>}
-            {status === "off" && <Hint.Root hasError>Place search isn&rsquo;t set up yet. Ask whoever runs dibs to add the Google key.</Hint.Root>}
+            {status === "off" && <Hint.Root hasError>Place search isn&rsquo;t set up yet. Ask whoever runs Dibby to add the Google key.</Hint.Root>}
             {status === "error" && <Hint.Root hasError>Couldn&rsquo;t search just then. Try again in a sec.</Hint.Root>}
             {status === "idle" && q.trim().length >= 2 && places.length === 0 && <Hint.Root>Nothing open by that name. Try something broader.</Hint.Root>}
             {q.trim().length < 2 && <Hint.Root>Search for a business, or type a place in below.</Hint.Root>}

@@ -38,7 +38,7 @@ export function planIcs(plan: Plan, url: string): string {
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//dibs//plans//EN",
+    "PRODID:-//dibby//plans//EN",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     "BEGIN:VEVENT",

@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { OG, SITE_DESCRIPTION, SITE_NAME } from "@/lib/og";
 
-// Add to Home Screen: opens straight to your plans, in dibs violet.
+// Add to Home Screen: opens straight to your plans, in Dibby violet.
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: SITE_NAME,

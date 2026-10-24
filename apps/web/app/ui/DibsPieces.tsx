@@ -98,7 +98,7 @@ function Piece({ title, children }: { title: string; children: React.ReactNode }
 export function DibsPieces() {
   return (
     <>
-      <h2 className="title-h4">Dibs pieces</h2>
+      <h2 className="title-h4">Dibby pieces</h2>
 
       <Piece title="Plan card">
         <State label="Default">

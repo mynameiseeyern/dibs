@@ -47,7 +47,7 @@ export function renderReleaseNote(note: ReleaseNote, sender: Sender, links: { un
     eyebrow: `Beta update · ${eyebrowDate(note.date)}`,
     body: markdownToEmailHtml(note.markdown),
     footer: {
-      reason: "You're getting this because you said yes to dibs beta updates.",
+      reason: "You're getting this because you said yes to Dibby beta updates.",
       unsubscribeUrl: links.unsubscribeUrl,
       settingsUrl: links.settingsUrl,
     },
@@ -56,7 +56,7 @@ export function renderReleaseNote(note: ReleaseNote, sender: Sender, links: { un
     markdownToText(note.markdown),
     "",
     "—",
-    "You're getting this because you said yes to dibs beta updates.",
+    "You're getting this because you said yes to Dibby beta updates.",
     `Unsubscribe: ${links.unsubscribeUrl}`,
     `${sender.name} · ${sender.contact}`,
   ].join("\n");

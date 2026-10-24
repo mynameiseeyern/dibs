@@ -22,7 +22,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
         </Button.Root>
         <Button.Root asChild mode="ghost" size="small">
           <a href="/">
-            Back to dibs
+            Back to Dibby
           </a>
         </Button.Root>
         {error.digest && <p className="paragraph-sm muted">Ref {error.digest}</p>}

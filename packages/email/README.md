@@ -1,6 +1,6 @@
 # @dibs/email
 
-Every dibs email shares one shell: a violet header with the logo, a white card, and a footer that says why you got it, how to stop, and who it's from. Colours come from `packages/ui/tokens.json`, so a token change reaches the emails too.
+Every Dibby email shares one shell: a violet header with the logo, a white card, and a footer that says why you got it, how to stop, and who it's from. Colours come from `packages/ui/tokens.json`, so a token change reaches the emails too.
 
 - `src/layout.ts`: the shell, plus `h1`, `para`, `muted` and `button` for emails written in code
 - `src/markdown.ts`: markdown to email-safe HTML (inline styles, because Gmail drops most `<style>`)
@@ -9,7 +9,7 @@ Every dibs email shares one shell: a violet header with the logo, a white card, 
 
 ## Release notes to beta users
 
-People join the **beta updates** list by ticking "Send me dibs beta updates" at sign-up (unticked by default) or with the switch on `/account`. Every release note has an unsubscribe link that works without signing in, plus `List-Unsubscribe` headers so Gmail and Apple Mail show their own unsubscribe button. Unsubscribing is instant.
+People join the **beta updates** list by ticking "Send me Dibby beta updates" at sign-up (unticked by default) or with the switch on `/account`. Every release note has an unsubscribe link that works without signing in, plus `List-Unsubscribe` headers so Gmail and Apple Mail show their own unsubscribe button. Unsubscribing is instant.
 
 1. Write `release-notes/YYYY-MM-DD-short-name.md`:
 
@@ -20,7 +20,7 @@ People join the **beta updates** list by ticking "Send me dibs beta updates" at 
    date: 2026-10-23
    ---
 
-   # What's new in dibs
+   # What's new in Dibby
    ...
    ```
 

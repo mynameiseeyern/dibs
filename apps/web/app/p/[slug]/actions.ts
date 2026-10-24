@@ -93,7 +93,7 @@ export async function trackShare(slug: string, kind: "invite" | "im_in" | "bills
   await track({ name: "plan_shared", planId: view.plan.id, userId: view.me.user_id, guestId: view.me.guest_id, props: { kind } });
 }
 
-/** A guest tapped "Get the dibs app" (web to app, ARV-50). There's no app yet, so it's a count. */
+/** A guest tapped "Get the Dibby app" (web to app, ARV-50). There's no app yet, so it's a count. */
 export async function appInterest(slug: string): Promise<void> {
   const view = await loadPlan(slug);
   if (!view?.me) return;

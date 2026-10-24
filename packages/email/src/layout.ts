@@ -4,7 +4,7 @@ import { dark, fonts, light } from "./theme";
 export interface Sender {
   /** Public site address, no trailing slash, e.g. https://dibby.social. Images load from here. */
   site: string;
-  /** Shown in the footer, e.g. "dibs, Sydney NSW". */
+  /** Shown in the footer, e.g. "Dibby, Sydney NSW". */
   name: string;
   /** Where replies and questions go, e.g. hello@dibby.social. */
   contact: string;
@@ -25,7 +25,7 @@ export interface EmailParts {
     reason: string;
     /** One-click unsubscribe link. Required for anything that isn't a sign-in or receipt. */
     unsubscribeUrl?: string;
-    /** Where they can change what dibs emails them about. */
+    /** Where they can change what Dibby emails them about. */
     settingsUrl?: string;
   };
 }
@@ -33,7 +33,7 @@ export interface EmailParts {
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 /**
- * The dibs email shell: violet header band with the logo, white card, quiet footer.
+ * The Dibby email shell: violet header band with the logo, white card, quiet footer.
  * Table layout and inline styles so it holds up in Gmail and Outlook. Clients that
  * honour prefers-color-scheme (Apple Mail, Outlook apps) get the dark palette.
  */
@@ -90,7 +90,7 @@ export function renderEmail(p: EmailParts): string {
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">
     <tr><td style="background:${L["primary-base"]};border-radius:24px 24px 0 0;padding:24px 32px;" class="db-pad">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-        <td valign="middle"><a href="${esc(site)}" style="text-decoration:none;"><img src="${esc(site)}/email/dibs-header@2x.png" width="96" height="32" alt="dibs" style="width:96px;height:32px;color:${L["static-white"]};font:800 26px ${fonts.display};"></a></td>
+        <td valign="middle"><a href="${esc(site)}" style="text-decoration:none;"><img src="${esc(site)}/email/dibby-header@2x.png" width="107" height="32" alt="Dibby" style="width:107px;height:32px;color:${L["static-white"]};font:800 26px ${fonts.display};"></a></td>
         ${p.eyebrow ? `<td align="right" valign="middle" style="font:700 12px/16px ${fonts.sans};letter-spacing:0.08em;text-transform:uppercase;color:${L["static-white"]};">${esc(p.eyebrow)}</td>` : ""}
       </tr></table>
     </td></tr>
@@ -102,7 +102,7 @@ ${p.body}
     <tr><td class="db-pad" style="padding:24px 32px 0;font:400 13px/20px ${fonts.sans};color:${L["text-sub-600"]};" align="center">
       <p class="db-sub" style="margin:0 0 8px;color:${L["text-sub-600"]};">${esc(p.footer.reason)}</p>
       ${links.length ? `<p class="db-sub" style="margin:0 0 8px;color:${L["text-sub-600"]};">${links.join(" &nbsp;·&nbsp; ")}</p>` : ""}
-      <p class="db-sub" style="margin:0 0 8px;color:${L["text-sub-600"]};">dibs never asks for your password or bank details by email.</p>
+      <p class="db-sub" style="margin:0 0 8px;color:${L["text-sub-600"]};">Dibby never asks for your password or bank details by email.</p>
       <p class="db-sub" style="margin:0;color:${L["text-sub-600"]};">${esc(name)} &nbsp;·&nbsp; <a href="mailto:${esc(contact)}" class="db-link-sub" style="color:${L["text-sub-600"]};text-decoration:underline;">${esc(contact)}</a></p>
     </td></tr>
   </table>

@@ -20,7 +20,7 @@ import { OfflineBanner } from "@/components/OfflineBanner";
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
   applicationName: SITE_NAME,
-  title: { default: `${SITE_NAME}: ${TAGLINE.toLowerCase()}`, template: "%s · dibs" },
+  title: { default: `${SITE_NAME}: ${TAGLINE.toLowerCase()}`, template: "%s · Dibby" },
   description: SITE_DESCRIPTION,
   // Plans and personal pages stay out of search. The landing page opts back in.
   robots: { index: false, follow: false },
