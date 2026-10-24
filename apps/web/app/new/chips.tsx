@@ -1,8 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import * as Button from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
+import * as Select from "@/components/ui/select";
+import { DayStrip, dateLabel, timeLabel } from "@/components/DateTime";
 
 const TZ = "Australia/Sydney";
 export const TIMES = [
@@ -21,10 +23,12 @@ export const SPENDS = [
 
 /** "today", "tomorrow" or "Sat 24", for Dibby's line. */
 export function dayWord(days: { id: string; label: string }[], id: string | null): string | null {
+  if (!id) return null;
   const d = days.find((x) => x.id === id);
-  return d ? d.label.toLowerCase() : null;
+  return d ? d.label.toLowerCase() : dateLabel(id);
 }
-export const timeWord = (id: string | null) => TIMES.find((t) => t.id === id)?.label.toLowerCase() ?? null;
+/** "dinner", or "7:30pm" for a time picked from the list. */
+export const timeWord = (id: string | null) => (id ? (TIMES.find((t) => t.id === id)?.label.toLowerCase() ?? timeLabel(id)) : null);
 
 /** Today and the next six days in Sydney: { id: "2026-10-24", label: "Sat 24" }. */
 export function nextDays() {
@@ -36,7 +40,20 @@ export function nextDays() {
   });
 }
 
-export function Chips<T extends string>({ label, items, value, onChange }: { label: string; items: readonly { id: T; label: string }[]; value: T | null; onChange: (v: T | null) => void }) {
+export function Chips<T extends string>({
+  label,
+  items,
+  value,
+  onChange,
+  children,
+}: {
+  label: string;
+  items: readonly { id: T; label: string }[];
+  value: T | null;
+  onChange: (v: T | null) => void;
+  /** Extra chips at the end of the row, like "Pick a date". */
+  children?: React.ReactNode;
+}) {
   const id = `chips-${label.toLowerCase().replace(/\W+/g, "-")}`;
   return (
     <div className="chip-group">
@@ -49,6 +66,7 @@ export function Chips<T extends string>({ label, items, value, onChange }: { lab
             {it.label}
           </Chip>
         ))}
+        {children}
       </div>
     </div>
   );
@@ -66,7 +84,6 @@ export function Chip({ on, children, ...rest }: { on: boolean; children: React.R
 /** Day and time chips. Anything tapped is a fixed fact; leave both blank and the time stays to be decided. */
 export type WhenValue = { date: string | null; time: string | null };
 export function WhenChips({ value, onChange }: { value?: WhenValue; onChange?: (v: WhenValue) => void }) {
-  const days = useMemo(nextDays, []);
   const [own, setOwn] = useState<WhenValue>({ date: null, time: null });
   const { date, time } = value ?? own;
   const set = (v: WhenValue) => (onChange ? onChange(v) : setOwn(v));
@@ -76,10 +93,40 @@ export function WhenChips({ value, onChange }: { value?: WhenValue; onChange?: (
     <>
       <input type="hidden" name="pick_date" value={date ?? ""} />
       <input type="hidden" name="pick_time" value={time ?? ""} />
-      <Chips label="When" items={days} value={date} onChange={setDate} />
-      <Chips label="Time" items={TIMES} value={time} onChange={setTime} />
+      <DayStrip label="When" value={date} onChange={setDate} bleed />
+      <Chips label="Time" items={TIMES} value={time} onChange={setTime}>
+        <OtherTime value={time} onChange={setTime} />
+      </Chips>
       {!date && !time && <p className="paragraph-xs muted">Leave it blank to sort the time out later.</p>}
     </>
+  );
+}
+
+const isPreset = (t: string | null) => TIMES.some((x) => x.id === t);
+
+/** The last time chip: any half hour, from AlignUI's Select. */
+function OtherTime({ value, onChange }: { value: string | null; onChange: (t: string | null) => void }) {
+  const other = value && !isPreset(value) ? value : null;
+  const slots = Array.from({ length: 36 }, (_, i) => {
+    const m = 6 * 60 + i * 30;
+    return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+  });
+  return (
+    <Select.Root value={other ?? ""} onValueChange={onChange}>
+      <Select.Trigger
+        aria-label="Other time"
+        className={`w-auto flex-none rounded-full px-4 text-label-md shadow-none ring-0 ${other ? "bg-primary-base text-static-white hover:bg-primary-hover data-[placeholder]:text-static-white" : "bg-bg-soft-200 text-text-strong-950 hover:bg-bg-sub-300 data-[placeholder]:text-text-strong-950"}`}
+      >
+        <Select.Value placeholder="Other time">{other ? timeLabel(other) : "Other time"}</Select.Value>
+      </Select.Trigger>
+      <Select.Content>
+        {slots.map((t) => (
+          <Select.Item key={t} value={t}>
+            {timeLabel(t)}
+          </Select.Item>
+        ))}
+      </Select.Content>
+    </Select.Root>
   );
 }
 

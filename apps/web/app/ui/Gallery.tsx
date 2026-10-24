@@ -18,6 +18,21 @@ import * as ProgressBar from "@/components/ui/progress-bar";
 import * as Tooltip from "@/components/ui/tooltip";
 import * as Modal from "@/components/ui/modal";
 import { toast } from "@/components/ui/toast";
+import { Calendar } from "@/components/ui/datepicker";
+import * as Select from "@/components/ui/select";
+import * as Textarea from "@/components/ui/textarea";
+import * as Popover from "@/components/ui/popover";
+import * as Dropdown from "@/components/ui/dropdown";
+import * as Drawer from "@/components/ui/drawer";
+import * as Tag from "@/components/ui/tag";
+import * as Divider from "@/components/ui/divider";
+import * as Accordion from "@/components/ui/accordion";
+import * as Slider from "@/components/ui/slider";
+import * as DigitInput from "@/components/ui/digit-input";
+import * as ProgressCircle from "@/components/ui/progress-circle";
+import * as LinkButton from "@/components/ui/link-button";
+import { useState } from "react";
+import { DayStrip, DateTimeField } from "@/components/DateTime";
 import {
   RiAddLine,
   RiMapPinLine,
@@ -28,6 +43,11 @@ import {
   RiAlertFill,
   RiCloseLine,
   RiWhatsappLine,
+  RiCalendarLine,
+  RiMore2Line,
+  RiPencilLine,
+  RiDeleteBinLine,
+  RiArrowRightSLine,
 } from "@remixicon/react";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -257,6 +277,145 @@ export function Gallery() {
           </Button.Root>
         </div>
       </Section>
+
+      <Section title="Date picker">
+        <DateDemo />
+      </Section>
+
+      <Section title="Select and textarea">
+        <div className="flex flex-col gap-2">
+          <Label.Root>Time</Label.Root>
+          <Select.Root defaultValue="19:00">
+            <Select.Trigger>
+              <Select.TriggerIcon as={RiTimeLine} />
+              <Select.Value placeholder="Pick a time" />
+            </Select.Trigger>
+            <Select.Content>
+              {["11:00", "12:30", "15:00", "18:00", "19:00", "21:00"].map((t) => (
+                <Select.Item key={t} value={t}>
+                  {t}
+                </Select.Item>
+              ))}
+            </Select.Content>
+          </Select.Root>
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label.Root htmlFor="g-notes">Anything else?</Label.Root>
+          <Textarea.Root id="g-notes" placeholder="BYO, bring a jumper…" maxLength={200}>
+            <Textarea.CharCounter current={0} max={200} />
+          </Textarea.Root>
+        </div>
+      </Section>
+
+      <Section title="Popover, dropdown and drawer">
+        <div className="db-row">
+          <Popover.Root>
+            <Popover.Trigger asChild>
+              <Button.Root variant="neutral" mode="lighter">Popover</Button.Root>
+            </Popover.Trigger>
+            <Popover.Content>Only people in the plan see the address.</Popover.Content>
+          </Popover.Root>
+          <Dropdown.Root>
+            <Dropdown.Trigger asChild>
+              <Button.Root variant="neutral" mode="lighter" iconOnly aria-label="More">
+                <Button.Icon as={RiMore2Line} />
+              </Button.Root>
+            </Dropdown.Trigger>
+            <Dropdown.Content align="start">
+              <Dropdown.Item>
+                <Dropdown.ItemIcon as={RiPencilLine} />
+                Edit plan
+              </Dropdown.Item>
+              <Dropdown.Item>
+                <Dropdown.ItemIcon as={RiDeleteBinLine} />
+                Call it off
+              </Dropdown.Item>
+            </Dropdown.Content>
+          </Dropdown.Root>
+          <Drawer.Root>
+            <Drawer.Trigger asChild>
+              <Button.Root variant="neutral" mode="lighter">Drawer</Button.Root>
+            </Drawer.Trigger>
+            <Drawer.Content>
+              <Drawer.Header>
+                <Drawer.Title>Plan settings</Drawer.Title>
+              </Drawer.Header>
+              <Drawer.Body className="p-4">Side panel. Bottom sheet (Modal) is the default on phones.</Drawer.Body>
+            </Drawer.Content>
+          </Drawer.Root>
+        </div>
+      </Section>
+
+      <Section title="Tag, divider and link button">
+        <div className="db-row">
+          <Tag.Root>Surry Hills</Tag.Root>
+          <Tag.Root variant="gray">Under $30</Tag.Root>
+          <Tag.Root>
+            Dumplings
+            <Tag.DismissButton />
+          </Tag.Root>
+        </div>
+        <Divider.Root variant="line-text">or</Divider.Root>
+        <LinkButton.Root variant="primary" size="medium">
+          See who's in
+          <LinkButton.Icon as={RiArrowRightSLine} />
+        </LinkButton.Root>
+      </Section>
+
+      <Section title="Accordion">
+        <Accordion.Root type="single" collapsible className="flex flex-col gap-2">
+          {[
+            ["Who sees my address?", "Only people in the plan."],
+            ["Does dibs hold money?", "Never. It just shows PayID details."],
+          ].map(([q, a]) => (
+            <Accordion.Item key={q} value={q}>
+              <Accordion.Trigger>
+                {q}
+                <Accordion.Arrow />
+              </Accordion.Trigger>
+              <Accordion.Content>{a}</Accordion.Content>
+            </Accordion.Item>
+          ))}
+        </Accordion.Root>
+      </Section>
+
+      <Section title="Slider, code and progress circle">
+        <Slider.Root defaultValue={[6]} min={2} max={20} step={1}>
+          <Slider.Thumb />
+        </Slider.Root>
+        <DigitInput.Root numInputs={6} value="4821" onChange={() => {}} />
+        <div className="db-row">
+          <ProgressCircle.Root value={66} size="56" />
+          <ProgressCircle.Root value={100} size="48" />
+        </div>
+      </Section>
     </Tooltip.Provider>
+  );
+}
+
+function DateDemo() {
+  const [day, setDay] = useState<Date | undefined>();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const [stripDay, setStripDay] = useState<string | null>(null);
+  return (
+    <>
+      <DayStrip label="When" value={stripDay} onChange={setStripDay} bleed />
+      <DateTimeField name="g-when" label="Day and time" hint="Sydney and Melbourne time." />
+      <div className="rounded-lg p-2 ring-1 ring-inset ring-stroke-soft-200">
+        <Calendar mode="single" selected={day} onSelect={setDay} disabled={{ before: today }} weekStartsOn={1} />
+      </div>
+      <Popover.Root>
+        <Popover.Trigger asChild>
+          <Button.Root variant="neutral" mode="stroke" size="large" block>
+            <Button.Icon as={RiCalendarLine} />
+            {day ? day.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" }) : "Pick a date"}
+          </Button.Root>
+        </Popover.Trigger>
+        <Popover.Content className="p-2">
+          <Calendar mode="single" selected={day} onSelect={setDay} disabled={{ before: today }} weekStartsOn={1} />
+        </Popover.Content>
+      </Popover.Root>
+    </>
   );
 }
