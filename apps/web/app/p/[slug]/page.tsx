@@ -21,11 +21,14 @@ import { owedToYou, youOwe } from "@/lib/copy";
 import { store } from "@/lib/store";
 import { formatShort, formatWhen } from "@/lib/time";
 import { loadPlan } from "@/lib/viewer";
-import { addTime, goWithTime, markFree, removeTime, appInterest, trackShare, addOption, askDibbyMore, joinPlan, lockPlan, removeMe, removeOption, setRsvp, vote } from "./actions";
+import { removeMyPhoto, addTime, goWithTime, markFree, removeTime, appInterest, trackShare, addOption, askDibbyMore, joinPlan, lockPlan, removeMe, removeOption, setRsvp, vote } from "./actions";
 import { setPlace } from "./manage/actions";
 import { JoinForm } from "./JoinForm";
 import { ShareButton } from "./ShareButton";
 import { GetTheApp } from "./GetTheApp";
+import { CameraCard } from "./CameraCard";
+import { PhotoRoll } from "./PhotoRoll";
+import { loadRoll } from "@/lib/photos";
 import { CircleAction } from "@/components/CircleAction";
 import { WhenWorks } from "./WhenWorks";
 import { MAX_TIMES, rankTimes } from "@dibs/shared/when";
@@ -128,6 +131,8 @@ export default async function PlanPage({ params, searchParams }: Props) {
   const voteOpen = plan.status === "voting";
   const iAmIn = Boolean(me && me.rsvp === "in" && !me.waitlisted);
   const chatOpen = Boolean(me) && access?.level !== "hidden";
+  // The Dibby camera, during the night (it develops at wrap-up and then lives in the recap).
+  const roll = !wrapped ? await loadRoll(plan, members, me) : null;
 
   return (
     <>
@@ -236,6 +241,13 @@ export default async function PlanPage({ params, searchParams }: Props) {
               </p>
             )}
           </section>
+        )}
+
+        {roll && (roll.canAdd || roll.photos.length > 0) && (
+          <div className="db-stack">
+            {roll.canAdd && <CameraCard slug={slug} taken={roll.taken} max={roll.max} revealed={roll.revealed} />}
+            <PhotoRoll slug={slug} photos={roll.photos} revealed={roll.revealed} remove={removeMyPhoto.bind(null, slug)} />
+          </div>
         )}
 
         {isHost && plan.status === "locked" && started && (

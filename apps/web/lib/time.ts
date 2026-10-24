@@ -45,3 +45,11 @@ export function formatShort(iso: string | null): string | null {
     .replace(/\s/g, "");
   return `${day} ${time}`;
 }
+
+/** The film-style stamp on a Dibby camera photo: "24 OCT · 9:41PM". */
+export function formatStamp(iso: string): string {
+  const d = new Date(iso);
+  const day = new Intl.DateTimeFormat("en-AU", { timeZone: TZ, day: "numeric", month: "short" }).format(d).toUpperCase();
+  const time = new Intl.DateTimeFormat("en-AU", { timeZone: TZ, hour: "numeric", minute: "2-digit" }).format(d).replace(/\s/g, "").toUpperCase();
+  return `${day} · ${time}`;
+}

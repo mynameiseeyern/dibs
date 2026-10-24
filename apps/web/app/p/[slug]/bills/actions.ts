@@ -26,6 +26,11 @@ export async function wrapUp(slug: string, form: FormData): Promise<void> {
   if (view.plan.status !== "wrapped") {
     await store.updatePlan(view.plan.id, { status: "wrapped", no_bills: noBills });
     await store.addMessage({ planId: view.plan.id, memberId: null, kind: "system", body: `${came.size} came. ${noBills ? "Nothing to split." : "Time to square up."}` });
+    // Wrap-up is when the Dibby camera's photos develop.
+    const shots = (await store.listPhotos(view.plan.id)).length;
+    if (shots > 0) {
+      await store.addMessage({ planId: view.plan.id, memberId: null, kind: "dibby", body: `The photos are in: ${shots} from the night. Have a look in the recap.` });
+    }
   } else if (noBills !== view.plan.no_bills) {
     await store.updatePlan(view.plan.id, { no_bills: noBills });
   }

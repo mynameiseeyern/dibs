@@ -9,6 +9,10 @@ import { RecapForm } from "./RecapForm";
 import * as Button from "@/components/ui/button";
 import * as Alert from "@/components/ui/alert";
 import { planPreview } from "@/lib/plan-preview";
+import { loadRoll } from "@/lib/photos";
+import { CameraCard } from "../CameraCard";
+import { PhotoRoll } from "../PhotoRoll";
+import { removeMyPhoto } from "../actions";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   return planPreview((await params).slug, { label: "Recap", path: "/recap", blurb: "How it went, in one place." });
@@ -60,6 +64,7 @@ export default async function Recap({ params }: { params: Promise<{ slug: string
   for (const a of answers) if (a.mvp_member_id) mvpVotes.set(a.mvp_member_id, (mvpVotes.get(a.mvp_member_id) ?? 0) + 1);
   const topMvp = [...mvpVotes.entries()].sort((a, b) => b[1] - a[1])[0];
   const moments = answers.filter((a) => a.best_moment);
+  const roll = await loadRoll(plan, members, me);
 
   return (
     <main className="page">
@@ -69,6 +74,14 @@ export default async function Recap({ params }: { params: Promise<{ slug: string
         <h1 className="title-h3">The recap</h1>
         <p className="muted">{answers.length} of {came.length} have chimed in. Only people who came can see this.</p>
       </div>
+
+      {roll && (roll.photos.length > 0 || roll.canAdd) && (
+        <section className="section db-stack" aria-labelledby="photos-h">
+          <h2 id="photos-h" className="title-h5">The photos</h2>
+          <PhotoRoll slug={slug} photos={roll.photos} revealed={roll.revealed} remove={removeMyPhoto.bind(null, slug)} />
+          {roll.canAdd && roll.taken < roll.max && <CameraCard slug={slug} taken={roll.taken} max={roll.max} revealed={roll.revealed} />}
+        </section>
+      )}
 
       <RecapForm
         action={saveRecap.bind(null, slug)}

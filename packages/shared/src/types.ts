@@ -128,3 +128,15 @@ export interface TimeVote {
   time_id: string;
   member_id: string;
 }
+
+/** A photo someone took with the Dibby camera. The image itself is in private storage. */
+export interface PlanPhoto {
+  id: string;
+  plan_id: string;
+  member_id: string;
+  /** Four colours from the shot's corners ("rrggbb,rrggbb,rrggbb,rrggbb"), worked out on the phone. Only a blur of colour: the developing tile glows with it. */
+  glow: string | null;
+  width: number | null;
+  height: number | null;
+  created_at: string;
+}

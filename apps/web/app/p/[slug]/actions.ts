@@ -419,3 +419,15 @@ export async function markChatSeen(slug: string): Promise<void> {
     console.warn("[chat seen]", e);
   }
 }
+
+/** Take back one of your own photos (once they've developed, so you can see what you're deleting). */
+export async function removeMyPhoto(slug: string, photoId: string): Promise<{ error?: string }> {
+  const view = await loadPlan(slug);
+  if (!view?.me) return { error: "Join the plan first." };
+  const photo = (await store.listPhotos(view.plan.id)).find((p) => p.id === photoId);
+  if (!photo || photo.member_id !== view.me.id) return { error: "That's not your photo." };
+  await store.removePhoto(view.plan.id, photoId);
+  revalidatePlan(slug);
+  revalidatePath(`/p/${slug}/recap`);
+  return {};
+}
