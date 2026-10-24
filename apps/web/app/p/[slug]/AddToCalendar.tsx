@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import * as Button from "@/components/ui/button";
+import * as Modal from "@/components/ui/modal";
+import { CircleAction } from "@/components/CircleAction";
 
 export interface CalendarLinks {
   ics: string;
@@ -11,9 +13,8 @@ export interface CalendarLinks {
 }
 
 /**
- * "Add to calendar" opens a short list of calendars to pick from, the same on every device.
- * Apple Calendar uses the .ics file, which iPhone and Mac open straight into the add-event sheet;
- * the rest open each calendar's own add-event page.
+ * Add to calendar: one button on the plan card, and the choices in a bottom sheet (Apple opens the
+ * .ics straight into its add-event sheet; the others open their own add-event page).
  */
 export function AddToCalendar({ links }: { links: CalendarLinks }) {
   const [open, setOpen] = useState(false);
@@ -26,39 +27,25 @@ export function AddToCalendar({ links }: { links: CalendarLinks }) {
   ];
 
   return (
-    <div className="add-to-calendar">
-      <Button.Root
-        type="button"
-        variant="neutral"
-        mode="lighter"
-        block
-        aria-expanded={open}
-        aria-controls="calendar-options"
-        onClick={() => setOpen((o) => !o)}
-      >
-        <i className="ri-calendar-event-line db-icon" aria-hidden="true" />
-        Add to calendar
-        <i className={`${open ? "ri-arrow-up-s-line" : "ri-arrow-down-s-line"} db-icon`} aria-hidden="true" />
-      </Button.Root>
-      {open && (
-        <ul id="calendar-options" className="add-to-calendar__list">
-          {options.map((o) => (
-            <li key={o.label}>
-              <Button.Root asChild mode="ghost" block>
-                <a
-                  className="add-to-calendar__option"
-                  href={o.href}
-                  {...(o.external ? { target: "_blank", rel: "noreferrer" } : {})}
-                  onClick={() => setOpen(false)}
-                >
-                  <i className={`${o.icon} db-icon`} aria-hidden="true" />
-                  {o.label}
-                </a>
-              </Button.Root>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+    <>
+      <CircleAction icon="ri-calendar-event-line" label="Calendar" onClick={() => setOpen(true)} />
+      <Modal.Root open={open} onOpenChange={setOpen}>
+        <Modal.Content>
+          <Modal.Header title="Add to calendar" />
+          <ul className="add-to-calendar__list">
+            {options.map((o) => (
+              <li key={o.label}>
+                <Button.Root asChild mode="ghost" block>
+                  <a className="add-to-calendar__option" href={o.href} {...(o.external ? { target: "_blank", rel: "noreferrer" } : {})} onClick={() => setOpen(false)}>
+                    <i className={`${o.icon} db-icon`} aria-hidden="true" />
+                    {o.label}
+                  </a>
+                </Button.Root>
+              </li>
+            ))}
+          </ul>
+        </Modal.Content>
+      </Modal.Root>
+    </>
   );
 }

@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { countIn, planAccess, READ_ONLY_NOTE, shareText } from "@dibs/shared/plans";
+import { countIn, planAccess, READ_ONLY_NOTE, shareText, unreadCount } from "@dibs/shared/plans";
 import { formatAud } from "@dibs/shared/bills";
 import type { PlanMember, Rsvp } from "@dibs/shared/types";
 import { Wordmark } from "@/components/Logo";
 import { AccountButton } from "@/components/AccountButton";
 import { Suspense } from "react";
 import { Weather } from "./Weather";
-import { PlanTabs } from "./PlanTabs";
 import { RsvpPicker } from "./RsvpPicker";
 import { AddToCalendar } from "./AddToCalendar";
 import { canAddToCalendar, googleCalendarLink, outlookCalendarLink } from "@/lib/calendar";
@@ -22,20 +21,19 @@ import { owedToYou, youOwe } from "@/lib/copy";
 import { store } from "@/lib/store";
 import { formatShort, formatWhen } from "@/lib/time";
 import { loadPlan } from "@/lib/viewer";
-import { addTime, goWithTime, markFree, removeTime, appInterest, trackShare, addOption, askDibbyMore, joinPlan, lockPlan, postMessage, removeMe, removeOption, setRsvp, toggleDibbyMute, toggleReaction, vote } from "./actions";
+import { addTime, goWithTime, markFree, removeTime, appInterest, trackShare, addOption, askDibbyMore, joinPlan, lockPlan, removeMe, removeOption, setRsvp, vote } from "./actions";
 import { setPlace } from "./manage/actions";
 import { JoinForm } from "./JoinForm";
 import { ShareButton } from "./ShareButton";
 import { GetTheApp } from "./GetTheApp";
+import { CircleAction } from "@/components/CircleAction";
 import { WhenWorks } from "./WhenWorks";
 import { MAX_TIMES, rankTimes } from "@dibs/shared/when";
-import { Thread } from "./Thread";
 import { VoteList } from "./Vote";
 import { siteUrl } from "@/lib/site";
 import { planPreview } from "@/lib/plan-preview";
 import * as Button from "@/components/ui/button";
 import * as Badge from "@/components/ui/badge";
-import * as Alert from "@/components/ui/alert";
 
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ when?: string }> };
 
@@ -63,7 +61,6 @@ export default async function PlanPage({ params, searchParams }: Props) {
   const [options, votes, firstMessages] = await Promise.all([store.listOptions(plan.id), store.listVotes(plan.id), store.listMessages(plan.id, 50)]);
   // Dibby's automatic nudges are checked on page load (we're on Vercel Hobby: no frequent cron).
   const messages = (await nudgeIfDue(plan, members, options, votes)) ? await store.listMessages(plan.id, 50) : firstMessages;
-  const reactions = await store.listReactions(plan.id);
   // A typed-in option's address (its note) is only for people in the plan.
   const voteRows = options.map((o) => ({ ...o, note: o.place_id || me ? o.note : null, votes: votes.filter((v) => v.option_id === o.id).length, mine: Boolean(me && votes.some((v) => v.option_id === o.id && v.member_id === me.id)) }));
   const started = plan.starts_at ? Date.parse(plan.starts_at) < Date.now() : false;
@@ -116,94 +113,107 @@ export default async function PlanPage({ params, searchParams }: Props) {
   }));
   const showWhen = whenOpen && (times.length > 0 || (isHost && (!plan.starts_at || askWhen)));
 
+  // Who's going, at a glance: "3 in · 1 maybe · 2 to reply".
+  const maybes = members.filter((m) => m.rsvp === "maybe").length;
+  const toReply = members.filter((m) => !m.rsvp && !m.waitlisted).length;
+  const waitlist = members.filter((m) => m.waitlisted).length;
+  const whoSummary = [`${inCount} in${full ? " (full)" : ""}`, maybes && `${maybes} maybe`, toReply && `${toReply} to reply`, waitlist && `${waitlist} on the waitlist`].filter(Boolean).join(" · ");
+  const host = members.find((m) => m.role === "organiser");
+  const hostedBy = isHost ? "Hosted by you" : host ? `Hosted by ${host.display_name.split(" ")[0]}` : null;
+  // Directions: a place from the map, or a typed-in address for people in the plan.
+  const directions = plan.venue_place_id && plan.venue_name ? mapsLink(plan.venue_place_id, plan.venue_name) : me && plan.venue_address ? mapsLink(null, plan.venue_address) : null;
+  const calendar = me && canAddToCalendar(plan) && plan.status === "locked";
+  // New messages since they last opened the chat, for the badge on the Chat button.
+  const unread = me ? unreadCount(me.dibby_muted ? messages.filter((m) => !m.auto) : messages, me) : 0;
+  const voteOpen = plan.status === "voting";
+  const iAmIn = Boolean(me && me.rsvp === "in" && !me.waitlisted);
+  const chatOpen = Boolean(me) && access?.level !== "hidden";
+
   return (
     <>
       <LiveRefresh />
-      <main className="page">
+      <main className="page plan-page">
         <header className="topbar">
           <Wordmark href={view.here.name ? "/home" : "/"} />
           <div className="topbar__end">
-            {isHost && !cancelled && plan.status !== "wrapped" && (
-            <Button.Root asChild variant="neutral" mode="lighter" size="small">
-              <a href={`/p/${slug}/manage`}>
-                <i className="ri-edit-line db-icon" aria-hidden="true" />
-                Edit
-              </a>
-            </Button.Root>
-            )}
             <AccountButton here={view.here} />
           </div>
         </header>
 
-        <article className={`db-card db-plan${cancelled ? "" : " db-card--sticker"}`}>
+        {/* 1. The event: what, when, where, who's hosting. Edit, calendar and directions live on it. */}
+        <article className={`db-card db-plan${cancelled ? "" : " db-card--sticker"}`} aria-labelledby="plan-h">
           <div className="plan-card__top">
             <Badge.Root color={status.tone}>
               <Badge.Icon as="i" className={status.icon} aria-hidden="true" />
               {status.label}
             </Badge.Root>
           </div>
-          <h1 className="title-h3 plan-title">{plan.title}</h1>
+          <div>
+            <h1 id="plan-h" className="title-h3 plan-title">{plan.title}</h1>
+            {hostedBy && <p className="paragraph-sm muted">{hostedBy}</p>}
+          </div>
           <ul className="db-plan__facts">
-            {when && (
-              <li>
-                <i className="ri-calendar-line db-icon" aria-hidden="true" /> {when}
-              </li>
-            )}
-            {(plan.venue_name || plan.area) && (
-              <li>
-                <i className="ri-map-pin-line db-icon" aria-hidden="true" />{" "}
-                {plan.venue_name && plan.venue_place_id ? (
-                  <a href={mapsLink(plan.venue_place_id, plan.venue_name)} target="_blank" rel="noreferrer">{plan.venue_name}</a>
-                ) : plan.venue_name ? (
-                  // Typed in: the address is only for people in the plan.
-                  me && plan.venue_address ? (
-                    <span>
-                      {plan.venue_name} ·{" "}
-                      <a href={mapsLink(null, plan.venue_address)} target="_blank" rel="noreferrer">{plan.venue_address}</a>
-                    </span>
-                  ) : (
-                    plan.venue_name
-                  )
-                ) : (
-                  plan.area
-                )}
-              </li>
-            )}
-            {!cancelled && (
-              <Suspense fallback={null}>
-                <Weather plan={plan} />
-              </Suspense>
-            )}
-          </ul>
-          {me && canAddToCalendar(plan) && plan.status === "locked" && (
-            <AddToCalendar
-              links={{
-                ics: `/p/${slug}/calendar`,
-                google: googleCalendarLink(plan, `${siteUrl()}/p/${slug}`),
-                outlook: outlookCalendarLink(plan, `${siteUrl()}/p/${slug}`),
-                office: outlookCalendarLink(plan, `${siteUrl()}/p/${slug}`, true),
-              }}
-            />
-          )}
-          {(cancelled || (plan.updated_note && !wrapped)) && (
-            <p className={`label-sm plan-card__note${cancelled ? " plan-card__note--off" : ""}`} role="status">
-              <i className={`${cancelled ? "ri-close-circle-line" : "ri-refresh-line"} db-icon`} aria-hidden="true" />
+            <li>
+              <i className="ri-calendar-line db-icon" aria-hidden="true" /> {when ?? <span className="muted">Time to be decided</span>}
+            </li>
+            <li>
+              <i className="ri-map-pin-line db-icon" aria-hidden="true" />
               <span>
-                {cancelled ? `${plan.updated_note ?? "This one's not happening."} Nobody owes anything for it.` : `Updated: ${plan.updated_note}`}
+                {plan.venue_name ? (
+                  // A typed-in place's address is only for people in the plan.
+                  <>
+                    {plan.venue_name}
+                    {me && !plan.venue_place_id && plan.venue_address ? <span className="muted"> · {plan.venue_address}</span> : null}
+                  </>
+                ) : voteOpen ? (
+                  <span className="muted">Up for a vote{plan.area ? ` around ${plan.area}` : ""}</span>
+                ) : (
+                  plan.area ?? <span className="muted">Place to be decided</span>
+                )}
+                {!cancelled && !wrapped && (
+                  <Suspense fallback={null}>
+                    <Weather plan={plan} short />
+                  </Suspense>
+                )}
               </span>
+            </li>
+          </ul>
+          {cancelled && (
+            <p className="label-sm plan-card__note plan-card__note--off" role="status">
+              <i className="ri-close-circle-line db-icon" aria-hidden="true" />
+              <span>{`${plan.updated_note ?? "This one's not happening."} Nobody owes anything for it.`}</span>
             </p>
           )}
-          {!wrapped && (
-          <div className="db-plan__foot">
-            <MonogramStack people={going} />
-            <Badge.Root color="accent">
-              {inCount} in{full ? " · full" : ""}
-            </Badge.Root>
-          </div>
+          {!cancelled && !wrapped && (isHost || calendar || directions || chatOpen) && (
+            <div className="plan-actions" role="group" aria-label="Plan actions">
+              {isHost && <CircleAction icon="ri-edit-line" label="Edit" href={`/p/${slug}/manage`} />}
+              {calendar && (
+                <AddToCalendar
+                  links={{
+                    ics: `/p/${slug}/calendar`,
+                    google: googleCalendarLink(plan, `${siteUrl()}/p/${slug}`),
+                    outlook: outlookCalendarLink(plan, `${siteUrl()}/p/${slug}`),
+                    office: outlookCalendarLink(plan, `${siteUrl()}/p/${slug}`, true),
+                  }}
+                />
+              )}
+              {directions && <CircleAction icon="ri-direction-line" label="Directions" href={directions} external />}
+              {chatOpen && (
+                <CircleAction
+                  icon="ri-chat-3-line"
+                  label="Chat"
+                  href={`/p/${slug}/chat`}
+                  badge={unread ? (unread > 9 ? "9+" : unread) : undefined}
+                  badgeLabel={unread ? `${unread} new ${unread === 1 ? "message" : "messages"}` : undefined}
+                />
+              )}
+            </div>
           )}
         </article>
 
-        {/* Your move: the one thing to do now. */}
+        {plan.status === "locked" && me && <Once id={`locked:${plan.id}`} kind="lock" size={150} label={`Locked in: ${plan.venue_name ?? "the plan"}`} />}
+
+        {/* 2. Your one job. Strangers join; guests answer; hosts are already going. */}
         {!cancelled && !me && (
           <section className="section db-card" aria-labelledby="join-h">
             <h2 id="join-h" className="title-h4">You coming?</h2>
@@ -211,23 +221,48 @@ export default async function PlanPage({ params, searchParams }: Props) {
           </section>
         )}
 
+        {me && !isHost && !cancelled && !wrapped && (
+          <section className="db-card section" aria-labelledby="rsvp-h">
+            {iAmIn && <Once id={`in:${plan.id}:${me.id}`} kind="pop" size={140} colour={me.colour} label="You popped up. You're in." />}
+            <RsvpPicker rsvp={me.rsvp ?? null} waitlisted={me.waitlisted} plusOne={me.plus_one} plusOnes={plan.plus_ones} setRsvp={setRsvp.bind(null, slug)} vibe={plan.vibe} />
+            {readOnly && (
+              <p className="paragraph-sm muted rsvp-note">
+                <i className="ri-eye-line db-icon" aria-hidden="true" /> {readOnly}
+              </p>
+            )}
+            {access?.level === "hidden" && (
+              <p className="paragraph-sm muted rsvp-note">
+                <i className="ri-eye-off-line db-icon" aria-hidden="true" /> The vote, chat and who&rsquo;s in are hidden while you can&rsquo;t make it.
+              </p>
+            )}
+          </section>
+        )}
+
+        {isHost && plan.status === "locked" && started && (
+          <Button.Root asChild size="large" block>
+            <a href={`/p/${slug}/wrap`}>
+              <i className="ri-flag-line db-icon" aria-hidden="true" />
+              Wrap it up: who came?
+            </a>
+          </Button.Root>
+        )}
+
+        {/* After the night: the money and the recap, for people who came. */}
         {wrapped && me?.attended && (
           <section className="wrap-links" aria-label="After the night">
-            {/* Money first while it's open; once everyone's square, the night comes first and bills become history. */}
-            {/* "Nothing to split" at wrap-up: no money card unless someone adds a bill anyway. */}
             {!allSquare && !(plan.no_bills && bills.length === 0) && (
-            <a className="db-card db-card--violet section link-card" href={`/p/${slug}/bills`}>
-              <strong className="title-h4">Square up</strong>
-              <span>
-                {iOwe > 0
-                  ? youOwe(plan.vibe, formatAud(iOwe))
-                  : owedToMe > 0
-                    ? owedToYou(plan.vibe, formatAud(owedToMe))
-                    : bills.length === 0
-                      ? "Paid for something? Add it and Dibby does the maths."
-                      : `${owed.length - open.length} of ${owed.length} settled.`}
-              </span>
-            </a>
+              <a className="db-card db-card--violet section link-card" href={`/p/${slug}/bills`}>
+                <strong className="title-h4">Square up</strong>
+                <span>
+                  {iOwe > 0
+                    ? youOwe(plan.vibe, formatAud(iOwe))
+                    : owedToMe > 0
+                      ? owedToYou(plan.vibe, formatAud(owedToMe))
+                      : bills.length === 0
+                        ? "Paid for something? Add it and Dibby does the maths."
+                        : `${owed.length - open.length} of ${owed.length} settled.`}
+                </span>
+              </a>
             )}
             <a className={`db-card section link-card recap-teaser${!iAnswered ? " recap-teaser--ask" : ""}`} href={`/p/${slug}/recap`}>
               <span className="subheading-sm eyebrow">The recap</span>
@@ -268,83 +303,56 @@ export default async function PlanPage({ params, searchParams }: Props) {
             )}
           </section>
         )}
-        {wrapped && me && !me.attended && (
-          <p className="paragraph-sm muted">The bills and recap are just for people who came. Catch you at the next one.</p>
-        )}
-
-        {me && !cancelled && plan.status !== "wrapped" && (
-          <section className="db-card section" aria-labelledby="rsvp-h">
-            {me.rsvp === "in" && !me.waitlisted && me.role !== "organiser" && (
-              <Once id={`in:${plan.id}:${me.id}`} kind="pop" size={140} colour={me.colour} label="You popped up. You're in." />
-            )}
-            {plan.status === "locked" && (
-              <Once id={`locked:${plan.id}`} kind="lock" size={150} label={`Locked in: ${plan.venue_name ?? "the plan"}`} />
-            )}
-            {me.role === "organiser" ? (
-              // Hosts are always going: no RSVP to make on your own plan. Can't make it any more? That's a change to the plan, not an RSVP.
-              <>
-                <h2 id="rsvp-h" className="label-md">
-                  You&rsquo;re hosting this one
-                </h2>
-                <p className="paragraph-sm muted">
-                  You&rsquo;re counted as going. Can&rsquo;t make it any more?{" "}
-                  <a href={`/p/${slug}/manage`}>
-                    Change the plan
-                  </a>
-                  .
-                </p>
-              </>
-            ) : (
-              <RsvpPicker
-                rsvp={me.rsvp ?? null}
-                waitlisted={me.waitlisted}
-                plusOne={me.plus_one}
-                plusOnes={plan.plus_ones}
-                setRsvp={setRsvp.bind(null, slug)}
-                vibe={plan.vibe}
-              />
-            )}
-            {me.rsvp === "in" && !me.waitlisted && !isHost && (
-              <ShareButton
-                quiet
-                label="Tell the group"
-                onShare={trackShare.bind(null, slug, "im_in")}
-                title={plan.title}
-                url={url}
-                text={`I'm in for ${[plan.title, formatShort(plan.starts_at), plan.venue_name].filter(Boolean).join(" · ")}. ${inCount} going so far, you coming? 👉 ${url}`}
-              />
-            )}
-            {me.rsvp === "in" && !me.waitlisted && me.role === "guest" && (
-              <GetTheApp onTap={appInterest.bind(null, slug)} />
-            )}
-            {me.role === "organiser" && plan.status === "locked" && (
-              <Button.Root asChild mode={started ? "filled" : "ghost"} block>
-                <a href={`/p/${slug}/wrap`}>
-                  <i className="ri-flag-line db-icon" aria-hidden="true" />
-                  {started ? "Wrap it up: who came?" : "After the night: wrap it up"}
-                </a>
-              </Button.Root>
-            )}
-          </section>
-        )}
-
-        {!cancelled && access?.level === "hidden" && (
-          <section className="db-card section" aria-labelledby="hidden-h">
-            <h2 id="hidden-h" className="title-h5">You said you can&rsquo;t make it</h2>
-            <p className="paragraph-sm muted">
-              So the vote, chat and who&rsquo;s in are hidden. Changed your mind? Tap I&rsquo;m in or Maybe above.
-            </p>
-          </section>
-        )}
+        {wrapped && me && !me.attended && <p className="paragraph-sm muted">The bills and recap are just for people who came. Catch you at the next one.</p>}
 
         {!cancelled && access?.level !== "hidden" && (
           <>
-            {readOnly && (
-              <Alert.Root status="information">
-                <Alert.Icon as="i" className="ri-eye-line" aria-hidden="true" />
-                <div>{readOnly}</div>
-              </Alert.Root>
-            )}
+            {/* 3. Who's going: faces and counts; tap for everyone. */}
+            <details className="db-card who" open={wrapped ? true : undefined}>
+              <summary className="who__summary">
+                <span className="who__text">
+                  <span className="label-md">{wrapped ? "Who came" : "Who's going"}</span>
+                  <span className="paragraph-sm muted">{wrapped ? `${came.length} came` : whoSummary}</span>
+                </span>
+                <MonogramStack people={wrapped ? came : going} max={4} />
+                <i className="ri-arrow-down-s-line db-icon who__chevron" aria-hidden="true" />
+              </summary>
+              <ul className="people">
+                {wrapped &&
+                  came.map((m) => (
+                    <li key={m.id} className="person">
+                      <Monogram name={m.display_name} colour={m.colour} />
+                      <span className="label-md person__name">
+                        {m.display_name}
+                        {m.id === me?.id ? " (you)" : ""}
+                        <small>{m.role === "organiser" ? "Organiser" : m.role === "cohost" ? "Co-host" : "Came"}</small>
+                      </span>
+                    </li>
+                  ))}
+                {!wrapped &&
+                  ORDER.flatMap((g) =>
+                    members
+                      .filter((m) => groupOf(m) === g)
+                      .map((m) => (
+                        <li key={m.id} className="person">
+                          <Monogram name={m.display_name} colour={m.colour} />
+                          <span className="label-md person__name">
+                            {m.display_name}
+                            {m.id === me?.id ? " (you)" : ""}
+                            <small>
+                              {m.role === "organiser" ? "Organiser · " : m.role === "cohost" ? "Co-host · " : ""}
+                              {GROUP_LABEL[g]}
+                              {m.plus_one ? " · +1" : ""}
+                            </small>
+                          </span>
+                        </li>
+                      ))
+                  )}
+              </ul>
+              {!wrapped && <p className="paragraph-xs muted who__cap">{inCount} of {plan.capacity} spots taken</p>}
+            </details>
+
+            {/* 4. Decide: only while something's open. */}
             {showWhen && (
               <WhenWorks
                 rows={whenRows}
@@ -361,136 +369,45 @@ export default async function PlanPage({ params, searchParams }: Props) {
                 }}
               />
             )}
-            <PlanTabs
-              storageKey={`dibs:tab:${plan.id}`}
-              initial={plan.status === "voting" ? "vote" : wrapped ? "chat" : "who"}
-              tabs={[
-                ...(!wrapped && (plan.status === "voting" || options.length > 0)
-                  ? [
-                      {
-                        id: "vote",
-                        label: plan.status === "voting" ? "Vote" : "The vote",
-                        panel: (
-                          <>
-                            <div className="section__head">
-                              <h2 className="sr-only">{plan.status === "voting" ? "What's the move?" : "The vote"}</h2>
-                              <span className="paragraph-sm muted">
-                                {plan.status === "voting"
-                                  ? `${voters} of ${members.length} voted · closes ${formatShort(plan.vote_deadline)}`
-                                  : `Locked in: ${plan.venue_name ?? "the winner"}`}
-                              </span>
-                            </div>
-                            <VoteList
-                              rows={voteRows}
-                              canVote={Boolean(me)}
-                              open={plan.status === "voting"}
-                              vote={vote.bind(null, slug)}
-                              add={addOption.bind(null, slug)}
-                              remove={me ? removeOption.bind(null, slug) : undefined}
-                              canRemoveAll={isHost}
-                              meId={me?.id ?? null}
-                              readOnly={readOnly}
-                              area={plan.area}
-                              askDibby={me && process.env.ANTHROPIC_API_KEY ? askDibbyMore.bind(null, slug) : undefined}
-                              decide={isHost ? setPlace.bind(null, slug) : undefined}
-                            />
-                            {isHost && plan.status === "voting" && options.length > 0 && (
-                              <form action={lockPlan.bind(null, slug)}>
-                                <Button.Root mode="ghost" size="small">
-                                  <i className="ri-lock-2-line db-icon" aria-hidden="true" />
-                                  Lock it in now
-                                </Button.Root>
-                              </form>
-                            )}
-                          </>
-                        ),
-                      },
-                    ]
-                  : []),
-                {
-                  id: "chat",
-                  label: "Chat",
-                  count: messages.filter((m) => m.kind !== "system").length || undefined,
-                  panel: (
-                    <>
-                      <Thread
-                        messages={me?.dibby_muted ? messages.filter((m) => !m.auto) : messages}
-                        vibe={plan.vibe}
-                        reactions={reactions}
-                        react={me?.user_id && !readOnly ? toggleReaction.bind(null, slug) : undefined}
-                        summary={[plan.title, when, plan.venue_name ?? plan.area, `${inCount} going`].filter(Boolean).join(" · ")}
-                        members={members}
-                        meId={me?.id ?? null}
-                        canPost={Boolean(me?.user_id)}
-                        readOnly={readOnly}
-                      placeNames={Object.fromEntries(options.filter((o) => o.place_id).map((o) => [o.place_id!, o.label]))}
-                        post={postMessage.bind(null, slug)}
-                      />
-                      {me && !wrapped && (
-                        <form action={toggleDibbyMute.bind(null, slug)} className="dibby-mute">
-                          <Button.Root mode="ghost" aria-pressed={me.dibby_muted}>
-                            <i className={`${me.dibby_muted ? "ri-notification-3-line" : "ri-notification-off-line"} db-icon`} aria-hidden="true" />
-                            {me.dibby_muted ? "Show Dibby's nudges" : "Mute Dibby's nudges"}
-                          </Button.Root>
-                        </form>
-                      )}
-                    </>
-                  ),
-                },
-                {
-                  id: "who",
-                  label: wrapped ? "Who came" : "Who's in",
-                  count: (wrapped ? came.length : inCount) || undefined,
-                  panel: (
-                    <>
-                      <h2 className="sr-only">Who's coming</h2>
-                      {!wrapped && (
-                        <p className="paragraph-sm muted">
-                          {inCount} of {plan.capacity} spots taken
-                        </p>
-                      )}
-                      <div className="db-card">
-                        <ul className="people">
-                          {wrapped && came.map((m) => (
-                            <li key={m.id} className="person">
-                              <Monogram name={m.display_name} colour={m.colour} />
-                              <span className="label-md person__name">
-                                {m.display_name}
-                                {m.id === me?.id ? " (you)" : ""}
-                                <small>{m.role === "organiser" ? "Organiser" : m.role === "cohost" ? "Co-host" : "Came"}</small>
-                              </span>
-                            </li>
-                          ))}
-                          {!wrapped && ORDER.flatMap((g) =>
-                            members
-                              .filter((m) => groupOf(m) === g)
-                              .map((m) => (
-                                <li key={m.id} className="person">
-                                  <Monogram name={m.display_name} colour={m.colour} />
-                                  <span className="label-md person__name">
-                                    {m.display_name}
-                                    {m.id === me?.id ? " (you)" : ""}
-                                    <small>
-                                      {m.role === "organiser" ? "Organiser · " : m.role === "cohost" ? "Co-host · " : ""}
-                                      {GROUP_LABEL[g]}
-                                      {m.plus_one ? " · +1" : ""}
-                                    </small>
-                                  </span>
-                                </li>
-                              ))
-                          )}
-                        </ul>
-                      </div>
-                    </>
-                  ),
-                },
-              ]}
-            />
+            {voteOpen && (
+              <section className="section" aria-labelledby="vote-h">
+                <div className="section__head">
+                  <h2 id="vote-h" className="title-h5">Where to?</h2>
+                  <span className="paragraph-sm muted">
+                    {voters} of {members.length} voted{plan.vote_deadline ? ` · closes ${formatShort(plan.vote_deadline)}` : ""}
+                  </span>
+                </div>
+                <VoteList
+                  rows={voteRows}
+                  canVote={Boolean(me)}
+                  open
+                  vote={vote.bind(null, slug)}
+                  add={addOption.bind(null, slug)}
+                  remove={me ? removeOption.bind(null, slug) : undefined}
+                  canRemoveAll={isHost}
+                  meId={me?.id ?? null}
+                  readOnly={readOnly}
+                  area={plan.area}
+                  askDibby={me && process.env.ANTHROPIC_API_KEY ? askDibbyMore.bind(null, slug) : undefined}
+                  decide={isHost ? setPlace.bind(null, slug) : undefined}
+                />
+                {isHost && options.length > 0 && (
+                  <form action={lockPlan.bind(null, slug)}>
+                    <Button.Root mode="ghost" size="small">
+                      <i className="ri-lock-2-line db-icon" aria-hidden="true" />
+                      Lock it in now
+                    </Button.Root>
+                  </form>
+                )}
+              </section>
+            )}
+
           </>
         )}
 
         {me?.guest_id && view.guest && me.guest_id === view.guest.id && (
           <footer className="plan-foot">
+            {iAmIn && <GetTheApp onTap={appInterest.bind(null, slug)} />}
             {!view.organiser && (
               <a className="label-sm" href="/account">
                 <i className="ri-smartphone-line db-icon" aria-hidden="true" /> Keep this plan on your other devices
@@ -505,21 +422,28 @@ export default async function PlanPage({ params, searchParams }: Props) {
         )}
       </main>
 
-      {!cancelled && !wrapped && isHost && (
+      {/* 6. One share button, pinned. */}
+      {me && !cancelled && !wrapped && (
         <div className="dock">
           <div className="dock__inner">
             <ShareButton
-              onShare={trackShare.bind(null, slug, "invite")}
+              label={isHost ? "Share to the group chat" : "Share the plan"}
+              tone={isHost ? "dibs" : "primary"}
+              onShare={trackShare.bind(null, slug, isHost ? "invite" : "im_in")}
               title={plan.title}
               url={url}
-              text={shareText({
-                title: plan.title,
-                when: formatShort(plan.starts_at),
-                place: plan.venue_name ?? plan.area,
-                voting: plan.status === "voting",
-                deadline: formatShort(plan.vote_deadline),
-                url,
-              })}
+              text={
+                !isHost && iAmIn
+                  ? `I'm in for ${[plan.title, formatShort(plan.starts_at), plan.venue_name].filter(Boolean).join(" · ")}. ${inCount} going so far, you coming? 👉 ${url}`
+                  : shareText({
+                      title: plan.title,
+                      when: formatShort(plan.starts_at),
+                      place: plan.venue_name ?? plan.area,
+                      voting: voteOpen,
+                      deadline: formatShort(plan.vote_deadline),
+                      url,
+                    })
+              }
             />
           </div>
         </div>

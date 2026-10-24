@@ -101,3 +101,15 @@ export function cleanCustomPlace(name: unknown, address: unknown): CustomPlace |
 export function looksLikeAddress(text: string): boolean {
   return /\b\d+[a-z]?(\/\d+)?\s+[a-z][a-z' -]*\s(st|street|rd|road|ave|avenue|pde|parade|ct|court|pl|place|dr|drive|ln|lane|way|cres|crescent|tce|terrace|hwy|highway|blvd|boulevard|cl|close|gr|grove|sq|square)\b/i.test(text);
 }
+
+/**
+ * How many chat messages are new to someone: things other people or Dibby said since they last
+ * opened the chat (or since they joined, if they never have). System lines don't count.
+ */
+export function unreadCount(
+  messages: { kind: string; member_id: string | null; created_at: string }[],
+  me: { id: string; joined_at: string; chat_seen_at?: string | null }
+): number {
+  const since = Date.parse(me.chat_seen_at ?? me.joined_at);
+  return messages.filter((m) => m.kind !== "system" && m.member_id !== me.id && Date.parse(m.created_at) > since).length;
+}

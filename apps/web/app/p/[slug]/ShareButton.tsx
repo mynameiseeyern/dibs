@@ -10,6 +10,7 @@ export function ShareButton({
   title,
   label = "Share to the group chat",
   quiet = false,
+  tone = "dibs",
   onShare,
 }: {
   text: string;
@@ -18,6 +19,8 @@ export function ShareButton({
   label?: string;
   /** Secondary style, for share moments that aren't the screen's main action. */
   quiet?: boolean;
+  /** Lime ("dibs") is the one call-dibs moment per screen; violet when lime's already taken (attendees' I'm in). */
+  tone?: "dibs" | "primary";
   /** Counts the tap (a server action). Fire and forget: sharing never waits on it. */
   onShare?: () => Promise<void>;
 }) {
@@ -42,7 +45,7 @@ export function ShareButton({
   return (
     <Button.Root
       type="button"
-      variant={quiet ? "neutral" : "dibs"}
+      variant={quiet ? "neutral" : tone}
       mode={quiet ? "lighter" : "filled"}
       size={quiet ? "medium" : "large"}
       block

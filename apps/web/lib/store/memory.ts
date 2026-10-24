@@ -192,6 +192,7 @@ export const memoryStore: Store = {
       waitlisted: false,
       attended: null,
       dibby_muted: false,
+      chat_seen_at: null,
       joined_at: now(),
     };
     db.members.set(member.id, member);
