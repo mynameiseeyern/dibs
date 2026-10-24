@@ -2,7 +2,9 @@ import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { FORMER_MEMBER, makeSlug, pickColour } from "@dibs/shared/plans";
 import type { LoggedEvent } from "@dibs/shared/metrics";
-import type { Bill, BillShare, Message, NewMember, NewPlan, Plan, PlanMember, PlanOption, PlanTime, Store, Subscription, TimeVote, Vote, RecapAnswer, Reaction } from "./types";
+import type { Bill, BillShare, Message, NewMember, NewPlan, Plan, PlanMember, PlanOption, PlanPhoto, PlanTime, Store, Subscription, TimeVote, Vote, RecapAnswer, Reaction } from "./types";
+
+const PHOTO_BUCKET = "plan-photos";
 
 // Server-side Supabase store using the service key. Every caller checks access first
 // (lib/viewer.ts); row-level security still protects anything the browser reads directly.
@@ -64,6 +66,8 @@ export const supabaseStore: Store = {
     );
   },
   async removeGuest(guestId) {
+    const mine = must(await admin().from("plan_members").select("id").eq("guest_id", guestId)) as { id: string }[];
+    await this.removePhotosBy(mine.map((m) => m.id));
     must(await admin().from("plan_members").delete().eq("guest_id", guestId));
     must(await admin().from("guests").update({ removed_at: new Date().toISOString(), first_name: "Removed", last_name: "" }).eq("id", guestId));
   },
@@ -298,6 +302,9 @@ export const supabaseStore: Store = {
     return count ?? 0;
   },
   async deleteAccount(userId) {
+    // Their photos go first, while their memberships still point at them.
+    const mine = must(await admin().from("plan_members").select("id").eq("user_id", userId)) as { id: string }[];
+    await this.removePhotosBy(mine.map((m) => m.id));
     // Rename first: the sign-in's foreign keys only null the IDs, they'd leave the name behind.
     must(await admin().from("plan_members").update({ display_name: FORMER_MEMBER, user_id: null }).eq("user_id", userId));
     must(await admin().from("plans").update({ organiser_id: null }).eq("organiser_id", userId));
@@ -307,6 +314,36 @@ export const supabaseStore: Store = {
     must(await admin().from("profiles").delete().eq("user_id", userId));
     const { error } = await admin().auth.admin.deleteUser(userId);
     if (error) throw new Error(error.message);
+  },
+  async listPhotos(planId) {
+    return must(await admin().from("plan_photos").select("id, plan_id, member_id, width, height, created_at").eq("plan_id", planId).order("created_at")) as PlanPhoto[];
+  },
+  async addPhoto({ planId, memberId, bytes, width, height }) {
+    const id = crypto.randomUUID();
+    const path = `${planId}/${id}.jpg`;
+    const up = await admin().storage.from(PHOTO_BUCKET).upload(path, bytes, { contentType: "image/jpeg", upsert: false });
+    if (up.error) throw new Error(up.error.message);
+    return must(await admin().from("plan_photos").insert({ id, plan_id: planId, member_id: memberId, path, width, height }).select("id, plan_id, member_id, width, height, created_at").single()) as PlanPhoto;
+  },
+  async photoBytes(photo) {
+    const row = must(await admin().from("plan_photos").select("path").eq("id", photo.id).maybeSingle()) as { path: string } | null;
+    if (!row) return null;
+    const { data, error } = await admin().storage.from(PHOTO_BUCKET).download(row.path);
+    if (error || !data) return null;
+    return new Uint8Array(await data.arrayBuffer());
+  },
+  async removePhoto(planId, photoId) {
+    const row = must(await admin().from("plan_photos").select("path").eq("plan_id", planId).eq("id", photoId).maybeSingle()) as { path: string } | null;
+    if (!row) return;
+    await admin().storage.from(PHOTO_BUCKET).remove([row.path]);
+    must(await admin().from("plan_photos").delete().eq("id", photoId));
+  },
+  async removePhotosBy(memberIds) {
+    if (memberIds.length === 0) return;
+    const rows = must(await admin().from("plan_photos").select("id, path").in("member_id", memberIds)) as { id: string; path: string }[];
+    if (rows.length === 0) return;
+    await admin().storage.from(PHOTO_BUCKET).remove(rows.map((r) => r.path));
+    must(await admin().from("plan_photos").delete().in("id", rows.map((r) => r.id)));
   },
   async listTimes(planId) {
     return must(await admin().from("plan_times").select("id, plan_id, starts_at").eq("plan_id", planId)) as PlanTime[];

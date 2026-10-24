@@ -32,6 +32,11 @@ export default function Privacy() {
           who&rsquo;s paid, and recap answers. People on the plan see these.
         </li>
         <li>
+          <strong>Photos from the Dibby camera,</strong> up to three each. They&rsquo;re shrunk on your phone before they&rsquo;re sent, which
+          also strips the location and camera details. They stay hidden until the host wraps up, and then only people who came can see them.
+          They&rsquo;re kept in private storage and never at a public link. You can take yours down any time after they develop.
+        </li>
+        <li>
           <strong>Guests:</strong> if you join without an account, we keep your name and a signed cookie on your browser so Dibby knows it&rsquo;s you
           next time. The cookie lasts a year.
         </li>

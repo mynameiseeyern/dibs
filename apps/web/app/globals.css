@@ -452,3 +452,27 @@ gmp-place-details {
 .chat-peek__line { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
 .chat-page__title { display: flex; flex-direction: column; min-width: 0; flex: 1; }
 .chat-page__title h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0; }
+
+/* The Dibby camera: three shots each, developing until wrap-up, then a roll with film stamps. */
+.camera { display: flex; flex-direction: column; gap: var(--space-3); }
+.camera__head { display: flex; align-items: center; gap: var(--space-3); }
+.camera__icon { display: grid; place-content: center; width: 44px; height: 44px; flex: none; border-radius: var(--radius-full); background: var(--bg-soft-200); box-shadow: var(--shadow-clay-sm); font-size: 22px; }
+.camera__text { flex: 1; min-width: 0; }
+.camera__shots { display: flex; gap: 6px; }
+.camera__shot { width: 10px; height: 10px; border-radius: var(--radius-full); border: 1.5px solid var(--stroke-sub-300); }
+.camera__shot[data-used] { background: var(--primary-base); border-color: var(--primary-base); }
+.roll { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+.roll__tile { position: relative; aspect-ratio: 3 / 4; border-radius: var(--radius-lg); overflow: hidden; background: var(--bg-soft-200); }
+/* Developing: a dark film frame in both themes. */
+.roll__tile--developing { background: color-mix(in srgb, var(--primary-base) 22%, var(--static-black)); color: var(--static-white); display: flex; align-items: center; justify-content: center; }
+.roll__developing { display: inline-flex; align-items: center; gap: var(--space-1); font: 600 13px/18px var(--font-sans); padding: 6px 12px; border-radius: var(--radius-full); background: rgb(255 255 255 / 0.1); }
+.roll__open { all: unset; position: relative; display: block; width: 100%; height: 100%; cursor: pointer; }
+/* Soft shade top and bottom so the stamp and name read on any photo. */
+.roll__open::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(to bottom, rgb(0 0 0 / 0.45), transparent 28%, transparent 66%, rgb(0 0 0 / 0.55)); }
+.roll__open .roll__name, .roll__open .roll__stamp { z-index: 1; }
+.roll__open:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; border-radius: var(--radius-lg); }
+.roll__open img, .roll__full img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.roll__name { position: absolute; left: var(--space-2); bottom: var(--space-2); font: 600 13px/18px var(--font-sans); color: var(--static-white); text-shadow: 0 1px 3px rgb(0 0 0 / 0.6); }
+.roll__stamp { position: absolute; right: var(--space-2); top: var(--space-2); font: 500 11px/14px var(--font-mono); letter-spacing: 0.04em; color: var(--accent-base); text-shadow: 0 1px 2px rgb(0 0 0 / 0.7); }
+.roll__full { position: relative; border-radius: var(--radius-lg); overflow: hidden; }
+.roll__full img { height: auto; max-height: 70dvh; object-fit: contain; background: var(--static-black); }

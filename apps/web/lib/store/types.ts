@@ -1,5 +1,5 @@
 import type { AppEvent, LoggedEvent } from "@dibs/shared/metrics";
-import type { Bill, BillShare, Message, Plan, PlanMember, PlanOption, PlanTime, Rsvp, TimeVote, Vibe, Role, Vote } from "@dibs/shared/types";
+import type { Bill, BillShare, Message, Plan, PlanMember, PlanOption, PlanPhoto, PlanTime, Rsvp, TimeVote, Vibe, Role, Vote } from "@dibs/shared/types";
 
 export interface Profile {
   user_id: string;
@@ -125,6 +125,17 @@ export interface Store {
    */
   deleteAccount(userId: string): Promise<void>;
 
+  /** The Dibby camera: photos on a plan (metadata), newest last. */
+  listPhotos(planId: string): Promise<PlanPhoto[]>;
+  /** Saves a JPEG to private storage and records it. */
+  addPhoto(p: { planId: string; memberId: string; bytes: Uint8Array; width: number | null; height: number | null }): Promise<PlanPhoto>;
+  /** The image itself, for the app's own photo route. */
+  photoBytes(photo: PlanPhoto): Promise<Uint8Array | null>;
+  /** Deletes a photo and its file. */
+  removePhoto(planId: string, photoId: string): Promise<void>;
+  /** Deletes every photo these members took (account deletion, a guest removing themselves). */
+  removePhotosBy(memberIds: string[]): Promise<void>;
+
   /** "When works?" (ARV-21): times the host put to the crew, and who's free for each. */
   listTimes(planId: string): Promise<PlanTime[]>;
   listTimeVotes(planId: string): Promise<TimeVote[]>;
@@ -152,7 +163,7 @@ export interface RecapAnswer {
   mvp_member_id: string | null;
 }
 
-export type { Plan, PlanMember, Rsvp, PlanOption, Vote, Message, Bill, BillShare, PlanTime, TimeVote };
+export type { Plan, PlanMember, Rsvp, PlanOption, Vote, Message, Bill, BillShare, PlanTime, TimeVote, PlanPhoto };
 
 export const REACTIONS = ["👍", "❤️", "😂", "🎉"] as const;
 export interface Reaction {

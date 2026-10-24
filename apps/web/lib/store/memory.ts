@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { FORMER_MEMBER, makeSlug, pickColour } from "@dibs/shared/plans";
 import type { LoggedEvent } from "@dibs/shared/metrics";
-import type { Bill, BillShare, Guest, Message, NewMember, NewPlan, Plan, PlanMember, PlanOption, PlanTime, Profile, Store, Subscription, TimeVote, Vote, RecapAnswer, Reaction } from "./types";
+import type { Bill, BillShare, Guest, Message, NewMember, NewPlan, Plan, PlanMember, PlanOption, PlanPhoto, PlanTime, Profile, Store, Subscription, TimeVote, Vote, RecapAnswer, Reaction } from "./types";
 
 // In-memory store for local runs without Supabase. Lost on restart.
 interface Db {
@@ -20,6 +20,7 @@ interface Db {
   lists: { list: string; email: string; userId: string | null; token: string; unsubscribed: boolean; source: string }[];
   events: LoggedEvent[];
   times: PlanTime[];
+  photos: { photo: PlanPhoto; bytes: Uint8Array }[];
   timeVotes: (TimeVote & { plan_id: string })[];
 }
 
@@ -40,10 +41,12 @@ const db: Db = (g.__dibsDb ??= {
   lists: [],
   events: [],
   times: [],
+  photos: [],
   timeVotes: [],
 });
 db.events ??= [];
 db.times ??= [];
+db.photos ??= [];
 db.timeVotes ??= [];
 db.nudges ??= [];
 db.reactions ??= [];
@@ -75,6 +78,7 @@ export const memoryStore: Store = {
   async removeGuest(guestId) {
     const guest = db.guests.get(guestId);
     if (guest) guest.removed_at = now();
+    await this.removePhotosBy([...db.members.values()].filter((m) => m.guest_id === guestId).map((m) => m.id));
     for (const m of db.members.values()) if (m.guest_id === guestId) db.members.delete(m.id);
   },
 
@@ -295,11 +299,29 @@ export const memoryStore: Store = {
     return db.nudges.filter((n) => n.plan_id === planId && n.at >= since).length;
   },
   async deleteAccount(userId) {
+    await this.removePhotosBy([...db.members.values()].filter((m) => m.user_id === userId).map((m) => m.id));
     for (const m of db.members.values()) if (m.user_id === userId) Object.assign(m, { user_id: null, display_name: FORMER_MEMBER });
     for (const p of db.plans.values()) if (p.organiser_id === userId) p.organiser_id = null;
     db.profiles.delete(userId);
     db.lists = db.lists.filter((l) => l.userId !== userId);
     for (const e of db.events) if (e.userId === userId) e.userId = null;
+  },
+  async listPhotos(planId) {
+    return db.photos.filter((x) => x.photo.plan_id === planId).map((x) => x.photo);
+  },
+  async addPhoto({ planId, memberId, bytes, width, height }) {
+    const photo: PlanPhoto = { id: randomUUID(), plan_id: planId, member_id: memberId, width, height, created_at: now() };
+    db.photos.push({ photo, bytes });
+    return photo;
+  },
+  async photoBytes(photo) {
+    return db.photos.find((x) => x.photo.id === photo.id)?.bytes ?? null;
+  },
+  async removePhoto(planId, photoId) {
+    db.photos = db.photos.filter((x) => !(x.photo.plan_id === planId && x.photo.id === photoId));
+  },
+  async removePhotosBy(memberIds) {
+    db.photos = db.photos.filter((x) => !memberIds.includes(x.photo.member_id));
   },
   async listTimes(planId) {
     return db.times.filter((t) => t.plan_id === planId);

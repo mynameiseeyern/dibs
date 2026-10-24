@@ -8,7 +8,8 @@
     "./types": "./src/types.ts",
     "./plans": "./src/plans.ts",
     "./when": "./src/when.ts",
-    "./metrics": "./src/metrics.ts"
+    "./metrics": "./src/metrics.ts",
+    "./photos": "./src/photos.ts"
   },
   "scripts": {
     "test": "vitest run",

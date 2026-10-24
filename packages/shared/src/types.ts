@@ -128,3 +128,13 @@ export interface TimeVote {
   time_id: string;
   member_id: string;
 }
+
+/** A photo someone took with the Dibby camera. The image itself is in private storage. */
+export interface PlanPhoto {
+  id: string;
+  plan_id: string;
+  member_id: string;
+  width: number | null;
+  height: number | null;
+  created_at: string;
+}
