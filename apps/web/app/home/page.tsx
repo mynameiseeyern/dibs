@@ -1,7 +1,7 @@
 import { owedToYou, youOwe } from "@/lib/copy";
 import { redirect } from "next/navigation";
 import { formatAud } from "@dibs/shared/bills";
-import { countIn } from "@dibs/shared/plans";
+import { countIn, wrapState } from "@dibs/shared/plans";
 import type { Plan, PlanMember } from "@dibs/shared/types";
 import { CrewWave, Wordmark } from "@/components/Logo";
 import { MonogramStack } from "@/components/Monogram";
@@ -59,7 +59,7 @@ export default async function Home() {
   const isUpcoming = (r: Row) =>
     (r.plan.status === "voting" || r.plan.status === "locked") && (!r.plan.starts_at || Date.parse(r.plan.starts_at) > Date.now() - SIX_HOURS);
   const upcoming = rows.filter(isUpcoming);
-  const squareUp = rows.filter((r) => !isUpcoming(r) && (r.iOwe > 0 || r.owedToMe > 0 || (r.plan.status === "locked" && r.me.role === "organiser")));
+  const squareUp = rows.filter((r) => !isUpcoming(r) && (r.iOwe > 0 || r.owedToMe > 0 || ((r.me.role === "organiser" || r.me.role === "cohost") && wrapState(r.plan) === "ready")));
   const past = rows.filter((r) => !upcoming.includes(r) && !squareUp.includes(r)).reverse().slice(0, 5);
 
   // ARV-61: ask once, only accounts that have never said yes or no to beta updates.
@@ -191,7 +191,7 @@ function PlanRow({ row, quiet }: { row: Row; quiet?: boolean }) {
       ? youOwe(plan.vibe, formatAud(iOwe))
       : owedToMe > 0
         ? owedToYou(plan.vibe, formatAud(owedToMe))
-        : plan.status === "locked" && me.role === "organiser" && plan.starts_at && Date.parse(plan.starts_at) < Date.now()
+        : (me.role === "organiser" || me.role === "cohost") && wrapState(plan) === "ready"
           ? "Wrap it up: who came?"
           : !me.rsvp && plan.status !== "cancelled" && plan.status !== "wrapped"
             ? "You haven't said if you're in"

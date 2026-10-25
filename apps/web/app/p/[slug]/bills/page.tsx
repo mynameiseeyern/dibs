@@ -49,7 +49,7 @@ export default async function Bills({ params, searchParams }: Props) {
           <i className="ri-arrow-left-line db-icon" aria-hidden="true" />
         </a>
       </Button.Root>
-      {me?.role === "organiser" && (
+      {(me?.role === "organiser" || me?.role === "cohost") && (
         <Button.Root asChild mode="ghost" size="small">
           <a href={`/p/${slug}/wrap`}>Edit who came</a>
         </Button.Root>

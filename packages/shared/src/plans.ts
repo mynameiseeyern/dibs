@@ -113,3 +113,14 @@ export function unreadCount(
   const since = Date.parse(me.chat_seen_at ?? me.joined_at);
   return messages.filter((m) => m.kind !== "system" && m.member_id !== me.id && Date.parse(m.created_at) > since).length;
 }
+
+/**
+ * Whether a host can wrap a plan up yet. A locked plan is ready once its start time has
+ * passed, or straight away if it never got a time. Before the start, hosts can still wrap
+ * it up early (it happened sooner, or they sorted it outside the app): "early".
+ */
+export function wrapState(plan: { status: string; starts_at: string | null }, now = Date.now()): "ready" | "early" | "no" {
+  if (plan.status !== "locked") return "no";
+  if (!plan.starts_at || Date.parse(plan.starts_at) <= now) return "ready";
+  return "early";
+}
