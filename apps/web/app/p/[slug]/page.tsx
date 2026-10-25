@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { countIn, planAccess, READ_ONLY_NOTE, shareText, unreadCount } from "@dibs/shared/plans";
+import { countIn, planAccess, READ_ONLY_NOTE, shareText, unreadCount, wrapState } from "@dibs/shared/plans";
 import { formatAud } from "@dibs/shared/bills";
 import type { PlanMember, Rsvp } from "@dibs/shared/types";
 import { Wordmark } from "@/components/Logo";
@@ -77,6 +77,7 @@ export default async function PlanPage({ params, searchParams }: Props) {
   const cancelled = plan.status === "cancelled";
   const full = inCount >= plan.capacity;
   const wrapped = plan.status === "wrapped";
+  const wrap = wrapState(plan);
   // After the night, Who came is just the people ticked at wrap-up.
   const came = members.filter((m) => m.attended);
 
@@ -251,11 +252,20 @@ export default async function PlanPage({ params, searchParams }: Props) {
           </div>
         )}
 
-        {isHost && plan.status === "locked" && started && (
+        {isHost && wrap === "ready" && (
           <Button.Root asChild size="large" block>
             <a href={`/p/${slug}/wrap`}>
               <i className="ri-flag-line db-icon" aria-hidden="true" />
               Wrap it up: who came?
+            </a>
+          </Button.Root>
+        )}
+        {/* Before the start, a quiet way through for when it happened early or got sorted elsewhere. */}
+        {isHost && wrap === "early" && (
+          <Button.Root asChild mode="ghost" size="small">
+            <a href={`/p/${slug}/wrap`}>
+              <i className="ri-flag-line db-icon" aria-hidden="true" />
+              Already happened? Wrap it up
             </a>
           </Button.Root>
         )}

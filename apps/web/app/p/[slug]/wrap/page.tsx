@@ -5,6 +5,9 @@ import { wrapUp } from "../bills/actions";
 import * as Button from "@/components/ui/button";
 import * as Checkbox from "@/components/ui/checkbox";
 import { planPreview } from "@/lib/plan-preview";
+import * as Alert from "@/components/ui/alert";
+import { wrapState } from "@dibs/shared/plans";
+import { formatWhen } from "@/lib/time";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   return planPreview((await params).slug, { label: "Wrap-up", path: "/wrap" });
@@ -15,7 +18,7 @@ export default async function Wrap({ params }: { params: Promise<{ slug: string 
   const { slug } = await params;
   const view = await loadPlan(slug);
   if (!view) notFound();
-  if (view.me?.role !== "organiser") redirect(`/p/${slug}`);
+  if (!view.isHost) redirect(`/p/${slug}`);
   const { plan, members } = view;
   // Default ticks: whoever said they were in (or what you saved last time).
   const ticked = (m: (typeof members)[number]) => (plan.status === "wrapped" ? m.attended === true : m.rsvp === "in" && !m.waitlisted);
@@ -36,6 +39,15 @@ export default async function Wrap({ params }: { params: Promise<{ slug: string 
           <h1 className="title-h3">Who actually came?</h1>
           <p className="muted">Only people you tick can be added to bills or see your PayID. Nobody paid for anything, or it&rsquo;s sorted? Pick Nothing to split.</p>
         </div>
+        {wrapState(plan) === "early" && plan.starts_at && (
+          <Alert.Root status="information">
+            <Alert.Icon as="i" className="ri-information-line" aria-hidden="true" />
+            <div>
+              <strong>It&rsquo;s set for {formatWhen(plan.starts_at)}</strong>
+              Wrapping up now ends the plan early: voting, RSVPs and reminders stop, and it moves on to bills.
+            </div>
+          </Alert.Root>
+        )}
         <div className="db-card">
           <div className="people">
             {listed.map((m) => (

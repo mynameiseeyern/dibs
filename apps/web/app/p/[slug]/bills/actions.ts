@@ -13,10 +13,10 @@ export type FormState = { error?: string } | undefined;
 const path = (slug: string) => `/p/${slug}/bills`;
 const clean = (v: FormDataEntryValue | null, max = 80) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, max);
 
-/** Organiser ticks who actually came. Only they can be on bills or see a PayID. */
+/** A host (organiser or co-host) ticks who actually came. Only they can be on bills or see a PayID. */
 export async function wrapUp(slug: string, form: FormData): Promise<void> {
   const view = await loadPlan(slug);
-  if (!view || view.me?.role !== "organiser" || view.plan.status === "cancelled") return;
+  if (!view || !view.isHost || view.plan.status === "cancelled") return;
   const came = new Set(form.getAll("came").map(String));
   for (const m of view.members) {
     await store.updateMember(m.id, { attended: came.has(m.id) });
