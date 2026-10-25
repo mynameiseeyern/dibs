@@ -8,6 +8,7 @@ import { planPreview } from "@/lib/plan-preview";
 import * as Alert from "@/components/ui/alert";
 import { wrapState } from "@dibs/shared/plans";
 import { formatWhen } from "@/lib/time";
+import { WalkIns } from "./WalkIns";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   return planPreview((await params).slug, { label: "Wrap-up", path: "/wrap" });
@@ -57,13 +58,14 @@ export default async function Wrap({ params }: { params: Promise<{ slug: string 
                   {m.display_name}
                   <small>
                     {m.role === "organiser" ? "Organiser · " : ""}
-                    {m.rsvp === "in" ? "Said they were in" : m.rsvp === "maybe" ? "Said maybe" : "Didn't reply"}
+                    {!m.user_id && !m.guest_id ? "Came last minute" : m.rsvp === "in" ? "Said they were in" : m.rsvp === "maybe" ? "Said maybe" : "Didn't reply"}
                     {m.plus_one ? " · +1" : ""}
                   </small>
                 </span>
                 <Checkbox.Root name="came" value={m.id} defaultChecked={ticked(m)} aria-label={`${m.display_name} came`} />
               </label>
             ))}
+            <WalkIns taken={members.map((m) => m.display_name)} />
           </div>
         </div>
       </main>

@@ -392,6 +392,9 @@ function PayerCard({
               <Badge.Root color="success"><Badge.Icon as="i" className="ri-check-line" aria-hidden="true" />Square</Badge.Root>
             ) : s.status === "says_paid" ? (
               <ActionForm action={confirmPaid.bind(null, slug, bill.id, s.member_id)} what="that" haptic={HAPTICS.paid} size="small" label="Confirm" ariaLabel={`Confirm ${m?.display_name.split(" ")[0] ?? "they"} paid`} />
+            ) : m && !m.user_id && !m.guest_id ? (
+              // Came last minute with no app: they can't tap "I've paid", so the payer marks it.
+              <ActionForm action={confirmPaid.bind(null, slug, bill.id, s.member_id)} what="that" haptic={HAPTICS.paid} size="small" label={`Got ${formatAud(s.amount_cents)}`} ariaLabel={`${m.display_name.split(" ")[0]} paid you ${formatAud(s.amount_cents)}`} />
             ) : (
               <span className="db-split__owe">{formatAud(s.amount_cents)}</span>
             )}

@@ -21,6 +21,14 @@ export async function wrapUp(slug: string, form: FormData): Promise<void> {
   for (const m of view.members) {
     await store.updateMember(m.id, { attended: came.has(m.id) });
   }
+  // Last-minute arrivals the host typed in: members with no account or device, there for the bills.
+  const known = new Set(view.members.map((m) => m.display_name.toLowerCase()));
+  const walkIns = [...new Set(form.getAll("walkin").map((v) => clean(v, 40)).filter(Boolean))].filter((n) => !known.has(n.toLowerCase())).slice(0, 20);
+  for (const name of walkIns) {
+    const m = await store.addMember({ planId: view.plan.id, name, role: "guest" });
+    await store.updateMember(m.id, { rsvp: "in", attended: true });
+    came.add(m.id);
+  }
   // "Nothing to split": a hangout where nobody paid, or people sorted it themselves.
   const noBills = form.get("next") === "none";
   if (view.plan.status !== "wrapped") {
