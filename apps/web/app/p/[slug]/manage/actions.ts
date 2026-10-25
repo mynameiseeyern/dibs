@@ -1,5 +1,7 @@
 "use server";
 
+import { memberRejoinUrl } from "@/lib/rejoin";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { DibbyVolume, Vibe } from "@dibs/shared/types";
@@ -210,6 +212,19 @@ export async function setVibe(slug: string, vibe: Vibe): Promise<void> {
  * Co-host: runs it alongside you. Hand over: they become the organiser and you stay on as a
  * co-host. Only people going who have the app (a plan's organiser needs an account).
  */
+/**
+ * A rejoin link for one person on this plan (lib/rejoin.ts), for a host to send them when their
+ * browser forgot them. Only for people without an account: they sign in instead.
+ */
+export async function hostRejoinLink(slug: string, memberId: string): Promise<{ url?: string; error?: string }> {
+  const view = await loadPlan(slug);
+  if (!view?.isHost) return { error: "Only the hosts can do that." };
+  const them = view.members.find((m) => m.id === memberId);
+  if (!them || them.id === view.me?.id) return { error: "Couldn't find them on the plan." };
+  if (them.user_id) return { error: `${them.display_name.split(" ")[0]} has an account, so they can just sign in.` };
+  return { url: memberRejoinUrl(them) };
+}
+
 export async function setHost(slug: string, memberId: string, to: "cohost" | "guest" | "organiser"): Promise<Result & { name?: string }> {
   const view = await loadPlan(slug);
   if (!view?.me || view.me.role !== "organiser") return { error: "Only the organiser can do that." };

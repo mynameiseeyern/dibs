@@ -68,6 +68,18 @@ export const supabaseStore: Store = {
       await admin().from("guests").insert({ first_name, last_name, device_token_hash: tokenHash }).select("id, first_name, last_name, removed_at").single()
     );
   },
+  async getGuest(guestId) {
+    return must(await admin().from("guests").select("id, first_name, last_name, removed_at").eq("id", guestId).is("removed_at", null).maybeSingle());
+  },
+  async setGuestTokenHash(guestId, hash) {
+    must(await admin().from("guests").update({ device_token_hash: hash }).eq("id", guestId));
+  },
+  async getMember(memberId) {
+    return must(await admin().from("plan_members").select("*").eq("id", memberId).maybeSingle()) as PlanMember | null;
+  },
+  async setMemberGuest(memberId, guestId) {
+    must(await admin().from("plan_members").update({ guest_id: guestId }).eq("id", memberId));
+  },
   async removeGuest(guestId) {
     const mine = must(await admin().from("plan_members").select("id").eq("guest_id", guestId)) as { id: string }[];
     await this.removePhotosBy(mine.map((m) => m.id));
@@ -156,6 +168,9 @@ export const supabaseStore: Store = {
     const organiser = await this.addMember({ planId: plan.id, userId: p.organiserUserId, name: p.organiserName, role: "organiser" });
     await this.updateMember(organiser.id, { rsvp: "in" });
     return plan;
+  },
+  async getPlanById(planId) {
+    return must(await admin().from("plans").select("*").eq("id", planId).maybeSingle()) as Plan | null;
   },
   async getPlanBySlug(slug) {
     return must(await admin().from("plans").select("*").eq("slug", slug).maybeSingle()) as Plan | null;

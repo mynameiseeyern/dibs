@@ -23,7 +23,9 @@ import { store } from "@/lib/store";
 import { formatShort, formatWhen } from "@/lib/time";
 import { loadPlan } from "@/lib/viewer";
 import { removeMyPhoto, addTime, goWithTime, markFree, removeTime, appInterest, trackShare, addOption, askDibbyMore, joinPlan, lockPlan, removeMe, removeOption, setRsvp, vote } from "./actions";
-import { setHost, setPlace } from "./manage/actions";
+import { hostRejoinLink, setHost, setPlace } from "./manage/actions";
+import { SaveSpot } from "@/components/SaveSpot";
+import { guestRejoinUrl } from "@/lib/rejoin";
 import { JoinForm } from "./JoinForm";
 import { ShareButton } from "./ShareButton";
 import { GetTheApp } from "./GetTheApp";
@@ -245,6 +247,9 @@ export default async function PlanPage({ params, searchParams }: Props) {
           </section>
         )}
 
+        {/* A guest with no email: their way back if this browser forgets them. */}
+        {me?.guest_id && view.here.guest?.id === me.guest_id && !view.here.organiser && !cancelled && <SaveSpot url={guestRejoinUrl(me.guest_id)} name={me.display_name} />}
+
         {roll && (roll.canAdd || roll.photos.length > 0) && (
           <div className="db-stack">
             {roll.canAdd && <CameraCard slug={slug} taken={roll.taken} max={roll.max} revealed={roll.revealed} />}
@@ -350,6 +355,9 @@ export default async function PlanPage({ params, searchParams }: Props) {
                         {m.id === me?.id ? " (you)" : ""}
                         <small>{m.role === "organiser" ? "Organiser" : m.role === "cohost" ? "Co-host" : "Came"}</small>
                       </span>
+                      {isHost && m.id !== me?.id && !m.user_id && (
+                        <HostMenu name={m.display_name} role="guest" canRun={false} why={null} canManage={false} setHost={setHost.bind(null, slug, m.id)} rejoin={hostRejoinLink.bind(null, slug, m.id)} />
+                      )}
                     </li>
                   ))}
                 {!wrapped &&
@@ -368,13 +376,15 @@ export default async function PlanPage({ params, searchParams }: Props) {
                               {m.plus_one ? " · +1" : ""}
                             </small>
                           </span>
-                          {me?.role === "organiser" && m.id !== me.id && m.role !== "organiser" && (g === "in" || m.role === "cohost") && (
+                          {isHost && m.id !== me?.id && m.role !== "organiser" && (me?.role === "organiser" ? g === "in" || m.role === "cohost" || !m.user_id : !m.user_id) && (
                             <HostMenu
                               name={m.display_name}
                               role={m.role === "cohost" ? "cohost" : "guest"}
                               canRun={g === "in" && Boolean(m.user_id)}
                               why={g !== "in" ? `${m.display_name.split(" ")[0]} isn't going right now.` : `${m.display_name.split(" ")[0]} joined without the app. They need it to help run a plan.`}
                               setHost={setHost.bind(null, slug, m.id)}
+                              rejoin={m.user_id ? undefined : hostRejoinLink.bind(null, slug, m.id)}
+                              canManage={me?.role === "organiser"}
                             />
                           )}
                         </li>
