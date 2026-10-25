@@ -16,6 +16,7 @@ export function Once({
   label,
   colour,
   size,
+  width,
   after,
   still,
 }: {
@@ -24,6 +25,7 @@ export function Once({
   label: string;
   colour?: string;
   size?: number;
+  width?: number;
   after?: React.ReactNode;
   still?: React.ReactNode;
 }) {
@@ -47,6 +49,7 @@ export function Once({
       label={label}
       colour={colour}
       size={size}
+      width={width}
       onDone={() => {
         try {
           localStorage.setItem(key, "1");

@@ -39,13 +39,14 @@ export interface Stage {
   dispose(): void;
 }
 
-export function stage(canvas: HTMLCanvasElement, size: number): Stage {
+/** `width` defaults to `height`: a square stage. Wider stages fit a row of figures without cropping. */
+export function stage(canvas: HTMLCanvasElement, height: number, width = height): Stage {
   const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: "low-power" });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-  renderer.setSize(size, size, false);
+  renderer.setSize(width, height, false);
   renderer.setClearColor(0x000000, 0);
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 50);
+  const camera = new THREE.PerspectiveCamera(32, width / height, 0.1, 50);
   camera.position.set(0, 1.6, 7);
   camera.lookAt(0, 0.4, 0);
   scene.add(new THREE.HemisphereLight(0xffffff, 0x8a80a0, 1.6));
