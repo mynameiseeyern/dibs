@@ -25,7 +25,20 @@ type Who = "dibby" | "us";
  * or a vote, and a vote is filled by Dibby (three real spots) or by the crew.
  */
 export function NewPlanForm() {
-  const [state, action, pending] = useActionState(createPlan, undefined);
+  // Dibby searches near you, so location is asked for when you tap "Let Dibby pick", not before.
+  // Turning "Near me" off on the chip means no.
+  const nearDeclined = useRef(false);
+  const [state, action, pending] = useActionState(async (s: Awaited<ReturnType<typeof createPlan>>, f: FormData) => {
+    if (f.get("where") === "dibby" && !f.get("near_lat") && !nearDeclined.current) {
+      const c = await locate({ ask: true });
+      if (c) {
+        f.set("near_lat", String(c.lat));
+        f.set("near_lng", String(c.lng));
+        setSearch((v) => ({ ...v, near: c }));
+      }
+    }
+    return createPlan(s, f);
+  }, undefined);
   const [where, setWhere] = useState<Where>("place");
   const [who, setWho] = useState<Who>("dibby");
   const [place, setPlace] = useState<PlacePick | null>(null);
@@ -39,13 +52,13 @@ export function NewPlanForm() {
   const [ask, setAsk] = useState("");
   const [vibe, setVibe] = useState<Vibe>("chill");
   const placeholder = useCyclingPlaceholder(mode === "dibby" && ask === "");
-  // Near me is the default for Dibby: on straight away if location's already allowed, otherwise
-  // asked for the first time Dibby's section is in play. Tap the chip to turn it off.
-  const locAsked = useRef(false);
+  // Near me is the default for Dibby: on straight away if location's already allowed. If not,
+  // nothing pops up here; it's asked for on "Let Dibby pick". Tap the chip to turn it off.
+  const locChecked = useRef(false);
   useEffect(() => {
-    if (mode !== "dibby" || search.near || locAsked.current) return;
-    locAsked.current = true;
-    locate({ ask: false }).then((c) => (c ? setSearch((v) => ({ ...v, near: c })) : locate({ ask: true }).then((c2) => c2 && setSearch((v) => ({ ...v, near: c2 })))));
+    if (mode !== "dibby" || search.near || locChecked.current) return;
+    locChecked.current = true;
+    locate({ ask: false }).then((c) => c && setSearch((v) => ({ ...v, near: c })));
   }, [mode, search.near]);
 
   return (
@@ -110,7 +123,14 @@ export function NewPlanForm() {
                   <Input.Input id="ask" name="ask" value={ask} onChange={(e) => setAsk(e.target.value)} placeholder={placeholder} maxLength={500} autoComplete="off" />
                 </Input.Wrapper>
               </Input.Root>
-              <SearchChips value={search} onChange={setSearch} />
+              <SearchChips
+                value={search}
+                onChange={(v) => {
+                  if (search.near && !v.near) nearDeclined.current = true;
+                  if (v.near) nearDeclined.current = false;
+                  setSearch(v);
+                }}
+              />
               <p className="paragraph-xs muted">Dibby picks three real spots to vote on. Anyone can add more from the map. What you type goes to an AI provider.</p>
             </>
           ) : (
