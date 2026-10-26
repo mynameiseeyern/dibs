@@ -59,6 +59,14 @@ export interface Store {
   findGuestByTokenHash(hash: string): Promise<Guest | null>;
   createGuest(g: { first_name: string; last_name: string; tokenHash: string }): Promise<Guest>;
   removeGuest(guestId: string): Promise<void>;
+  /** A guest by id (not removed), for rejoin links. */
+  getGuest(guestId: string): Promise<Guest | null>;
+  /** Points a guest at a new device token: their old browser stops working, this one starts. */
+  setGuestTokenHash(guestId: string, hash: string): Promise<void>;
+  /** One plan member by id. */
+  getMember(memberId: string): Promise<PlanMember | null>;
+  /** Moves a membership onto a guest (a host's rejoin link), or detaches it (null). */
+  setMemberGuest(memberId: string, guestId: string | null): Promise<void>;
   /** A guest asked for a sign-in link to this email, to keep their plans. */
   setGuestEmail(guestId: string, email: string): Promise<void>;
   /**
@@ -80,6 +88,7 @@ export interface Store {
 
   createPlan(p: NewPlan): Promise<Plan>;
   getPlanBySlug(slug: string): Promise<Plan | null>;
+  getPlanById(planId: string): Promise<Plan | null>;
   listPlansForUser(userId: string): Promise<{ plan: Plan; member: PlanMember }[]>;
   /** Plans this device has joined as a guest. */
   listPlansForGuest(guestId: string): Promise<{ plan: Plan; member: PlanMember }[]>;

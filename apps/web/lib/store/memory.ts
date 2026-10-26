@@ -70,6 +70,21 @@ export const memoryStore: Store = {
     if (p && !p.beta_prompt_answered_at) p.beta_prompt_answered_at = new Date().toISOString();
   },
 
+  async getGuest(guestId) {
+    const g = db.guests.get(guestId);
+    return g && !g.removed_at ? g : null;
+  },
+  async setGuestTokenHash(guestId, hash) {
+    const g = db.guests.get(guestId);
+    if (g) g.tokenHash = hash;
+  },
+  async getMember(memberId) {
+    return db.members.get(memberId) ?? null;
+  },
+  async setMemberGuest(memberId, guestId) {
+    const m = db.members.get(memberId);
+    if (m) m.guest_id = guestId;
+  },
   async findGuestByTokenHash(hash) {
     for (const guest of db.guests.values()) if (guest.tokenHash === hash && !guest.removed_at) return guest;
     return null;
@@ -114,6 +129,9 @@ export const memoryStore: Store = {
     const organiser = [...db.members.values()].find((m) => m.plan_id === plan.id)!;
     organiser.rsvp = "in";
     return plan;
+  },
+  async getPlanById(planId) {
+    return db.plans.get(planId) ?? null;
   },
   async getPlanBySlug(slug) {
     for (const p of db.plans.values()) if (p.slug === slug) return p;

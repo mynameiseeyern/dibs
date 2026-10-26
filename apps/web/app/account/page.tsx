@@ -1,3 +1,5 @@
+import { SaveSpot } from "@/components/SaveSpot";
+import { guestRejoinUrl } from "@/lib/rejoin";
 import { Wordmark } from "@/components/Logo";
 import { Monogram } from "@/components/Monogram";
 import { BETA_LIST } from "@dibs/email";
@@ -83,6 +85,8 @@ export default async function Account() {
           <KeepPlansForm demo={!usingSupabase} />
         </section>
       )}
+
+      {guest && !organiser && <SaveSpot url={guestRejoinUrl(guest.id)} name={[guest.first_name, guest.last_name].filter(Boolean).join(" ")} always />}
 
       {organiser && (
         <section id="email" className="db-card section" aria-labelledby="email-h">

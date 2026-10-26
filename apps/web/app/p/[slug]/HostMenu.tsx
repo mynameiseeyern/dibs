@@ -17,6 +17,8 @@ export function HostMenu({
   canRun,
   why,
   setHost,
+  rejoin,
+  canManage = true,
 }: {
   name: string;
   role: "cohost" | "guest";
@@ -25,6 +27,10 @@ export function HostMenu({
   /** Why they can't run it, when they can't. */
   why: string | null;
   setHost: (to: To) => Promise<{ error?: string; name?: string }>;
+  /** For people without an account: a link that puts them back on this plan. */
+  rejoin?: () => Promise<{ url?: string; error?: string }>;
+  /** The organiser: co-host and hand-over options. Co-hosts only get the link. */
+  canManage?: boolean;
 }) {
   const first = name.split(" ")[0];
   const [open, setOpen] = useState(false);
@@ -53,11 +59,14 @@ export function HostMenu({
               <p>
                 {first} becomes the organiser: they run the vote, wrap-up and bills, and can hand it back. You stay on as a co-host.
               </p>
+            ) : !canManage ? (
+              <p>{`${first} joined without the app. If their browser forgot them, send them their link and they're back on this plan.`}</p>
             ) : canRun ? (
               <p>{role === "cohost" ? `${first} helps run this plan.` : `Get ${first} to help run this plan, or hand it over completely.`}</p>
             ) : (
               <p>{why}</p>
             )}
+            {rejoin && canManage && !confirming && <p className="paragraph-sm muted">Browser forgot them? Send them their link and they&rsquo;re back on this plan.</p>}
           </Modal.Body>
           <Modal.Footer>
             {confirming ? (
@@ -71,7 +80,7 @@ export function HostMenu({
               </>
             ) : (
               <>
-                {role === "cohost" ? (
+                {!canManage ? null : role === "cohost" ? (
                   <Button.Root variant="neutral" mode="lighter" size="large" block disabled={pending} onClick={() => run("guest", `${first}'s not a co-host any more`)}>
                     <i className="ri-user-unfollow-line db-icon" aria-hidden="true" />
                     Remove as co-host
@@ -84,10 +93,38 @@ export function HostMenu({
                     </Button.Root>
                   )
                 )}
-                {canRun && (
+                {canManage && canRun && (
                   <Button.Root variant="neutral" mode="lighter" size="large" block disabled={pending} onClick={() => setConfirming(true)}>
                     <i className="ri-vip-crown-line db-icon" aria-hidden="true" />
                     Hand the plan over
+                  </Button.Root>
+                )}
+                {rejoin && (
+                  <Button.Root
+                    variant="neutral"
+                    mode="lighter"
+                    size="large"
+                    block
+                    disabled={pending}
+                    onClick={() =>
+                      start(async () => {
+                        const res = await rejoin();
+                        if (!res.url) return void toast.error(res.error ?? "Couldn't make the link.");
+                        const text = `${first}, here's your Dibby link to get back on the plan. It's just for you: ${res.url}`;
+                        try {
+                          if (navigator.share) await navigator.share({ text });
+                          else {
+                            await navigator.clipboard.writeText(res.url);
+                            toast.success("Link copied", { description: `Send it to ${first} directly, not the group.` });
+                          }
+                        } catch (e) {
+                          if ((e as Error).name !== "AbortError") toast.info(`Send this to ${first}`, { description: res.url, duration: 12000 });
+                        }
+                      })
+                    }
+                  >
+                    <i className="ri-link db-icon" aria-hidden="true" />
+                    Send {first} their link
                   </Button.Root>
                 )}
                 <Modal.Close asChild>
