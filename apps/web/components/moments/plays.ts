@@ -4,10 +4,10 @@ import { clamp01, confetti, crew, easeOutBack, easeOutCubic, matte, palette, pro
 export type MomentKind = "pop" | "lock" | "square" | "paid";
 
 /** Each moment: builds its scene, plays once, and resolves when it's done. */
-export function play(kind: MomentKind, canvas: HTMLCanvasElement, size: number, colour?: string): { done: Promise<void>; dispose: () => void } {
+export function play(kind: MomentKind, canvas: HTMLCanvasElement, size: number, colour?: string, width = size): { done: Promise<void>; dispose: () => void } {
   const el = canvas.parentElement ?? canvas;
   const p = palette(el);
-  const s = stage(canvas, size);
+  const s = stage(canvas, size, width);
   const done = new Promise<void>((resolve) => {
     PLAYS[kind](s, p, colour ? crewColour(colour, el) : p.lime, colour ?? "lime").then((tick) => s.run(tick, resolve));
   });
@@ -126,8 +126,10 @@ const square: Play = async (s, p) => {
   });
   const c = confetti(60, p);
   s.scene.add(c.group);
-  s.camera.position.set(0, 2.2, 8.5);
-  s.camera.lookAt(0, 0.8, 0);
+  // A wide stage (Moment width > size) fits the row; closer in so the crew fills it, with room either side.
+  const wide = s.camera.aspect >= 1.4;
+  s.camera.position.set(0, wide ? 1.9 : 2.2, wide ? 7.2 : 10.5);
+  s.camera.lookAt(0, wide ? 1 : 0.8, 0);
   return (t) => {
     figs.forEach((f, i) => {
       const u = easeOutBack(clamp01((t - i * 0.08) / 0.5));

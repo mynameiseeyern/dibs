@@ -206,7 +206,7 @@ export default async function Bills({ params, searchParams }: Props) {
 
         {owedShares.length > 0 && settled === owedShares.length && (
           <section className="moment">
-            <Once id={`square:${plan.id}`} kind="square" size={220} label="Everyone's square. The crew celebrates." />
+            <Once id={`square:${plan.id}`} kind="square" size={220} width={358} label="Everyone's square. The crew celebrates." />
             <Badge.Root color="success"><Badge.Icon as="i" className="ri-checkbox-circle-fill" aria-hidden="true" />All squared up</Badge.Root>
             <p className="muted">{allSquare(plan.vibe)}</p>
             <Button.Root asChild variant="neutral" mode="lighter">

@@ -32,6 +32,7 @@ import * as DigitInput from "@/components/ui/digit-input";
 import * as ProgressCircle from "@/components/ui/progress-circle";
 import * as LinkButton from "@/components/ui/link-button";
 import { useState } from "react";
+import { Moment } from "@/components/moments/Moment";
 import { DayStrip, DateTimeField } from "@/components/DateTime";
 import {
   RiAddLine,
@@ -278,6 +279,10 @@ export function Gallery() {
         </div>
       </Section>
 
+      <Section title="Moments">
+        <MomentsDemo />
+      </Section>
+
       <Section title="Date picker">
         <DateDemo />
       </Section>
@@ -390,6 +395,25 @@ export function Gallery() {
         </div>
       </Section>
     </Tooltip.Provider>
+  );
+}
+
+function MomentsDemo() {
+  const [run, setRun] = useState(0);
+  return (
+    <>
+      <div key={run} className="db-stack">
+        <Moment kind="square" size={220} width={358} label="Everyone's square" />
+        <div className="db-row justify-center">
+          <Moment kind="pop" size={140} colour="violet" label="You're in" />
+          <Moment kind="lock" size={140} label="Locked in" />
+          <Moment kind="paid" size={120} label="Paid" />
+        </div>
+      </div>
+      <Button.Root variant="neutral" mode="lighter" onClick={() => setRun(run + 1)}>
+        Play again
+      </Button.Root>
+    </>
   );
 }
 

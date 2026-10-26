@@ -11,13 +11,17 @@ import type { MomentKind } from "./plays";
 export function Moment({
   kind,
   size = 160,
+  width = size,
   colour,
   label,
   onDone,
   children,
 }: {
   kind: MomentKind;
+  /** Height in px; also the width unless `width` is set. */
   size?: number;
+  /** For a row of figures (everyone's square): wider than tall so nobody's cut off. Shrinks to fit the screen. */
+  width?: number;
   colour?: string;
   label: string;
   onDone?: () => void;
@@ -37,7 +41,7 @@ export function Moment({
     let gone = false;
     import("./plays").then(({ play }) => {
       if (gone || !ref.current) return;
-      const run = play(kind, ref.current, size, colour);
+      const run = play(kind, ref.current, size, colour, width);
       dispose = run.dispose;
       run.done.then(() => onDone?.());
     });
@@ -50,8 +54,8 @@ export function Moment({
   }, []);
 
   return (
-    <div className="moment3d" style={{ width: size, height: size }} role="img" aria-label={label}>
-      {still ? <div className="moment3d__still">{children}</div> : <canvas ref={ref} width={size} height={size} />}
+    <div className="moment3d" style={{ width, maxWidth: "100%", aspectRatio: `${width} / ${size}` }} role="img" aria-label={label}>
+      {still ? <div className="moment3d__still">{children}</div> : <canvas ref={ref} width={width} height={size} />}
     </div>
   );
 }
