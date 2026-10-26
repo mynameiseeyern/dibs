@@ -14,19 +14,24 @@ export function Composer({ action }: { action: (s: FormState, f: FormData) => Pr
   const [text, setText] = useState("");
   const [askedDibby, setAskedDibby] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
-  // Dibby searches around you by default. Ask for location once, when you first tag Dibby.
+  // Dibby searches around you by default. Location is used silently if it's already allowed;
+  // otherwise it's asked for when you send a message to Dibby, not while you're typing one.
   const tagging = /(^|\s)@dibby\b/i.test(text);
   const [near, setNear] = useState<Coords | null>(null);
   const asked = useRef(false);
   useEffect(() => {
     locate({ ask: false }).then((c) => c && setNear(c));
   }, []);
-  useEffect(() => {
-    if (!tagging || near || asked.current) return;
-    asked.current = true;
-    locate({ ask: true }).then(setNear);
-  }, [tagging, near]);
   const [state, formAction, pending] = useActionState(async (s: FormState, f: FormData) => {
+    if (/(^|\s)@dibby\b/i.test(String(f.get("body") ?? "")) && !f.get("near_lat") && !asked.current) {
+      asked.current = true;
+      const c = await locate({ ask: true });
+      if (c) {
+        setNear(c);
+        f.set("near_lat", String(c.lat));
+        f.set("near_lng", String(c.lng));
+      }
+    }
     const r = await action(s, f);
     setText("");
     return r;
