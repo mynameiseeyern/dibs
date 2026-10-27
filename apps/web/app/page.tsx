@@ -15,7 +15,7 @@ export const metadata: Metadata = { robots: { index: true, follow: true }, alter
 const STEPS = [
   { icon: "ri-edit-2-line", label: "Make the plan" },
   { icon: "ri-whatsapp-line", label: "Share the link" },
-  { icon: "ri-checkbox-circle-line", label: "Vote and go" },
+  { icon: "ri-chat-smile-2-line", label: "Dibby chases the crew" },
 ];
 
 /**
