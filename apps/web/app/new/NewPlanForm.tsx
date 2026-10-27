@@ -79,8 +79,8 @@ export function NewPlanForm({ organising, savedCategories = [] }: { organising: 
           <span id="where-l">Where</span>
         </Label.Root>
           <SegmentedControl.List aria-labelledby="where-l">
-            <SegmentedControl.Trigger value="place">Already decided</SegmentedControl.Trigger>
-            <SegmentedControl.Trigger value="vote">Feeling democratic?</SegmentedControl.Trigger>
+            <SegmentedControl.Trigger value="place">Location</SegmentedControl.Trigger>
+            <SegmentedControl.Trigger value="vote">Start a poll</SegmentedControl.Trigger>
           </SegmentedControl.List>
       </div>
 
