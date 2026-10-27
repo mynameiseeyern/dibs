@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { TZ, formatWhen } from "@/lib/time";
 import { countIn } from "@dibs/shared/plans";
 import { loadPlan } from "@/lib/viewer";
-import { cancelPlan, openVote, setArea, setCapacity, setDibbyVolume, setPlace, setPlusOnes, setTitle, setVibe, setVoteDeadline, setWhen } from "./actions";
+import { cancelPlan, openVote, setArea, setCategory, setDescription, setCapacity, setDibbyVolume, setPlace, setPlusOnes, setTitle, setVibe, setVoteDeadline, setWhen } from "./actions";
 import { store } from "@/lib/store";
 import { EditPlan } from "./EditPlan";
 import * as Button from "@/components/ui/button";
@@ -38,6 +38,7 @@ export default async function Manage({ params }: { params: Promise<{ slug: strin
   if (!isHost || plan.status === "cancelled" || plan.status === "wrapped") redirect(`/p/${slug}`);
   const locked = plan.status === "locked";
   const optionCount = (await store.listOptions(plan.id)).length;
+  const profile = view.organiser ? await store.getProfile(view.organiser.id) : null;
 
   return (
     <main className="page">
@@ -56,6 +57,10 @@ export default async function Manage({ params }: { params: Promise<{ slug: strin
         status={locked ? "locked" : "voting"}
         askWhenHref={plan.starts_at && Date.parse(plan.starts_at) <= Date.now() ? undefined : `/p/${slug}?when=ask#when`}
         title={plan.title}
+        category={plan.category ?? null}
+        description={plan.description ?? null}
+        savedCategories={profile?.plan_categories ?? []}
+        signedIn={Boolean(view.organiser)}
         whenLabel={formatWhen(plan.starts_at)}
         deadlineLabel={formatWhen(plan.vote_deadline)}
         whenInput={toLocalInput(plan.starts_at)}
@@ -70,6 +75,8 @@ export default async function Manage({ params }: { params: Promise<{ slug: strin
         volume={plan.dibby_volume ?? "normal"}
         actions={{
           setTitle: setTitle.bind(null, slug),
+          setCategory: setCategory.bind(null, slug),
+          setDescription: setDescription.bind(null, slug),
           setWhen: setWhen.bind(null, slug),
           setArea: setArea.bind(null, slug),
           setVoteDeadline: setVoteDeadline.bind(null, slug),

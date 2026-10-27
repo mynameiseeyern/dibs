@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { countIn, planAccess, READ_ONLY_NOTE, shareText, unreadCount, wrapState } from "@dibs/shared/plans";
+import { categoryIcon, countIn, planAccess, READ_ONLY_NOTE, shareText, unreadCount, wrapState } from "@dibs/shared/plans";
 import { formatAud } from "@dibs/shared/bills";
 import type { PlanMember, Rsvp } from "@dibs/shared/types";
 import { Wordmark } from "@/components/Logo";
@@ -40,8 +40,9 @@ import { siteUrl } from "@/lib/site";
 import { planPreview } from "@/lib/plan-preview";
 import * as Button from "@/components/ui/button";
 import * as Badge from "@/components/ui/badge";
+import * as Alert from "@/components/ui/alert";
 
-type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ when?: string }> };
+type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ when?: string; kept?: string }> };
 
 export const dynamic = "force-dynamic";
 
@@ -55,7 +56,9 @@ const groupOf = (m: PlanMember) => (m.waitlisted ? "waitlist" : m.rsvp ?? "none"
 
 export default async function PlanPage({ params, searchParams }: Props) {
   const { slug } = await params;
-  const askWhen = (await searchParams).when === "ask";
+  const sp = await searchParams;
+  const askWhen = sp.when === "ask";
+  const kept = sp.kept === "1";
   let view = await loadPlan(slug);
   if (!view) notFound();
   // Votes close themselves once the deadline passes.
@@ -149,6 +152,13 @@ export default async function PlanPage({ params, searchParams }: Props) {
           </div>
         </header>
 
+        {kept && (
+          <Alert.Root status="success" role="status">
+            <Alert.Icon as="i" className="ri-mail-check-line" aria-hidden="true" />
+            <div>Plan&rsquo;s made. Check your email for a link to keep it on any device.</div>
+          </Alert.Root>
+        )}
+
         {/* 1. The event: what, when, where, who's hosting. Edit, calendar and directions live on it. */}
         <article className={`db-card db-plan${cancelled ? "" : " db-card--sticker"}`} aria-labelledby="plan-h">
           <div className="plan-card__top">
@@ -156,11 +166,18 @@ export default async function PlanPage({ params, searchParams }: Props) {
               <Badge.Icon as="i" className={status.icon} aria-hidden="true" />
               {status.label}
             </Badge.Root>
+            {plan.category && (
+              <Badge.Root color="faded" variant="lighter">
+                <Badge.Icon as="i" className={categoryIcon(plan.category)} aria-hidden="true" />
+                {plan.category}
+              </Badge.Root>
+            )}
           </div>
           <div>
             <h1 id="plan-h" className="title-h3 plan-title">{plan.title}</h1>
             {hostedBy && <p className="paragraph-sm muted">{hostedBy}</p>}
           </div>
+          {plan.description && <p className="paragraph-sm plan-desc">{plan.description}</p>}
           <ul className="db-plan__facts">
             <li>
               <i className="ri-calendar-line db-icon" aria-hidden="true" /> {when ?? <span className="muted">Time to be decided</span>}

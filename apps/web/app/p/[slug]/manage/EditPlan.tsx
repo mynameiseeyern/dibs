@@ -11,6 +11,10 @@ import * as Modal from "@/components/ui/modal";
 import * as Switch from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
 import { PlaceSection } from "./PlaceSection";
+import { CategoryPick } from "@/app/new/CategoryPick";
+import { DESCRIPTION_MAX } from "@dibs/shared/plans";
+import * as Textarea from "@/components/ui/textarea";
+import * as Label from "@/components/ui/label";
 
 type Result = { error?: string };
 
@@ -19,6 +23,11 @@ export interface EditPlanProps {
   /** "Ask the crew when works" on the plan page, while the plan hasn't started. */
   askWhenHref?: string;
   title: string;
+  category: string | null;
+  description: string | null;
+  /** The organiser's own categories (signed in), for the picker. */
+  savedCategories: string[];
+  signedIn: boolean;
   /** Display values, already formatted on the server. */
   whenLabel: string | null;
   deadlineLabel: string | null;
@@ -35,6 +44,8 @@ export interface EditPlanProps {
   volume: DibbyVolume;
   actions: {
     setTitle: (v: string) => Promise<Result>;
+    setCategory: (v: string) => Promise<Result>;
+    setDescription: (v: string) => Promise<Result>;
     setWhen: (v: string) => Promise<Result>;
     setArea: (v: string) => Promise<Result>;
     setVoteDeadline: (v: string) => Promise<Result>;
@@ -54,7 +65,7 @@ const VOLUME = {
   loud: { label: "Loud", hint: "Everything Normal does, up to five a day." },
 } as const;
 
-type SheetId = "title" | "when" | "where" | "deadline" | "spots" | "vibe" | "volume" | "cancel";
+type SheetId = "title" | "category" | "description" | "when" | "where" | "deadline" | "spots" | "vibe" | "volume" | "cancel";
 
 /**
  * The edit screen as a settings list: each row shows the current value and opens a sheet to
@@ -72,6 +83,8 @@ export function EditPlan(p: EditPlanProps) {
     <>
       <Group label="The plan">
         <Row label="Name" value={p.title} onOpen={() => setSheet("title")} />
+        <Row label="Category" value={p.category ?? "None"} onOpen={() => setSheet("category")} />
+        <Row label="Description" value={p.description ? p.description.replace(/\s+/g, " ") : "None"} onOpen={() => setSheet("description")} />
         <Row label="When" value={p.whenLabel ?? "To be decided"} onOpen={() => setSheet("when")} />
         <Row label="Where" value={whereValue} onOpen={() => setSheet("where")} />
         {voting && <Row label="Vote closes" value={p.deadlineLabel ?? "When you lock it in"} onOpen={() => setSheet("deadline")} />}
@@ -100,6 +113,12 @@ export function EditPlan(p: EditPlanProps) {
         field={{ label: "Name", name: "title", defaultValue: p.title, maxLength: 80, required: true, autoComplete: "off" }}
         save={p.actions.setTitle}
       />
+      <TextSheet open={sheet === "category"} onClose={close} title="Category" name="category" save={p.actions.setCategory}>
+        <CategoryPick saved={p.savedCategories} signedIn={p.signedIn} initial={p.category} />
+      </TextSheet>
+      <TextSheet open={sheet === "description"} onClose={close} title="Description" name="description" save={p.actions.setDescription}>
+        <DescriptionField initial={p.description ?? ""} />
+      </TextSheet>
       <TextSheet
         open={sheet === "when"}
         onClose={close}
@@ -394,6 +413,26 @@ function VolumePick({ value, save }: { value: DibbyVolume; save: (v: DibbyVolume
           <span className="paragraph-sm muted">{VOLUME[v].hint}</span>
         </button>
       ))}
+    </div>
+  );
+}
+
+function DescriptionField({ initial }: { initial: string }) {
+  const [text, setText] = useState(initial);
+  return (
+    <div className="flex flex-col gap-2">
+      <Label.Root htmlFor="edit-description">Description</Label.Root>
+      <Textarea.Root
+        id="edit-description"
+        name="description"
+        placeholder="What to bring, where to meet, dress code…"
+        maxLength={DESCRIPTION_MAX}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+      >
+        <Textarea.CharCounter current={text.length} max={DESCRIPTION_MAX} />
+      </Textarea.Root>
+      <p className="paragraph-xs muted">Anyone with the link sees this. Clear it to take it off.</p>
     </div>
   );
 }

@@ -16,6 +16,9 @@ import { PlaceCard } from "@/components/PlaceCard";
 import { SearchChips, WhenChips, dayWord, nextDays, timeWord, type SearchValue, type WhenValue } from "./chips";
 import { DibbyBubble, useCyclingPlaceholder } from "./DibbyBubble";
 import { DibbyWorking } from "@/components/DibbyWorking";
+import { CategoryPick } from "./CategoryPick";
+import { Description } from "./Description";
+import { Organiser, type Organising } from "./Organiser";
 
 type Where = "place" | "vote";
 type Who = "dibby" | "us";
@@ -24,7 +27,7 @@ type Who = "dibby" | "us";
  * One form for every plan. Name and when are shared; "where" is either a place from the map
  * or a vote, and a vote is filled by Dibby (three real spots) or by the crew.
  */
-export function NewPlanForm() {
+export function NewPlanForm({ organising, savedCategories = [] }: { organising: Organising; savedCategories?: string[] }) {
   // Dibby searches near you, so location is asked for when you tap "Let Dibby pick", not before.
   // Turning "Near me" off on the chip means no.
   const nearDeclined = useRef(false);
@@ -65,6 +68,8 @@ export function NewPlanForm() {
     <form action={action} className="form">
       <input type="hidden" name="where" value={mode} />
       <Field label="Name it" name="title" placeholder="Friday dinner" maxLength={80} autoComplete="off" hint={mode === "dibby" ? "Leave it blank and Dibby names it." : undefined} />
+
+      <CategoryPick saved={savedCategories} signedIn={organising.kind === "account"} />
 
       <WhenChips value={when} onChange={setWhen} />
 
@@ -140,6 +145,8 @@ export function NewPlanForm() {
       </SegmentedControl.Content>
       </SegmentedControl.Root>
 
+      <Description />
+
       <fieldset className="m-0 min-w-0 border-0 p-0">
         <Label.Root asChild className="mb-2">
           <legend>How Dibby talks</legend>
@@ -152,6 +159,8 @@ export function NewPlanForm() {
         <Switch.Root name="plus_ones" />
         Plus-ones welcome
       </label>
+
+      <Organiser who={organising} />
 
       <FormError error={state?.error} />
       {pending && mode === "dibby" && <DibbyWorking where={search.near ? "near you" : null} />}

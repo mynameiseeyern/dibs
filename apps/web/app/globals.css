@@ -549,3 +549,12 @@ gmp-place-details {
   .landing__step { grid-template-columns: 1fr; align-items: start; }
   .landing__step img { width: 88px; height: 88px; }
 }
+
+/* Home: the plan form is the front door, with the three steps as a quick strip above it. */
+.start__hero { display: flex; flex-direction: column; gap: var(--space-2); }
+.start__steps { list-style: none; margin: var(--space-2) 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); }
+.start__steps li { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); padding: var(--space-3); border-radius: var(--radius-lg); background: var(--bg-weak-50); }
+.start__steps .db-icon { color: var(--primary-base); }
+.start__num { position: absolute; top: var(--space-2); right: var(--space-3); font-family: var(--font-mono, monospace); font-size: 12px; color: var(--text-soft-400); }
+.plan-card__top { justify-content: flex-start; flex-wrap: wrap; }
+.plan-desc { white-space: pre-line; overflow-wrap: anywhere; }

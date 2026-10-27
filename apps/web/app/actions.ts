@@ -5,15 +5,15 @@ import { redirect } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import type { Vibe } from "@dibs/shared/types";
 import { currentOrganiser, demoSignIn, signOut } from "@/lib/auth";
-import { clearGuestSession, currentGuest } from "@/lib/guest";
-import { store, usingSupabase } from "@/lib/store";
+import { clearGuestSession, createGuestSession, currentGuest } from "@/lib/guest";
+import { store, usingSupabase, type Guest } from "@/lib/store";
 import { report } from "@/lib/report";
 import { draftPlan, type DraftPicks } from "@/lib/dibby";
 import { localToIso } from "@/lib/time";
 import { resolveStart } from "@dibs/shared/when";
 import { siteUrl } from "@/lib/site";
 import { BETA_LIST } from "@dibs/email";
-import { cleanCustomPlace } from "@dibs/shared/plans";
+import { cleanCategory, cleanCustomPlace, cleanDescription, rememberCategory } from "@dibs/shared/plans";
 import { getPlace } from "@/lib/places";
 import { withPlaces } from "@/lib/place-ids";
 
@@ -156,7 +156,7 @@ export async function saveProfile(_prev: FormState, form: FormData): Promise<For
       console.error("[onboarding] beta updates subscribe failed", me.id, e);
     }
   }
-  redirect(safeNext(String(form.get("next") ?? "/new")));
+  redirect(safeNext(String(form.get("next") ?? "/")));
 }
 
 /**
@@ -165,10 +165,8 @@ export async function saveProfile(_prev: FormState, form: FormData): Promise<For
  * real spots.
  */
 export async function createPlan(_prev: FormState, form: FormData): Promise<FormState> {
-  const me = await currentOrganiser();
-  if (!me) redirect("/login?next=/new");
-  const profile = await store.getProfile(me.id);
-  if (!profile) redirect("/onboarding?next=/new");
+  const host = await whoIsOrganising(form);
+  if ("error" in host) return { error: host.error };
 
   const where = String(form.get("where") ?? "vote");
   const picks = readPicks(form);
@@ -177,7 +175,9 @@ export async function createPlan(_prev: FormState, form: FormData): Promise<Form
   const title = clean(form.get("title"), 80);
   const startLocal = resolveStart(null, picks);
   const startsAt = startLocal ? localToIso(startLocal) : null;
-  const organiserName = `${profile.first_name} ${profile.last_name}`;
+  const organiserName = host.name;
+  const category = cleanCategory(form.get("category"));
+  const description = cleanDescription(form.get("description"));
 
   // Dibby seeds the vote: name and area can come from what you're after, if you left them blank.
   if (where === "dibby") {
@@ -192,8 +192,10 @@ export async function createPlan(_prev: FormState, form: FormData): Promise<Form
       return { error: "brb, Dibby's having a moment. Try again, or add your own places." };
     }
     const plan = await store.createPlan({
-      organiserUserId: me.id,
+      ...(await host.ids()),
       organiserName,
+      category,
+      description,
       title: title || draft.title,
       area: clean(form.get("area"), 80) || draft.area,
       startsAt: startsAt ?? (draft.startsAtLocal ? localToIso(draft.startsAtLocal) : null),
@@ -202,7 +204,7 @@ export async function createPlan(_prev: FormState, form: FormData): Promise<Form
     });
     for (const v of draft.venues) await store.addOption({ planId: plan.id, label: v.name, placeId: v.placeId, note: v.address });
     const members = await store.listMembers(plan.id);
-    const organiser = members.find((m) => m.user_id === me.id) ?? null;
+    const organiser = members.find((m) => m.role === "organiser") ?? null;
     await store.addMessage({ planId: plan.id, memberId: organiser?.id ?? null, kind: "text", body: `@dibby ${[ask, picksLabel(picks)].filter(Boolean).join(" · ")}`, mentionsDibby: true });
     await store.addMessage({
       planId: plan.id,
@@ -210,9 +212,10 @@ export async function createPlan(_prev: FormState, form: FormData): Promise<Form
       kind: "system",
       body: "Heads up: messages that tag @dibby are sent to an AI provider so Dibby can reply. Dibby only reads messages it's tagged in.",
     });
+    await afterCreate(host, category);
     const tail = draft.venues.length ? "Vote's open for 24 hours." : "Couldn't find spots for that on Maps, so add a few from the map and the vote opens.";
     await store.addMessage({ planId: plan.id, memberId: null, kind: "dibby", body: `${draft.reply} ${tail}`, template: withPlaces(null, draft.venues.map((v) => v.placeId)) });
-    redirect(`/p/${plan.slug}`);
+    redirect(await landingFor(host, plan.slug));
   }
 
   if (!title) return { error: "Give it a name, like “Friday dinner”." };
@@ -230,8 +233,10 @@ export async function createPlan(_prev: FormState, form: FormData): Promise<Form
   }
 
   const plan = await store.createPlan({
-    organiserUserId: me.id,
+    ...(await host.ids()),
     organiserName,
+    category,
+    description,
     title,
     area: venue ? null : clean(form.get("area"), 80) || null,
     startsAt,
@@ -239,7 +244,95 @@ export async function createPlan(_prev: FormState, form: FormData): Promise<Form
     plusOnes,
     venue,
   });
-  redirect(`/p/${plan.slug}`);
+  await afterCreate(host, category);
+  redirect(await landingFor(host, plan.slug));
+}
+
+type Host = {
+  name: string;
+  /** Who goes on the plan as organiser. For a new guest this sets the device cookie, so it's
+   *  only called once the rest of the form checks out. */
+  ids: () => Promise<{ organiserUserId: string | null; organiserGuestId: string | null }>;
+  userId: string | null;
+  savedCategories: string[];
+  /** A guest who'd like their plans kept: the sign-in link goes here once the plan exists. */
+  email: string | null;
+};
+
+/**
+ * Like checking out as a guest: a signed-in organiser makes the plan as themselves; anyone else
+ * just gives their name (and says they're 18+), with an email only if they want to keep it.
+ */
+async function whoIsOrganising(form: FormData): Promise<Host | { error: string }> {
+  const me = await currentOrganiser();
+  if (me) {
+    const profile = await store.getProfile(me.id);
+    if (!profile) redirect("/onboarding?next=/");
+    return {
+      name: `${profile.first_name} ${profile.last_name}`,
+      ids: async () => ({ organiserUserId: me.id, organiserGuestId: null }),
+      userId: me.id,
+      savedCategories: profile.plan_categories ?? [],
+      email: null,
+    };
+  }
+  const email = clean(form.get("email"), 200).toLowerCase() || null;
+  if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { error: "That email doesn't look right. Leave it blank to skip it." };
+  const guest = await currentGuest();
+  if (guest) {
+    return {
+      name: `${guest.first_name} ${guest.last_name}`,
+      ids: async () => ({ organiserUserId: null, organiserGuestId: guest.id }),
+      userId: null,
+      savedCategories: [],
+      email,
+    };
+  }
+  const first = clean(form.get("first_name"), 40);
+  const last = clean(form.get("last_name"), 40);
+  if (!first || !last) return { error: "Add your first and last name so the crew knows who's organising." };
+  if (form.get("adult") !== "on") return { error: "You need to be 18 or over to organise a plan." };
+  let made: Guest | null = null;
+  return {
+    name: `${first} ${last}`,
+    ids: async () => {
+      made ??= await createGuestSession(first, last);
+      return { organiserUserId: null, organiserGuestId: made.id };
+    },
+    userId: null,
+    savedCategories: [],
+    email,
+  };
+}
+
+/** A made-up category becomes a preset, but only for an account and only once the plan exists. */
+async function afterCreate(host: Host, category: string | null) {
+  if (host.userId && category) {
+    const next = rememberCategory(host.savedCategories, category);
+    if (next.join("\n") !== host.savedCategories.join("\n")) {
+      try {
+        await store.setSavedCategories(host.userId, next);
+      } catch (e) {
+        report("save category", e);
+      }
+    }
+  }
+}
+
+/** Straight to the plan. A guest who left an email gets the keep-your-plans link on the way. */
+async function landingFor(host: Host, slug: string): Promise<string> {
+  if (!host.email) return `/p/${slug}`;
+  const guest = await currentGuest();
+  if (!guest) return `/p/${slug}`;
+  try {
+    await store.setGuestEmail(guest.id, host.email);
+  } catch (e) {
+    report("keep plans email", e);
+    return `/p/${slug}`;
+  }
+  if (!usingSupabase) return `/p/${slug}`;
+  const sent = await sendLink(host.email, `/p/${slug}`);
+  return sent?.sent ? `/p/${slug}?kept=1` : `/p/${slug}`;
 }
 
 /** The Ask Dibby chips. Anything malformed is dropped rather than guessed at. */

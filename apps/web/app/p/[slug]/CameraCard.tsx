@@ -47,13 +47,13 @@ export function CameraCard({ slug, taken, max, revealed }: { slug: string; taken
     <section className="db-card camera" aria-labelledby="camera-h">
       <div className="camera__head">
         <span className="camera__icon" aria-hidden="true">
-          <i className="ri-camera-3-line db-icon" />
+          <i className="ri-image-add-line db-icon" />
         </span>
         <div className="camera__text">
-          <h2 id="camera-h" className="label-md">Dibby camera</h2>
+          <h2 id="camera-h" className="label-md">Upload pics</h2>
           <p className="paragraph-sm muted">
-            {left === 0 ? "That's your three." : `${left} of ${max} shots left`}
-            {revealed ? "" : " · develops at wrap-up"}
+            {left === 0 ? "That's your three. Nice." : `${left} of ${max} left`}
+            {revealed ? "" : " · the crew sees them at wrap-up"}
           </p>
         </div>
         <span className="camera__shots" aria-hidden="true">
@@ -66,8 +66,8 @@ export function CameraCard({ slug, taken, max, revealed }: { slug: string; taken
         <>
           <input ref={input} type="file" accept="image/*" hidden onChange={(e) => e.target.files?.[0] && send(e.target.files[0])} />
           <Button.Root type="button" variant="neutral" mode="lighter" block disabled={busy} onClick={() => input.current?.click()}>
-            <i className={`${busy ? "ri-loader-4-line db-spin" : "ri-camera-line"} db-icon`} aria-hidden="true" />
-            {busy ? "Sending…" : "Take a photo"}
+            <i className={`${busy ? "ri-loader-4-line db-spin" : "ri-upload-2-line"} db-icon`} aria-hidden="true" />
+            {busy ? "Uploading…" : left === max ? "Add your first pic" : "Add another"}
           </Button.Root>
         </>
       )}

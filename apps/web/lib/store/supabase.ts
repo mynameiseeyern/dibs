@@ -54,6 +54,9 @@ export const supabaseStore: Store = {
   async upsertProfile(p) {
     must(await admin().from("profiles").upsert(p));
   },
+  async setSavedCategories(userId, labels) {
+    must(await admin().from("profiles").update({ plan_categories: labels }).eq("user_id", userId));
+  },
   async answerBetaPrompt(userId) {
     must(await admin().from("profiles").update({ beta_prompt_answered_at: new Date().toISOString() }).eq("user_id", userId).is("beta_prompt_answered_at", null));
   },
@@ -129,14 +132,16 @@ export const supabaseStore: Store = {
     }
     if (guestIds.size === 0) return 0;
     const [theirs, mine] = await Promise.all([
-      admin().from("plan_members").select("id, plan_id").in("guest_id", [...guestIds]).is("user_id", null),
+      admin().from("plan_members").select("id, plan_id, role").in("guest_id", [...guestIds]).is("user_id", null),
       admin().from("plan_members").select("plan_id").eq("user_id", userId),
     ]);
     const onPlans = new Set((must(mine) as { plan_id: string }[]).map((r) => r.plan_id));
     let moved = 0;
-    for (const m of must(theirs) as { id: string; plan_id: string }[]) {
+    for (const m of must(theirs) as { id: string; plan_id: string; role: string }[]) {
       if (onPlans.has(m.plan_id)) continue;
       must(await admin().from("plan_members").update({ user_id: userId }).eq("id", m.id));
+      // A plan made as a guest becomes theirs on the account too.
+      if (m.role === "organiser") must(await admin().from("plans").update({ organiser_id: userId }).eq("id", m.plan_id).is("organiser_id", null));
       onPlans.add(m.plan_id);
       moved++;
     }
@@ -151,6 +156,8 @@ export const supabaseStore: Store = {
           slug: makeSlug(),
           organiser_id: p.organiserUserId,
           title: p.title,
+          category: p.category ?? null,
+          description: p.description ?? null,
           area: p.area,
           starts_at: p.startsAt,
           vibe: p.vibe,
@@ -165,7 +172,7 @@ export const supabaseStore: Store = {
         .select()
         .single()
     ) as Plan;
-    const organiser = await this.addMember({ planId: plan.id, userId: p.organiserUserId, name: p.organiserName, role: "organiser" });
+    const organiser = await this.addMember({ planId: plan.id, userId: p.organiserUserId, guestId: p.organiserGuestId ?? null, name: p.organiserName, role: "organiser" });
     await this.updateMember(organiser.id, { rsvp: "in" });
     return plan;
   },
