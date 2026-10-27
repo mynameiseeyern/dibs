@@ -7,7 +7,7 @@ import { OnboardingForm } from "./OnboardingForm";
 export const metadata = { title: "About you" };
 
 export default async function Onboarding({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
-  const next = (await searchParams).next ?? "/new";
+  const next = (await searchParams).next ?? "/";
   const me = await currentOrganiser();
   if (!me) redirect(`/login?next=${encodeURIComponent(`/onboarding?next=${next}`)}`);
   if (await store.getProfile(me.id)) redirect(next);

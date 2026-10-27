@@ -65,6 +65,10 @@ export const memoryStore: Store = {
   async upsertProfile(p) {
     db.profiles.set(p.user_id, { beta_prompt_answered_at: null, ...db.profiles.get(p.user_id), ...p });
   },
+  async setSavedCategories(userId, labels) {
+    const p = db.profiles.get(userId);
+    if (p) p.plan_categories = labels;
+  },
   async answerBetaPrompt(userId) {
     const p = db.profiles.get(userId);
     if (p && !p.beta_prompt_answered_at) p.beta_prompt_answered_at = new Date().toISOString();
@@ -107,6 +111,8 @@ export const memoryStore: Store = {
       slug: makeSlug(),
       organiser_id: p.organiserUserId,
       title: p.title,
+      category: p.category ?? null,
+      description: p.description ?? null,
       area: p.area,
       starts_at: p.startsAt,
       venue_place_id: p.venue?.placeId ?? null,
@@ -125,7 +131,7 @@ export const memoryStore: Store = {
       created_at: now(),
     };
     db.plans.set(plan.id, plan);
-    await this.addMember({ planId: plan.id, userId: p.organiserUserId, name: p.organiserName, role: "organiser" });
+    await this.addMember({ planId: plan.id, userId: p.organiserUserId, guestId: p.organiserGuestId ?? null, name: p.organiserName, role: "organiser" });
     const organiser = [...db.members.values()].find((m) => m.plan_id === plan.id)!;
     organiser.rsvp = "in";
     return plan;
@@ -184,6 +190,8 @@ export const memoryStore: Store = {
     for (const m of db.members.values()) {
       if (!m.guest_id || !guestIds.has(m.guest_id) || m.user_id || mine.has(m.plan_id)) continue;
       m.user_id = userId;
+      const plan = db.plans.get(m.plan_id);
+      if (m.role === "organiser" && plan && !plan.organiser_id) plan.organiser_id = userId;
       mine.add(m.plan_id);
       moved++;
     }

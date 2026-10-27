@@ -10,6 +10,8 @@ export interface Profile {
   payid_name: string | null;
   /** When they said yes or no to beta updates anywhere. Null: show the one-time card. */
   beta_prompt_answered_at?: string | null;
+  /** Categories they made up, newest first. */
+  plan_categories?: string[];
 }
 
 export interface Subscription {
@@ -26,8 +28,12 @@ export interface Guest {
 }
 
 export interface NewPlan {
-  organiserUserId: string;
+  /** Signed-in organiser, or a guest organiser (no account): exactly one is set. */
+  organiserUserId: string | null;
+  organiserGuestId?: string | null;
   organiserName: string;
+  category?: string | null;
+  description?: string | null;
   title: string;
   area: string | null;
   startsAt: string | null;
@@ -40,8 +46,8 @@ export interface NewPlan {
 
 export interface NewMember {
   planId: string;
-  userId?: string;
-  guestId?: string;
+  userId?: string | null;
+  guestId?: string | null;
   name: string;
   role: Role;
 }
@@ -55,6 +61,8 @@ export interface Store {
   kind: "supabase" | "memory";
   getProfile(userId: string): Promise<Profile | null>;
   upsertProfile(p: Profile): Promise<void>;
+  /** Replaces an organiser's saved categories. */
+  setSavedCategories(userId: string, labels: string[]): Promise<void>;
 
   findGuestByTokenHash(hash: string): Promise<Guest | null>;
   createGuest(g: { first_name: string; last_name: string; tokenHash: string }): Promise<Guest>;
@@ -93,7 +101,7 @@ export interface Store {
   /** Plans this device has joined as a guest. */
   listPlansForGuest(guestId: string): Promise<{ plan: Plan; member: PlanMember }[]>;
 
-  updatePlan(planId: string, patch: Partial<Pick<Plan, "status" | "venue_name" | "venue_place_id" | "venue_address" | "no_bills" | "starts_at" | "vote_deadline" | "version" | "updated_note" | "title" | "area" | "dibby_volume" | "vibe" | "capacity" | "plus_ones" | "organiser_id">>): Promise<Plan>;
+  updatePlan(planId: string, patch: Partial<Pick<Plan, "status" | "venue_name" | "venue_place_id" | "venue_address" | "no_bills" | "starts_at" | "vote_deadline" | "version" | "updated_note" | "title" | "area" | "dibby_volume" | "vibe" | "capacity" | "plus_ones" | "organiser_id" | "category" | "description">>): Promise<Plan>;
 
   listMembers(planId: string): Promise<PlanMember[]>;
   addMember(m: NewMember): Promise<PlanMember>;

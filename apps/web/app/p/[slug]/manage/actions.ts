@@ -9,7 +9,7 @@ import { store } from "@/lib/store";
 import { formatWhen, localToIso } from "@/lib/time";
 import { loadPlan } from "@/lib/viewer";
 import { getPlace } from "@/lib/places";
-import { cleanCustomPlace, countIn, type CustomPlace } from "@dibs/shared/plans";
+import { cleanCategory, cleanCustomPlace, cleanDescription, countIn, rememberCategory, type CustomPlace } from "@dibs/shared/plans";
 
 export type FormState = { error?: string } | undefined;
 const clean = (v: FormDataEntryValue | null, max = 80) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, max);
@@ -45,6 +45,34 @@ export async function setTitle(slug: string, raw: string): Promise<Result> {
   if (!title) return { error: "Give it a name, like \u201cFriday dinner\u201d." };
   if (title === view.plan.title) return {};
   await announce(slug, view, { title }, `Now called ${title}.`);
+  return {};
+}
+
+/** The plan's label. Quiet: nobody needs pinging about it. A made-up one is kept for an account. */
+export async function setCategory(slug: string, raw: string): Promise<Result> {
+  const view = await editable(slug);
+  if (!isView(view)) return view;
+  const category = cleanCategory(raw);
+  if (category === view.plan.category) return {};
+  await store.updatePlan(view.plan.id, { category });
+  if (category && view.organiser) {
+    const profile = await store.getProfile(view.organiser.id);
+    const saved = profile?.plan_categories ?? [];
+    const next = rememberCategory(saved, category);
+    if (profile && next.join("\n") !== saved.join("\n")) await store.setSavedCategories(view.organiser.id, next);
+  }
+  revalidatePath(`/p/${slug}`);
+  revalidatePath(`/p/${slug}/manage`);
+  return {};
+}
+
+/** The details. Guests might act on them (bring a jacket), so it's announced like a name change. */
+export async function setDescription(slug: string, raw: string): Promise<Result> {
+  const view = await editable(slug);
+  if (!isView(view)) return view;
+  const description = cleanDescription(raw);
+  if (description === view.plan.description) return {};
+  await announce(slug, view, { description }, description ? "Updated the details." : "Took the details off.");
   return {};
 }
 

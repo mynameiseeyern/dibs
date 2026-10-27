@@ -34,6 +34,10 @@ export interface Plan {
   expires_at: string | null;
   /** How chatty Dibby's automatic messages are on this plan. Set by the organiser. */
   dibby_volume: DibbyVolume;
+  /** Optional label ("Food", "Run", or one the organiser made up). */
+  category: string | null;
+  /** Optional details from the organiser: what to bring, where to meet. Public like the title. */
+  description: string | null;
   created_at: string;
 }
 

@@ -124,3 +124,59 @@ export function wrapState(plan: { status: string; starts_at: string | null }, no
   if (!plan.starts_at || Date.parse(plan.starts_at) <= now) return "ready";
   return "early";
 }
+
+/**
+ * Plan categories. Optional, a label for the organiser more than anyone. Kept broad so most
+ * plans fit one; anything else is typed in, and a signed-in organiser keeps what they type as
+ * their own preset.
+ */
+export const PLAN_CATEGORIES = [
+  { label: "Food", icon: "ri-restaurant-2-line" },
+  { label: "Drinks", icon: "ri-goblet-line" },
+  { label: "Coffee", icon: "ri-cup-line" },
+  { label: "Walk", icon: "ri-walk-line" },
+  { label: "Run", icon: "ri-run-line" },
+  { label: "Sport", icon: "ri-basketball-line" },
+  { label: "Games", icon: "ri-gamepad-line" },
+  { label: "Social", icon: "ri-group-line" },
+] as const;
+
+export const CATEGORY_MAX = 30;
+export const DESCRIPTION_MAX = 500;
+/** How many made-up categories an organiser keeps. */
+export const SAVED_CATEGORIES_MAX = 12;
+
+/** Tidies a typed category: one line, trimmed, sentence case for a preset match ("food" → "Food"). */
+export function cleanCategory(v: unknown): string | null {
+  const t = String(v ?? "").replace(/\s+/g, " ").trim().slice(0, CATEGORY_MAX);
+  if (!t) return null;
+  const preset = PLAN_CATEGORIES.find((c) => c.label.toLowerCase() === t.toLowerCase());
+  return preset ? preset.label : t;
+}
+
+/** The icon for a category: the preset's, or a plain tag for one someone made up. */
+export const categoryIcon = (label: string) => PLAN_CATEGORIES.find((c) => c.label === label)?.icon ?? "ri-price-tag-3-line";
+
+/** A description keeps its line breaks (up to one blank line in a row), trimmed. */
+export function cleanDescription(v: unknown): string | null {
+  const t = String(v ?? "")
+    .replace(/\r\n?/g, "\n")
+    .split("\n")
+    .map((l) => l.replace(/[ \t]+/g, " ").trim())
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+    .slice(0, DESCRIPTION_MAX)
+    .trim();
+  return t || null;
+}
+
+/**
+ * An organiser's saved categories after using `label`: newest first, no duplicates (ignoring
+ * case), never a preset, at most SAVED_CATEGORIES_MAX.
+ */
+export function rememberCategory(saved: readonly string[], label: string | null): string[] {
+  if (!label || PLAN_CATEGORIES.some((c) => c.label === label)) return [...saved];
+  const rest = saved.filter((s) => s.toLowerCase() !== label.toLowerCase());
+  return [label, ...rest].slice(0, SAVED_CATEGORIES_MAX);
+}
