@@ -180,3 +180,31 @@ export function rememberCategory(saved: readonly string[], label: string | null)
   const rest = saved.filter((s) => s.toLowerCase() !== label.toLowerCase());
   return [label, ...rest].slice(0, SAVED_CATEGORIES_MAX);
 }
+
+/**
+ * Extras: everything on a plan beyond RSVP. All on unless the organiser switches one off,
+ * at creation or in Edit plan. Off only hides it and stops new entries; nothing is deleted.
+ */
+export const PLAN_EXTRAS = [
+  { id: "chat", label: "Group chat", icon: "ri-chat-3-line", hint: "Talk it out and tag @dibby for ideas. Dibby's reminders show up here too." },
+  { id: "photos", label: "Upload pics", icon: "ri-image-add-line", hint: "Three pics each once it starts. Everyone sees them at wrap-up." },
+  { id: "bills", label: "Bills", icon: "ri-receipt-line", hint: "Someone pays, Dibby does the maths and shares their PayID. Dibby never touches the money." },
+  { id: "recap", label: "Recap", icon: "ri-star-smile-line", hint: "After the night: stars, best moment and an MVP vote." },
+] as const;
+
+export type PlanExtra = (typeof PLAN_EXTRAS)[number]["id"];
+export const isPlanExtra = (v: unknown): v is PlanExtra => PLAN_EXTRAS.some((e) => e.id === v);
+
+/** Whether an extra is on for this plan. Plans from before extras have them all on. */
+export const extraOn = (plan: { extras_off?: readonly string[] | null }, extra: PlanExtra) => !(plan.extras_off ?? []).includes(extra);
+
+/** extras_off from a form with one `extra_<id>` switch per extra: a missing switch is off. */
+export const extrasOffFrom = (has: (name: string) => boolean): PlanExtra[] => PLAN_EXTRAS.filter((e) => !has(`extra_${e.id}`)).map((e) => e.id);
+
+/** extras_off after switching one extra, in PLAN_EXTRAS order. */
+export function withExtra(off: readonly string[] | null | undefined, extra: PlanExtra, on: boolean): PlanExtra[] {
+  const next = new Set((off ?? []).filter(isPlanExtra));
+  if (on) next.delete(extra);
+  else next.add(extra);
+  return PLAN_EXTRAS.filter((e) => next.has(e.id)).map((e) => e.id);
+}

@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { planAccess, READ_ONLY_NOTE } from "@dibs/shared/plans";
+import { extraOn, planAccess, READ_ONLY_NOTE } from "@dibs/shared/plans";
 import * as Button from "@/components/ui/button";
 import { LiveRefresh } from "@/components/LiveRefresh";
 import { store } from "@/lib/store";
@@ -23,7 +23,7 @@ export default async function Chat({ params }: { params: Promise<{ slug: string 
   if (!view) notFound();
   const { plan, members, me } = view;
   // Chat is for people on the plan; "can't go" don't see it (same as the plan page).
-  if (!me || planAccess(me).level === "hidden" || plan.status === "cancelled") redirect(`/p/${slug}`);
+  if (!me || planAccess(me).level === "hidden" || plan.status === "cancelled" || !extraOn(plan, "chat")) redirect(`/p/${slug}`);
   const access = planAccess(me);
   const readOnly = access.level === "read" ? READ_ONLY_NOTE[access.why] : null;
   const [messages, reactions, options] = await Promise.all([store.listMessages(plan.id, 100), store.listReactions(plan.id), store.listOptions(plan.id)]);

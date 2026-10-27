@@ -29,7 +29,8 @@ const v3 = (vibe: Vibe, chill: string, extra: string, straight: string) => (vibe
 export type Template =
   | { k: "rsvp"; title: string; names: string[] }
   | { k: "vote_closing"; mins: number; ranked: { label: string; votes: number }[] }
-  | { k: "wrap_up"; host: string }
+  /** `after`: what opens at wrap-up, from the plan's extras. Missing (older messages): bills and recap. */
+  | { k: "wrap_up"; host: string; after?: { bills: boolean; recap: boolean } }
   | { k: "day_before"; when: string; where: string | null; coming: number }
   | { k: "maybe"; title: string; names: string[] }
   | { k: "bail"; name: string }
@@ -66,14 +67,27 @@ export function renderTemplate(t: Template, vibe: Vibe): string {
         `Voting closes ${when}. Leading: ${top.label} (${top.votes} ${top.votes === 1 ? "vote" : "votes"}).`
       );
     }
-    case "wrap_up":
+    case "wrap_up": {
+      const { bills = true, recap = true } = t.after ?? {};
+      if (!bills && !recap)
+        return v3(
+          vibe,
+          `Hope it was a good one. ${t.host}, tap "Wrap it up" when you get a sec.`,
+          `how good was that 🥹 ${t.host}, hit "Wrap it up" when you're ready ✨`,
+          `${t.host}: please wrap up the plan.`
+        );
+      const what = bills && recap ? "bills and the recap" : bills ? "bills" : "the recap";
       return v3(
         vibe,
-        `Hope it was a good one. ${t.host}, tap "Wrap it up" when you get a sec so everyone can square up.`,
-        `how good was that 🥹 ${t.host}, hit "Wrap it up" so the crew can square up and spill the recap ✨`,
-        `${t.host}: please wrap up the plan so bills and the recap can open.`
+        bills ? `Hope it was a good one. ${t.host}, tap "Wrap it up" when you get a sec so everyone can square up.` : `Hope it was a good one. ${t.host}, tap "Wrap it up" when you get a sec so everyone can do the recap.`,
+        bills && recap
+          ? `how good was that 🥹 ${t.host}, hit "Wrap it up" so the crew can square up and spill the recap ✨`
+          : bills
+            ? `how good was that 🥹 ${t.host}, hit "Wrap it up" so the crew can square up ✨`
+            : `how good was that 🥹 ${t.host}, hit "Wrap it up" so the crew can spill the recap ✨`,
+        `${t.host}: please wrap up the plan so ${what} can open.`
       );
-    case "day_before": {
+    }    case "day_before": {
       const place = t.where ? `, ${t.where}` : "";
       const n = `${t.coming} coming`;
       return v3(vibe, `${t.when}${place}. ${n}. See you there.`, `${t.when}${place} 📍 ${n}, it's happening 🎉`, `Reminder: ${t.when}${place}. ${n}.`);

@@ -6,7 +6,7 @@ import * as Button from "@/components/ui/button";
 import * as Checkbox from "@/components/ui/checkbox";
 import { planPreview } from "@/lib/plan-preview";
 import * as Alert from "@/components/ui/alert";
-import { wrapState } from "@dibs/shared/plans";
+import { extraOn, wrapState } from "@dibs/shared/plans";
 import { formatWhen } from "@/lib/time";
 import { WalkIns } from "./WalkIns";
 
@@ -20,6 +20,7 @@ export default async function Wrap({ params }: { params: Promise<{ slug: string 
   const view = await loadPlan(slug);
   if (!view) notFound();
   if (!view.isHost) redirect(`/p/${slug}`);
+  const billsOn = extraOn(view.plan, "bills");
   const { plan, members } = view;
   // Default ticks: whoever said they were in (or what you saved last time).
   const ticked = (m: (typeof members)[number]) => (plan.status === "wrapped" ? m.attended === true : m.rsvp === "in" && !m.waitlisted);
@@ -38,14 +39,20 @@ export default async function Wrap({ params }: { params: Promise<{ slug: string 
         <div className="section">
           <span className="subheading-sm eyebrow">{plan.title} · wrap-up</span>
           <h1 className="title-h3">Who actually came?</h1>
-          <p className="muted">Only people you tick can be added to bills or see your PayID. Nobody paid for anything, or it&rsquo;s sorted? Pick Nothing to split.</p>
+          <p className="muted">
+            {billsOn
+              ? <>Only people you tick can be added to bills or see your PayID. Nobody paid for anything, or it&rsquo;s sorted? Pick Nothing to split.</>
+              : extraOn(plan, "recap")
+                ? "Tick who came. They're the ones who get the recap."
+                : "Tick who came, so the plan remembers who was there."}
+          </p>
         </div>
         {wrapState(plan) === "early" && plan.starts_at && (
           <Alert.Root status="information">
             <Alert.Icon as="i" className="ri-information-line" aria-hidden="true" />
             <div>
               <strong>It&rsquo;s set for {formatWhen(plan.starts_at)}</strong>
-              Wrapping up now ends the plan early: voting, RSVPs and reminders stop, and it moves on to bills.
+              Wrapping up now ends the plan early: voting, RSVPs and reminders stop{billsOn ? ", and it moves on to bills" : ""}.
             </div>
           </Alert.Root>
         )}
@@ -71,12 +78,20 @@ export default async function Wrap({ params }: { params: Promise<{ slug: string 
       </main>
       <div className="dock">
         <div className="dock__inner">
-          <Button.Root size="large" block name="next" value="bills">
-            On to bills
-          </Button.Root>
-          <Button.Root variant="neutral" mode="lighter" size="large" block name="next" value="none">
-            Nothing to split
-          </Button.Root>
+          {billsOn ? (
+            <>
+              <Button.Root size="large" block name="next" value="bills">
+                On to bills
+              </Button.Root>
+              <Button.Root variant="neutral" mode="lighter" size="large" block name="next" value="none">
+                Nothing to split
+              </Button.Root>
+            </>
+          ) : (
+            <Button.Root size="large" block name="next" value="none">
+              That&rsquo;s a wrap
+            </Button.Root>
+          )}
         </div>
       </div>
     </form>

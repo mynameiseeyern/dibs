@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { TZ, formatWhen } from "@/lib/time";
 import { countIn } from "@dibs/shared/plans";
 import { loadPlan } from "@/lib/viewer";
-import { cancelPlan, openVote, setArea, setCategory, setDescription, setCapacity, setDibbyVolume, setPlace, setPlusOnes, setTitle, setVibe, setVoteDeadline, setWhen } from "./actions";
+import { cancelPlan, openVote, setArea, setExtra, setCategory, setDescription, setCapacity, setDibbyVolume, setPlace, setPlusOnes, setTitle, setVibe, setVoteDeadline, setWhen } from "./actions";
 import { store } from "@/lib/store";
 import { EditPlan } from "./EditPlan";
 import * as Button from "@/components/ui/button";
@@ -35,7 +35,9 @@ export default async function Manage({ params }: { params: Promise<{ slug: strin
   const view = await loadPlan(slug);
   if (!view) notFound();
   const { plan, isHost } = view;
-  if (!isHost || plan.status === "cancelled" || plan.status === "wrapped") redirect(`/p/${slug}`);
+  if (!isHost || plan.status === "cancelled") redirect(`/p/${slug}`);
+  // After wrap-up the plan itself is set; only the extras (bills, recap…) can still change.
+  const wrapped = plan.status === "wrapped";
   const locked = plan.status === "locked";
   const optionCount = (await store.listOptions(plan.id)).length;
   const profile = view.organiser ? await store.getProfile(view.organiser.id) : null;
@@ -51,16 +53,18 @@ export default async function Manage({ params }: { params: Promise<{ slug: strin
       </header>
       <div className="section">
         <span className="subheading-sm eyebrow">{plan.title}</span>
-        <h1 className="title-h3">Edit the plan</h1>
+        <h1 className="title-h3">{wrapped ? "Extras" : "Edit the plan"}</h1>
       </div>
       <EditPlan
-        status={locked ? "locked" : "voting"}
+        extrasOnly={wrapped}
+        status={locked || wrapped ? "locked" : "voting"}
         askWhenHref={plan.starts_at && Date.parse(plan.starts_at) <= Date.now() ? undefined : `/p/${slug}?when=ask#when`}
         title={plan.title}
         category={plan.category ?? null}
         description={plan.description ?? null}
         savedCategories={profile?.plan_categories ?? []}
         signedIn={Boolean(view.organiser)}
+        extrasOff={plan.extras_off ?? []}
         whenLabel={formatWhen(plan.starts_at)}
         deadlineLabel={formatWhen(plan.vote_deadline)}
         whenInput={toLocalInput(plan.starts_at)}
@@ -82,6 +86,7 @@ export default async function Manage({ params }: { params: Promise<{ slug: strin
           setVoteDeadline: setVoteDeadline.bind(null, slug),
           setCapacity: setCapacity.bind(null, slug),
           setPlusOnes: setPlusOnes.bind(null, slug),
+          setExtra: setExtra.bind(null, slug),
           setPlace: setPlace.bind(null, slug),
           openVote: openVote.bind(null, slug),
           setVibe: setVibe.bind(null, slug),

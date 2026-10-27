@@ -158,6 +158,7 @@ export const supabaseStore: Store = {
           title: p.title,
           category: p.category ?? null,
           description: p.description ?? null,
+          extras_off: p.extrasOff ?? [],
           area: p.area,
           starts_at: p.startsAt,
           vibe: p.vibe,

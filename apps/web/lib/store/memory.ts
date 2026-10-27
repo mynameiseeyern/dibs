@@ -113,6 +113,7 @@ export const memoryStore: Store = {
       title: p.title,
       category: p.category ?? null,
       description: p.description ?? null,
+      extras_off: p.extrasOff ?? [],
       area: p.area,
       starts_at: p.startsAt,
       venue_place_id: p.venue?.placeId ?? null,

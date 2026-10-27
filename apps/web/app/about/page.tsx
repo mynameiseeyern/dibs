@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Wordmark } from "@/components/Logo";
 import * as Button from "@/components/ui/button";
 import { SiteFooter } from "@/components/SiteFooter";
+import { AccountButton } from "@/components/AccountButton";
+import { whoIsHere } from "@/lib/viewer";
 
 export const metadata: Metadata = { title: "About", robots: { index: true, follow: true }, alternates: { canonical: "/about" } };
 
@@ -12,14 +14,12 @@ const STEPS = [
 ];
 
 /** What Dibby is and how it works. The home page is the plan form itself. */
-export default function About() {
+export default async function About() {
   return (
     <main className="page landing">
       <header className="topbar">
         <Wordmark href="/" />
-        <Button.Root asChild mode="ghost" size="small">
-          <a href="/home">Your plans</a>
-        </Button.Root>
+        <AccountButton here={await whoIsHere()} />
       </header>
 
       <section className="landing__hero">

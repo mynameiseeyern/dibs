@@ -9,7 +9,7 @@ import { store } from "@/lib/store";
 import { formatWhen, localToIso } from "@/lib/time";
 import { loadPlan } from "@/lib/viewer";
 import { getPlace } from "@/lib/places";
-import { cleanCategory, cleanCustomPlace, cleanDescription, countIn, rememberCategory, type CustomPlace } from "@dibs/shared/plans";
+import { PLAN_EXTRAS, cleanCategory, cleanCustomPlace, cleanDescription, countIn, extraOn, isPlanExtra, rememberCategory, withExtra, type CustomPlace } from "@dibs/shared/plans";
 
 export type FormState = { error?: string } | undefined;
 const clean = (v: FormDataEntryValue | null, max = 80) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, max);
@@ -97,6 +97,25 @@ export async function setArea(slug: string, raw: string): Promise<Result> {
   const area = clean(raw) || null;
   if (area === view.plan.area) return {};
   await announce(slug, view, { area }, area ? `Now around ${area}.` : "Area to be decided.");
+  return {};
+}
+
+/**
+ * Switch an extra on or off. Works after wrap-up too (bills and the recap live there), just not
+ * on a cancelled plan. Off hides it and stops new entries; whatever's there stays, so switching
+ * back on brings it all back.
+ */
+export async function setExtra(slug: string, extra: string, on: boolean): Promise<Result> {
+  const view = await loadPlan(slug);
+  if (!view?.isHost) return { error: "Only hosts can change the plan." };
+  if (view.plan.status === "cancelled") return { error: "This plan's off, so it can't be changed." };
+  if (!isPlanExtra(extra)) return { error: "That's not something you can switch." };
+  if (extraOn(view.plan, extra) === on) return {};
+  await store.updatePlan(view.plan.id, { extras_off: withExtra(view.plan.extras_off, extra, on) });
+  const label = PLAN_EXTRAS.find((e) => e.id === extra)!.label.toLowerCase();
+  await store.addMessage({ planId: view.plan.id, memberId: null, kind: "system", body: `${view.me!.display_name.split(" ")[0]} turned ${on ? "on" : "off"} ${label}.` });
+  revalidatePath(`/p/${slug}`);
+  revalidatePath(`/p/${slug}/manage`);
   return {};
 }
 

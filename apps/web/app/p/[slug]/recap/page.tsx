@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { monogram } from "@dibs/shared/plans";
+import { extraOn, monogram } from "@dibs/shared/plans";
 import { Monogram } from "@/components/Monogram";
 import { store } from "@/lib/store";
 import { formatWhen } from "@/lib/time";
@@ -24,7 +24,7 @@ export default async function Recap({ params }: { params: Promise<{ slug: string
   const view = await loadPlan(slug);
   if (!view) notFound();
   const { plan, members, me } = view;
-  if (plan.status !== "wrapped") redirect(`/p/${slug}`);
+  if (plan.status !== "wrapped" || !extraOn(plan, "recap")) redirect(`/p/${slug}`);
 
   const back = (
     <header className="topbar">

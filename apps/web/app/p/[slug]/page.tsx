@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { categoryIcon, countIn, planAccess, READ_ONLY_NOTE, shareText, unreadCount, wrapState } from "@dibs/shared/plans";
+import { categoryIcon, countIn, extraOn, planAccess, READ_ONLY_NOTE, shareText, unreadCount, wrapState } from "@dibs/shared/plans";
 import { formatAud } from "@dibs/shared/bills";
 import type { PlanMember, Rsvp } from "@dibs/shared/types";
 import { Wordmark } from "@/components/Logo";
@@ -137,9 +137,14 @@ export default async function PlanPage({ params, searchParams }: Props) {
   const unread = me ? unreadCount(me.dibby_muted ? messages.filter((m) => !m.auto) : messages, me) : 0;
   const voteOpen = plan.status === "voting";
   const iAmIn = Boolean(me && me.rsvp === "in" && !me.waitlisted);
-  const chatOpen = Boolean(me) && access?.level !== "hidden";
-  // The Dibby camera, during the night (it develops at wrap-up and then lives in the recap).
-  const roll = !wrapped ? await loadRoll(plan, members, me) : null;
+  // Extras the organiser switched off are hidden; whatever was there stays for if they're back on.
+  const chatOn = extraOn(plan, "chat");
+  const photosOn = extraOn(plan, "photos");
+  const billsOn = extraOn(plan, "bills");
+  const recapOn = extraOn(plan, "recap");
+  const chatOpen = chatOn && Boolean(me) && access?.level !== "hidden";
+  // Pics, during the night. They're revealed at wrap-up in the recap, or here if the recap's off.
+  const roll = photosOn && (!wrapped || !recapOn) ? await loadRoll(plan, members, me) : null;
 
   return (
     <>
@@ -293,9 +298,9 @@ export default async function PlanPage({ params, searchParams }: Props) {
         )}
 
         {/* After the night: the money and the recap, for people who came. */}
-        {wrapped && me?.attended && (
+        {wrapped && me?.attended && (billsOn || recapOn) && (
           <section className="wrap-links" aria-label="After the night">
-            {!allSquare && !(plan.no_bills && bills.length === 0) && (
+            {billsOn && !allSquare && !(plan.no_bills && bills.length === 0) && (
               <a className="db-card db-card--violet section link-card" href={`/p/${slug}/bills`}>
                 <strong className="title-h4">Square up</strong>
                 <span>
@@ -309,6 +314,7 @@ export default async function PlanPage({ params, searchParams }: Props) {
                 </span>
               </a>
             )}
+            {recapOn && (
             <a className={`db-card section link-card recap-teaser${!iAnswered ? " recap-teaser--ask" : ""}`} href={`/p/${slug}/recap`}>
               <span className="subheading-sm eyebrow">The recap</span>
               {recap.length === 0 ? (
@@ -332,14 +338,15 @@ export default async function PlanPage({ params, searchParams }: Props) {
                 <i className="ri-arrow-right-line db-icon" aria-hidden="true" />
               </span>
             </a>
-            {plan.no_bills && bills.length === 0 && (
+            )}
+            {billsOn && plan.no_bills && bills.length === 0 && (
               <a className="history-link" href={`/p/${slug}/bills?add=1`}>
                 <i className="ri-receipt-line db-icon" aria-hidden="true" />
                 <span className="label-sm">Paid for something after all?</span>
                 <span className="paragraph-sm muted">Add a bill</span>
               </a>
             )}
-            {allSquare && (
+            {billsOn && allSquare && (
               <a className="history-link" href={`/p/${slug}/bills`}>
                 <i className="ri-check-double-line db-icon" aria-hidden="true" />
                 <span className="label-sm">Bills · everyone&rsquo;s square</span>
@@ -348,7 +355,20 @@ export default async function PlanPage({ params, searchParams }: Props) {
             )}
           </section>
         )}
-        {wrapped && me && !me.attended && <p className="paragraph-sm muted">The bills and recap are just for people who came. Catch you at the next one.</p>}
+        {wrapped && me && !me.attended && (billsOn || recapOn) && (
+          <p className="paragraph-sm muted">
+            {billsOn && recapOn ? "The bills and recap are" : billsOn ? "The bills are" : "The recap is"} just for people who came. Catch you at the next one.
+          </p>
+        )}
+        {/* After wrap-up the plan's set, but hosts can still switch the extras. */}
+        {wrapped && isHost && (
+          <Button.Root asChild mode="ghost" size="small" className="self-start">
+            <a href={`/p/${slug}/manage`}>
+              <i className="ri-equalizer-line db-icon" aria-hidden="true" />
+              Extras
+            </a>
+          </Button.Root>
+        )}
 
         {!cancelled && access?.level !== "hidden" && (
           <>

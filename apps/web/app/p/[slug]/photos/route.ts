@@ -1,4 +1,5 @@
 import { revalidatePath } from "next/cache";
+import { extraOn } from "@dibs/shared/plans";
 import { canAddPhotos, cleanGlow, MAX_PHOTOS } from "@dibs/shared/photos";
 import { store } from "@/lib/store";
 import { loadPlan } from "@/lib/viewer";
@@ -17,6 +18,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   const view = await loadPlan(slug);
   if (!view?.me) return err(403, "Join the plan first.");
   const { plan, me } = view;
+  if (!extraOn(plan, "photos")) return err(403, "Pics are switched off for this plan.");
   if (!canAddPhotos(plan, me, new Date())) return err(403, plan.status === "wrapped" ? "Photos are for people who came." : "The camera opens when the plan starts.");
   const mine = (await store.listPhotos(plan.id)).filter((p) => p.member_id === me.id);
   if (mine.length >= MAX_PHOTOS) return err(409, `That's your ${MAX_PHOTOS} shots.`);
