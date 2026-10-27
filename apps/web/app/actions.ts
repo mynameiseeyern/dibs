@@ -13,7 +13,7 @@ import { localToIso } from "@/lib/time";
 import { resolveStart } from "@dibs/shared/when";
 import { siteUrl } from "@/lib/site";
 import { BETA_LIST } from "@dibs/email";
-import { cleanCategory, cleanCustomPlace, cleanDescription, rememberCategory } from "@dibs/shared/plans";
+import { cleanCategory, cleanCustomPlace, cleanDescription, extrasOffFrom, rememberCategory } from "@dibs/shared/plans";
 import { getPlace } from "@/lib/places";
 import { withPlaces } from "@/lib/place-ids";
 
@@ -178,6 +178,7 @@ export async function createPlan(_prev: FormState, form: FormData): Promise<Form
   const organiserName = host.name;
   const category = cleanCategory(form.get("category"));
   const description = cleanDescription(form.get("description"));
+  const extrasOff = extrasOffFrom((n) => form.get(n) === "on");
 
   // Dibby seeds the vote: name and area can come from what you're after, if you left them blank.
   if (where === "dibby") {
@@ -196,6 +197,7 @@ export async function createPlan(_prev: FormState, form: FormData): Promise<Form
       organiserName,
       category,
       description,
+      extrasOff,
       title: title || draft.title,
       area: clean(form.get("area"), 80) || draft.area,
       startsAt: startsAt ?? (draft.startsAtLocal ? localToIso(draft.startsAtLocal) : null),
@@ -237,6 +239,7 @@ export async function createPlan(_prev: FormState, form: FormData): Promise<Form
     organiserName,
     category,
     description,
+    extrasOff,
     title,
     area: venue ? null : clean(form.get("area"), 80) || null,
     startsAt,

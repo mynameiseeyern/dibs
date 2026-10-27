@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { extraOn } from "@dibs/shared/plans";
 import { formatAud, netDebts } from "@dibs/shared/bills";
 import type { Bill, BillShare, PlanMember } from "@dibs/shared/types";
 import { CopyButton } from "@/components/CopyButton";
@@ -40,7 +41,7 @@ export default async function Bills({ params, searchParams }: Props) {
   const view = await loadPlan(slug);
   if (!view) notFound();
   const { plan, members, me } = view;
-  if (plan.status !== "wrapped") redirect(`/p/${slug}`);
+  if (plan.status !== "wrapped" || !extraOn(plan, "bills")) redirect(`/p/${slug}`);
 
   const back = (
     <header className="topbar">

@@ -1,4 +1,5 @@
 import "server-only";
+import { extraOn } from "@dibs/shared/plans";
 import type { DibbyVolume, Plan, PlanMember, PlanOption, Vibe, Vote } from "@dibs/shared/types";
 import { store } from "./store";
 import { TZ } from "./time";
@@ -128,7 +129,7 @@ function* dueNudges(plan: Plan, members: PlanMember[], options: PlanOption[], vo
   // After the night: the organiser hasn't wrapped up yet.
   if (ok("wrap_up") && plan.status === "locked" && untilStart !== null && -untilStart >= WRAP_AFTER_MS) {
     const host = members.find((m) => m.role === "organiser");
-    if (host) yield { kind: "wrap_up", key: plan.starts_at!, template: { k: "wrap_up", host: firstName(host) } };
+    if (host) yield { kind: "wrap_up", key: plan.starts_at!, template: { k: "wrap_up", host: firstName(host), after: { bills: extraOn(plan, "bills"), recap: extraOn(plan, "recap") } } };
   }
   if (untilStart !== null && untilStart <= TOO_LATE_MS) return;
 

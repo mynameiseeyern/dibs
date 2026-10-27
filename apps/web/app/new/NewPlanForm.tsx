@@ -19,6 +19,7 @@ import { DibbyWorking } from "@/components/DibbyWorking";
 import { CategoryPick } from "./CategoryPick";
 import { Description } from "./Description";
 import { Organiser, type Organising } from "./Organiser";
+import { Extras } from "./Extras";
 
 type Where = "place" | "vote";
 type Who = "dibby" | "us";
@@ -159,6 +160,8 @@ export function NewPlanForm({ organising, savedCategories = [] }: { organising: 
         <Switch.Root name="plus_ones" />
         Plus-ones welcome
       </label>
+
+      <Extras />
 
       <Organiser who={organising} />
 

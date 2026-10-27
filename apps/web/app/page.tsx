@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { Wordmark } from "@/components/Logo";
 import { AccountButton } from "@/components/AccountButton";
 import * as Alert from "@/components/ui/alert";
-import * as Button from "@/components/ui/button";
 import { SiteFooter } from "@/components/SiteFooter";
 import { whoIsHere } from "@/lib/viewer";
 import { store } from "@/lib/store";
@@ -38,17 +37,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
     <main className="page">
       <header className="topbar">
         <Wordmark href="/" />
-        <div className="topbar__end">
-          <Button.Root asChild mode="ghost" size="small">
-            <a href="/about">About</a>
-          </Button.Root>
-          {here.name && (
-            <Button.Root asChild mode="ghost" size="small">
-              <a href="/home">Your plans</a>
-            </Button.Root>
-          )}
-          <AccountButton here={here} />
-        </div>
+        <AccountButton here={here} />
       </header>
 
       {sp.bye && (

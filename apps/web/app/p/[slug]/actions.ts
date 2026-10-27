@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { READ_ONLY_NOTE, cleanCustomPlace, hasRoom, planAccess } from "@dibs/shared/plans";
+import { READ_ONLY_NOTE, cleanCustomPlace, extraOn, hasRoom, planAccess } from "@dibs/shared/plans";
 import type { PlanMember, Rsvp } from "@dibs/shared/types";
 import { asSearchMemo, BRB, mentionsDibby, replyInThread, suggestMore, type PlanDraft } from "@/lib/dibby";
 import { clearGuestSession, createGuestSession } from "@/lib/guest";
@@ -132,6 +132,7 @@ function blocked(view: NonNullable<Awaited<ReturnType<typeof loadPlan>>>): strin
 export async function postMessage(slug: string, _prev: FormState, form: FormData): Promise<FormState> {
   const view = await loadPlan(slug);
   if (!view?.me) return { error: "Join the plan to chat." };
+  if (!extraOn(view.plan, "chat")) return { error: "The chat's switched off for this plan." };
   // Guests read the thread; signed-in members post (ARV-46).
   if (!view.me.user_id) return { error: "Get the app to chat in the thread." };
   const no = blocked(view);
@@ -237,7 +238,7 @@ export async function toggleDibbyMute(slug: string): Promise<void> {
 /** React to a message in the thread. Signed-in members only, like posting. */
 export async function toggleReaction(slug: string, messageId: string, emoji: string): Promise<void> {
   const view = await loadPlan(slug);
-  if (!view?.me?.user_id || !(REACTIONS as readonly string[]).includes(emoji) || blocked(view)) return;
+  if (!view?.me?.user_id || !(REACTIONS as readonly string[]).includes(emoji) || blocked(view) || !extraOn(view.plan, "chat")) return;
   const messages = await store.listMessages(view.plan.id, 200);
   if (!messages.some((m) => m.id === messageId)) return;
   await store.toggleReaction({ planId: view.plan.id, message_id: messageId, member_id: view.me.id, emoji: emoji as Reaction["emoji"] });

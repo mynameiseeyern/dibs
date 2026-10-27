@@ -38,6 +38,8 @@ export interface Plan {
   category: string | null;
   /** Optional details from the organiser: what to bring, where to meet. Public like the title. */
   description: string | null;
+  /** Extras the organiser switched off ("chat", "photos", "bills", "recap"). Empty: all on. */
+  extras_off: string[];
   created_at: string;
 }
 

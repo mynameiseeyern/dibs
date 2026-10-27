@@ -34,6 +34,7 @@ export interface NewPlan {
   organiserName: string;
   category?: string | null;
   description?: string | null;
+  extrasOff?: string[];
   title: string;
   area: string | null;
   startsAt: string | null;
@@ -101,7 +102,7 @@ export interface Store {
   /** Plans this device has joined as a guest. */
   listPlansForGuest(guestId: string): Promise<{ plan: Plan; member: PlanMember }[]>;
 
-  updatePlan(planId: string, patch: Partial<Pick<Plan, "status" | "venue_name" | "venue_place_id" | "venue_address" | "no_bills" | "starts_at" | "vote_deadline" | "version" | "updated_note" | "title" | "area" | "dibby_volume" | "vibe" | "capacity" | "plus_ones" | "organiser_id" | "category" | "description">>): Promise<Plan>;
+  updatePlan(planId: string, patch: Partial<Pick<Plan, "status" | "venue_name" | "venue_place_id" | "venue_address" | "no_bills" | "starts_at" | "vote_deadline" | "version" | "updated_note" | "title" | "area" | "dibby_volume" | "vibe" | "capacity" | "plus_ones" | "organiser_id" | "category" | "description" | "extras_off">>): Promise<Plan>;
 
   listMembers(planId: string): Promise<PlanMember[]>;
   addMember(m: NewMember): Promise<PlanMember>;

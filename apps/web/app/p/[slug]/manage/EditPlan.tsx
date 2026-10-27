@@ -12,13 +12,15 @@ import * as Switch from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
 import { PlaceSection } from "./PlaceSection";
 import { CategoryPick } from "@/app/new/CategoryPick";
-import { DESCRIPTION_MAX } from "@dibs/shared/plans";
+import { DESCRIPTION_MAX, PLAN_EXTRAS, type PlanExtra } from "@dibs/shared/plans";
 import * as Textarea from "@/components/ui/textarea";
 import * as Label from "@/components/ui/label";
 
 type Result = { error?: string };
 
 export interface EditPlanProps {
+  /** After wrap-up: just the extras. */
+  extrasOnly?: boolean;
   status: "voting" | "locked";
   /** "Ask the crew when works" on the plan page, while the plan hasn't started. */
   askWhenHref?: string;
@@ -28,6 +30,8 @@ export interface EditPlanProps {
   /** The organiser's own categories (signed in), for the picker. */
   savedCategories: string[];
   signedIn: boolean;
+  /** Extras switched off on this plan. */
+  extrasOff: string[];
   /** Display values, already formatted on the server. */
   whenLabel: string | null;
   deadlineLabel: string | null;
@@ -51,6 +55,7 @@ export interface EditPlanProps {
     setVoteDeadline: (v: string) => Promise<Result>;
     setCapacity: (n: number) => Promise<Result>;
     setPlusOnes: (on: boolean) => Promise<Result>;
+    setExtra: (extra: PlanExtra, on: boolean) => Promise<Result>;
     setPlace: (pick: string | CustomPlace) => Promise<Result>;
     openVote: () => Promise<Result>;
     setVibe: (v: Vibe) => Promise<void>;
@@ -79,6 +84,18 @@ export function EditPlan(p: EditPlanProps) {
     ? `Vote · ${p.optionCount} ${p.optionCount === 1 ? "place" : "places"}${p.area ? ` around ${p.area}` : ""}`
     : p.venue ?? "Not picked yet";
 
+  const extras = (
+    <>
+      <Group label="Extras">
+        {PLAN_EXTRAS.map((e) => (
+          <ExtraRow key={e.id} label={e.label} hint={e.hint} on={!p.extrasOff.includes(e.id)} save={(on) => p.actions.setExtra(e.id, on)} />
+        ))}
+      </Group>
+      <p className="paragraph-xs muted -mt-2">RSVPs are always on. Switching something off hides it; anything already there comes back if you switch it on.</p>
+    </>
+  );
+  if (p.extrasOnly) return extras;
+
   return (
     <>
       <Group label="The plan">
@@ -94,6 +111,8 @@ export function EditPlan(p: EditPlanProps) {
         <Row label="Spots" value={`${p.capacity} · ${p.going} going`} onOpen={() => setSheet("spots")} />
         <PlusOnesRow on={p.plusOnes} save={p.actions.setPlusOnes} />
       </Group>
+
+      {extras}
 
       <Group label="Dibby">
         <Row label="How Dibby talks" value={VIBE_OPTIONS.find((v) => v.id === p.vibe)?.name ?? "Chill"} onOpen={() => setSheet("vibe")} />
@@ -275,6 +294,30 @@ function PlusOnesRow({ on, save }: { on: boolean; save: (on: boolean) => Promise
         checked={shown}
         disabled={pending}
         aria-label="Plus-ones welcome"
+        onCheckedChange={(v: boolean) =>
+          start(async () => {
+            setShown(v);
+            const r = await save(v);
+            if (r.error) toast.error(r.error);
+          })
+        }
+      />
+    </label>
+  );
+}
+
+function ExtraRow({ label, hint, on, save }: { label: string; hint: string; on: boolean; save: (on: boolean) => Promise<Result> }) {
+  const [pending, start] = useTransition();
+  const [shown, setShown] = useOptimistic(on);
+  return (
+    <label className="edit-plan__row edit-plan__row--extra">
+      <span className="edit-plan__extra">
+        <span className="label-md block">{label}</span>
+        <span className="paragraph-xs muted block">{hint}</span>
+      </span>
+      <Switch.Root
+        checked={shown}
+        disabled={pending}
         onCheckedChange={(v: boolean) =>
           start(async () => {
             setShown(v);

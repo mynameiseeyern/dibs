@@ -1,6 +1,7 @@
 "use server";
 
 import { renderTemplate, type Template } from "@/lib/copy";
+import { extraOn } from "@dibs/shared/plans";
 import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -29,15 +30,18 @@ export async function wrapUp(slug: string, form: FormData): Promise<void> {
     await store.updateMember(m.id, { rsvp: "in", attended: true });
     came.add(m.id);
   }
-  // "Nothing to split": a hangout where nobody paid, or people sorted it themselves.
-  const noBills = form.get("next") === "none";
+  // "Nothing to split": a hangout where nobody paid, or people sorted it themselves. With bills
+  // switched off there's nothing to move on to, so it's the same.
+  const billsOn = extraOn(view.plan, "bills");
+  const noBills = !billsOn || form.get("next") === "none";
   if (view.plan.status !== "wrapped") {
     await store.updatePlan(view.plan.id, { status: "wrapped", no_bills: noBills });
-    await store.addMessage({ planId: view.plan.id, memberId: null, kind: "system", body: `${came.size} came. ${noBills ? "Nothing to split." : "Time to square up."}` });
+    await store.addMessage({ planId: view.plan.id, memberId: null, kind: "system", body: billsOn ? `${came.size} came. ${noBills ? "Nothing to split." : "Time to square up."}` : `${came.size} came. That's a wrap.` });
     // Wrap-up is when the Dibby camera's photos develop.
-    const shots = (await store.listPhotos(view.plan.id)).length;
+    const shots = extraOn(view.plan, "photos") ? (await store.listPhotos(view.plan.id)).length : 0;
     if (shots > 0) {
-      await store.addMessage({ planId: view.plan.id, memberId: null, kind: "dibby", body: `The photos are in: ${shots} from the night. Have a look in the recap.` });
+      const where = extraOn(view.plan, "recap") ? "in the recap" : "on the plan";
+      await store.addMessage({ planId: view.plan.id, memberId: null, kind: "dibby", body: `The pics are in: ${shots} from the night. Have a look ${where}.` });
     }
   } else if (noBills !== view.plan.no_bills) {
     await store.updatePlan(view.plan.id, { no_bills: noBills });
@@ -60,6 +64,7 @@ function toCents(raw: string): number | null {
 export async function addBill(slug: string, _prev: FormState, form: FormData): Promise<FormState> {
   const view = await loadPlan(slug);
   if (!view?.me || !view.me.attended) return { error: "Only people who came can add bills." };
+  if (!extraOn(view.plan, "bills")) return { error: "Bills are switched off for this plan." };
   const title = clean(form.get("title")) || "Bill";
   const total = toCents(clean(form.get("total"), 20));
   if (total === null || total <= 0) return { error: "Pop in the total, like 186.00." };
@@ -137,7 +142,7 @@ export async function addBill(slug: string, _prev: FormState, form: FormData): P
 
 async function billFor(slug: string, billId: string) {
   const view = await loadPlan(slug);
-  if (!view?.me?.attended) return null;
+  if (!view?.me?.attended || !extraOn(view.plan, "bills")) return null;
   const bill = (await store.listBills(view.plan.id)).find((b) => b.id === billId);
   return bill ? { view, bill, me: view.me } : null;
 }
@@ -215,7 +220,7 @@ export async function confirmPaid(slug: string, billId: string, memberId: string
  */
 export async function settleNet(slug: string, otherId: string): Promise<void> {
   const view = await loadPlan(slug);
-  if (!view?.me?.attended) return;
+  if (!view?.me?.attended || !extraOn(view.plan, "bills")) return;
   const me = view.me;
   const [bills, shares] = await Promise.all([store.listBills(view.plan.id), store.listShares(view.plan.id)]);
   const payer = new Map(bills.map((b) => [b.id, b.payer_member_id]));
