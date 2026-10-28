@@ -32,6 +32,14 @@ const isView = (v: View | Result): v is View => "plan" in v;
  * says so in the chat.
  */
 async function announce(slug: string, view: View, patch: Parameters<typeof store.updatePlan>[1], note: string) {
+  // Nobody else on it yet (the organiser fixing a typo straight after making it): just save it.
+  // No "Updated" note or chat message to a group that hasn't seen the plan.
+  if ((await store.listMembers(view.plan.id)).length <= 1) {
+    await store.updatePlan(view.plan.id, patch);
+    revalidatePath(`/p/${slug}`);
+    revalidatePath(`/p/${slug}/manage`);
+    return;
+  }
   await store.updatePlan(view.plan.id, { ...patch, version: view.plan.version + 1, updated_note: note });
   await store.addMessage({ planId: view.plan.id, memberId: null, kind: "system", body: `${view.me!.display_name.split(" ")[0]} updated the plan: ${note}` });
   revalidatePath(`/p/${slug}`);
