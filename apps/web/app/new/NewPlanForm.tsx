@@ -20,7 +20,6 @@ import { CategoryPick } from "./CategoryPick";
 import { Description } from "./Description";
 import { Organiser, type Organising } from "./Organiser";
 import { Extras } from "./Extras";
-import { WizardSteps } from "@/components/WizardSteps";
 
 type Where = "place" | "vote";
 type Who = "dibby" | "us";
@@ -96,7 +95,6 @@ export function NewPlanForm({ organising, savedCategories = [] }: { organising: 
         }
       }}
     >
-      <WizardSteps step={step} onPick={go} />
       <input type="hidden" name="where" value={mode} />
       <div className="form" hidden={step !== 1}>
       <Field label="Name it" name="title" placeholder="Friday dinner" maxLength={80} autoComplete="off" hint={mode === "dibby" ? "Leave it blank and Dibby names it." : undefined} />
