@@ -550,6 +550,8 @@ gmp-place-details {
 .landing__step { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: var(--space-4); align-items: center; }
 .landing__step img { width: 64px; height: 64px; }
 .landing__step h3 { margin: 2px 0; }
+.landing__promise { margin: 0; display: flex; gap: var(--space-3); align-items: flex-start; }
+.landing__promise .db-icon { font-size: 22px; color: var(--primary-base); }
 .landing__soon { display: flex; gap: var(--space-3); align-items: flex-start; padding: var(--space-4); border-radius: var(--radius-lg); border: 1.5px dashed var(--stroke-sub-300); }
 .landing__soon .db-icon { font-size: 22px; color: var(--primary-base); }
 @media (min-width: 720px) {

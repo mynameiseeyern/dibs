@@ -8,9 +8,10 @@ import { whoIsHere } from "@/lib/viewer";
 export const metadata: Metadata = { title: "About", robots: { index: true, follow: true }, alternates: { canonical: "/about" } };
 
 const STEPS = [
-  { img: "/crew/flag.png", title: "Plan it with Dibby", body: "Tag Dibby with the day, the vibe and a budget. It finds real places nearby and drafts the plan." },
-  { img: "/crew/trophy.png", title: "Vote and RSVP", body: "Drop the link in the group chat. Everyone votes and says if they're in, no sign-up needed." },
-  { img: "/crew/coin.png", title: "Square up after", body: "One person pays, Dibby splits it, everyone gets the PayID details. Or spin card roulette." },
+  { img: "/crew/flag.png", title: "Start a plan", body: "Say what, when and where. Not sure where? Tell Dibby what you're after and it finds three real spots to vote on." },
+  { img: "/crew/confetti.png", title: "Drop it in the chat", body: "One link in WhatsApp or wherever. Your mates just tap it. No app, no sign-up." },
+  { img: "/crew/trophy.png", title: "See who's in", body: "Your mates tap in or out. Can't pick a spot? Everyone going votes, and the top pick wins." },
+  { img: "/crew/coin.png", title: "Square up after", body: "One person pays, it's split for you, and everyone gets their PayID to pay them back. Or, if you're all in, spin card roulette and one person shouts." },
 ];
 
 /** What Dibby is and how it works. The home page is the plan form itself. */
@@ -28,16 +29,10 @@ export default async function About() {
           <img src="/crew/lime.png" alt="" width={512} height={512} />
           <img src="/crew/sun.png" alt="" width={512} height={512} />
         </div>
-        <h1 className="title-h2">
-          Plans sorted,
-          <br />
-          money square.
-        </h1>
-        <p className="muted">
-          Get your crew from &ldquo;we should catch up&rdquo; to actually going. Your friends don&rsquo;t need the app, just the link.
-        </p>
+        <h1 className="title-h2">Everyone&rsquo;s keen. Nobody locks it in.</h1>
+        <p className="paragraph-lg muted">Get the group chat from &ldquo;we should&rdquo; to a day, a spot and who&rsquo;s coming.</p>
         <Button.Root asChild variant="dibs" size="large" block>
-          <a href="/">Start a plan</a>
+          <a href="/">Make plans</a>
         </Button.Root>
       </section>
 
@@ -58,6 +53,13 @@ export default async function About() {
           ))}
         </ol>
       </section>
+
+      <p className="db-card landing__promise">
+        <i className="ri-shield-check-line db-icon" aria-hidden="true" />
+        <span className="paragraph-sm">
+          <strong>No money goes through Dibby.</strong> Only you and whoever paid see your share. Everyone else just sees &ldquo;4 of 6 settled&rdquo;.
+        </span>
+      </p>
 
       <section className="landing__soon" aria-label="iPhone app">
         <i className="ri-smartphone-line db-icon" aria-hidden="true" />
