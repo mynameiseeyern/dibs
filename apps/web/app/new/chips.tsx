@@ -3,18 +3,11 @@
 import { useState } from "react";
 import * as Button from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
-import * as Select from "@/components/ui/select";
 import { DayStrip, dateLabel, timeLabel } from "@/components/DateTime";
+import * as Input from "@/components/ui/input";
+import * as Label from "@/components/ui/label";
 
 const TZ = "Australia/Sydney";
-export const TIMES = [
-  { id: "11:00", label: "Brunch" },
-  { id: "12:30", label: "Lunch" },
-  { id: "15:00", label: "Arvo" },
-  { id: "18:00", label: "Drinks" },
-  { id: "19:00", label: "Dinner" },
-  { id: "21:00", label: "Late" },
-] as const;
 export const SPENDS = [
   { id: 1, label: "Cheap and cheerful", name: "Cheap" },
   { id: 2, label: "Mid-range", name: "Mid-range" },
@@ -27,8 +20,8 @@ export function dayWord(days: { id: string; label: string }[], id: string | null
   const d = days.find((x) => x.id === id);
   return d ? d.label.toLowerCase() : dateLabel(id);
 }
-/** "dinner", or "7:30pm" for a time picked from the list. */
-export const timeWord = (id: string | null) => (id ? (TIMES.find((t) => t.id === id)?.label.toLowerCase() ?? timeLabel(id)) : null);
+/** "7:30pm", for Dibby's line. */
+export const timeWord = (id: string | null) => (id ? timeLabel(id) : null);
 
 /** Today and the next six days in Sydney: { id: "2026-10-24", label: "Sat 24" }. */
 export function nextDays() {
@@ -94,39 +87,39 @@ export function WhenChips({ value, onChange }: { value?: WhenValue; onChange?: (
       <input type="hidden" name="pick_date" value={date ?? ""} />
       <input type="hidden" name="pick_time" value={time ?? ""} />
       <DayStrip label="When" value={date} onChange={setDate} bleed />
-      <Chips label="Time" items={TIMES} value={time} onChange={setTime}>
-        <OtherTime value={time} onChange={setTime} />
-      </Chips>
+      <div className="flex flex-col gap-2">
+        <Label.Root htmlFor="pick-time">Time</Label.Root>
+        <div className="flex items-center gap-2">
+          <div className="min-w-0 flex-1">
+            {/* The phone's own time wheel: quicker than scrolling a list of half hours. */}
+            <Input.Root>
+              <Input.Wrapper>
+                <Input.Icon as="i" className="ri-time-line" aria-hidden="true" />
+                <Input.Input
+                  id="pick-time"
+                  type="time"
+                  className="time-input"
+                  value={time ?? ""}
+                  onChange={(e) => setTime(e.target.value || null)}
+                  onClick={(e) => {
+                    // Desktop browsers only open the picker from their own icon, which we hide.
+                    try {
+                      e.currentTarget.showPicker?.();
+                    } catch {}
+                  }}
+                />
+              </Input.Wrapper>
+            </Input.Root>
+          </div>
+          {time && (
+            <Button.Root type="button" variant="neutral" mode="ghost" onClick={() => setTime(null)}>
+              Clear
+            </Button.Root>
+          )}
+        </div>
+      </div>
       {!date && !time && <p className="paragraph-xs muted">Leave it blank to sort the time out later.</p>}
     </>
-  );
-}
-
-const isPreset = (t: string | null) => TIMES.some((x) => x.id === t);
-
-/** The last time chip: any half hour, from AlignUI's Select. */
-function OtherTime({ value, onChange }: { value: string | null; onChange: (t: string | null) => void }) {
-  const other = value && !isPreset(value) ? value : null;
-  const slots = Array.from({ length: 36 }, (_, i) => {
-    const m = 6 * 60 + i * 30;
-    return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
-  });
-  return (
-    <Select.Root value={other ?? ""} onValueChange={onChange}>
-      <Select.Trigger
-        aria-label="Other time"
-        className={`w-auto flex-none rounded-full px-4 text-label-md shadow-none ring-0 ${other ? "bg-primary-base text-static-white hover:bg-primary-hover data-[placeholder]:text-static-white" : "bg-bg-soft-200 text-text-strong-950 hover:bg-bg-sub-300 data-[placeholder]:text-text-strong-950"}`}
-      >
-        <Select.Value placeholder="Other time">{other ? timeLabel(other) : "Other time"}</Select.Value>
-      </Select.Trigger>
-      <Select.Content>
-        {slots.map((t) => (
-          <Select.Item key={t} value={t}>
-            {timeLabel(t)}
-          </Select.Item>
-        ))}
-      </Select.Content>
-    </Select.Root>
   );
 }
 
