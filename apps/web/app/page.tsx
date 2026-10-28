@@ -11,11 +11,6 @@ import type { Organising } from "./new/Organiser";
 
 export const metadata: Metadata = { robots: { index: true, follow: true }, alternates: { canonical: "/" } };
 
-const STEPS = [
-  { icon: "ri-edit-2-line", label: "Make the plan" },
-  { icon: "ri-whatsapp-line", label: "Share the link" },
-  { icon: "ri-chat-smile-2-line", label: "Dibby chases the crew" },
-];
 
 /**
  * The plan form is the front door: make a plan straight away, no sign-up. Name only, like
@@ -52,15 +47,6 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
           What&rsquo;s the plan?
         </h1>
         <p className="paragraph-sm muted">Make it now, share the link in the group chat. Nobody needs the app or an account.</p>
-        <ol className="start__steps" aria-label="How it works">
-          {STEPS.map((s, i) => (
-            <li key={s.label}>
-              <span className="start__num">{i + 1}</span>
-              <i className={`${s.icon} db-icon`} aria-hidden="true" />
-              <span className="label-xs">{s.label}</span>
-            </li>
-          ))}
-        </ol>
       </section>
 
       <NewPlanForm organising={who} savedCategories={profile?.plan_categories ?? []} />

@@ -95,7 +95,19 @@ export function WhenChips({ value, onChange }: { value?: WhenValue; onChange?: (
             <Input.Root>
               <Input.Wrapper>
                 <Input.Icon as="i" className="ri-time-line" aria-hidden="true" />
-                <Input.Input id="pick-time" type="time" value={time ?? ""} onChange={(e) => setTime(e.target.value || null)} />
+                <Input.Input
+                  id="pick-time"
+                  type="time"
+                  className="time-input"
+                  value={time ?? ""}
+                  onChange={(e) => setTime(e.target.value || null)}
+                  onClick={(e) => {
+                    // Desktop browsers only open the picker from their own icon, which we hide.
+                    try {
+                      e.currentTarget.showPicker?.();
+                    } catch {}
+                  }}
+                />
               </Input.Wrapper>
             </Input.Root>
           </div>
