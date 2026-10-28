@@ -3,18 +3,16 @@ import { redirect } from "next/navigation";
 import { Wordmark } from "@/components/Logo";
 import { AccountButton } from "@/components/AccountButton";
 import * as Alert from "@/components/ui/alert";
-import { SiteFooter } from "@/components/SiteFooter";
 import { whoIsHere } from "@/lib/viewer";
-import { store } from "@/lib/store";
-import { NewPlanForm } from "./new/NewPlanForm";
+import { PlanFlow } from "./new/PlanFlow";
 import type { Organising } from "./new/Organiser";
 
 export const metadata: Metadata = { robots: { index: true, follow: true }, alternates: { canonical: "/" } };
 
 
 /**
- * The plan form is the front door: make a plan straight away, no sign-up. Name only, like
- * checking out as a guest; an email keeps it. What Dibby is lives at /about.
+ * Making a plan is the front door: one question a screen, no sign-up. Someone new gets a short
+ * intro first; a guest gives their name last, like checking out. What Dibby is lives at /about.
  */
 export default async function Home({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const sp = await searchParams;
@@ -25,7 +23,6 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   }
   const here = await whoIsHere();
   if (here.organiser && !here.canOrganise) redirect("/onboarding?next=/");
-  const profile = here.organiser ? await store.getProfile(here.organiser.id) : null;
   const who: Organising = here.organiser ? { kind: "account" } : here.guest ? { kind: "guest", name: here.name ?? "you" } : { kind: "new" };
 
   return (
@@ -42,16 +39,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
         </Alert.Root>
       )}
 
-      <section className="start__hero" aria-labelledby="start-h">
-        <h1 id="start-h" className="title-h3">
-          What&rsquo;s the plan?
-        </h1>
-        <p className="paragraph-sm muted">Make it now, share the link in the group chat. Nobody needs the app or an account.</p>
-      </section>
-
-      <NewPlanForm organising={who} savedCategories={profile?.plan_categories ?? []} />
-
-      <SiteFooter />
+      <PlanFlow organising={who} intro={who.kind === "new" && !sp.bye} />
     </main>
   );
 }
