@@ -98,6 +98,7 @@ export function NewPlanForm({ organising, savedCategories = [] }: { organising: 
       <input type="hidden" name="where" value={mode} />
       <div className="form" hidden={step !== 1}>
       <Field label="Name it" name="title" placeholder="Friday dinner" maxLength={80} autoComplete="off" hint={mode === "dibby" ? "Leave it blank and Dibby names it." : undefined} />
+      <Description />
 
       <CategoryPick saved={savedCategories} signedIn={organising.kind === "account"} />
 
@@ -174,8 +175,6 @@ export function NewPlanForm({ organising, savedCategories = [] }: { organising: 
         </div>
       </SegmentedControl.Content>
       </SegmentedControl.Root>
-
-      <Description />
 
       <label className="flex min-h-11 cursor-pointer items-center gap-3">
         <Switch.Root name="plus_ones" />
