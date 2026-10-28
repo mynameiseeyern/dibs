@@ -248,7 +248,7 @@ export function VoteList({
         open={picking}
         onOpenChange={setPicking}
         title="Add a place to the vote"
-        cta="Add"
+        cta="Add to the vote"
         area={area}
         exclude={rows.map((r) => r.place_id).filter((id): id is string => Boolean(id))}
         onPick={(p) => {
