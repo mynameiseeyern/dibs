@@ -50,7 +50,7 @@ export function PlacePicker({
   onOpenChange: (open: boolean) => void;
   onPick: (place: PlacePick) => void;
   title: string;
-  /** Button label; the picked place's name is added after it. */
+  /** Button label, e.g. "Use this place". The picked place shows above it, so the label never repeats the name. */
   cta: string;
   /** Plan area, to bias the first search ("Surry Hills"). */
   area?: string | null;
@@ -231,7 +231,7 @@ export function PlacePicker({
                 reset(false);
               }}
             >
-              {typedName.trim() ? `${cta}: ${typedName.trim()}` : "Name the place"}
+              {typedName.trim() ? cta : "Name the place"}
             </Button.Root>
           ) : (
             <Button.Root
@@ -244,7 +244,7 @@ export function PlacePicker({
                 reset(false);
               }}
             >
-              {picked ? `${cta}: ${picked.name}` : "Pick a place"}
+              {picked ? cta : "Pick a place"}
             </Button.Root>
           )}
         </Modal.Footer>

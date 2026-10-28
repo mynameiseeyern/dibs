@@ -138,7 +138,7 @@ export function NewPlanForm({ organising, savedCategories = [] }: { organising: 
               Pick the place
             </Button.Root>
           )}
-          <PlacePicker open={picking} onOpenChange={setPicking} title="Where's it at?" cta="Use" onPick={setPlace} />
+          <PlacePicker open={picking} onOpenChange={setPicking} title="Where's it at?" cta="Use this place" onPick={setPlace} />
         </div>
       </SegmentedControl.Content>
       <SegmentedControl.Content value="vote" forceMount hidden={where !== "vote"}>
