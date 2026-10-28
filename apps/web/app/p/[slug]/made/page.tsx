@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
-import { categoryIcon, shareText } from "@dibs/shared/plans";
+import { shareText } from "@dibs/shared/plans";
 import { Wordmark } from "@/components/Logo";
 import { CopyButton } from "@/components/CopyButton";
 import * as Alert from "@/components/ui/alert";
 import * as Button from "@/components/ui/button";
-import { formatShort, formatWhen } from "@/lib/time";
+import { formatShort, formatWhen, isoToLocal } from "@/lib/time";
 import { loadPlan } from "@/lib/viewer";
 import { siteUrl } from "@/lib/site";
 import { ShareButton } from "../ShareButton";
 import { trackShare } from "../actions";
+import { Overview } from "./Overview";
 
 export const metadata: Metadata = { title: "Plan's made", robots: { index: false } };
 
@@ -60,22 +61,16 @@ export default async function Made({ params, searchParams }: { params: Promise<{
         </Alert.Root>
       )}
 
-      <article className="db-card section" aria-label="The plan">
-        <h2 className="title-h5">{plan.title}</h2>
-        <ul className="db-plan__facts">
-          {plan.category && (
-            <li>
-              <i className={`${categoryIcon(plan.category)} db-icon`} aria-hidden="true" /> {plan.category}
-            </li>
-          )}
-          <li>
-            <i className="ri-calendar-line db-icon" aria-hidden="true" /> {formatWhen(plan.starts_at) ?? <span className="muted">Time to be decided</span>}
-          </li>
-          <li>
-            <i className="ri-map-pin-line db-icon" aria-hidden="true" /> {where ?? <span className="muted">Place to be decided</span>}
-          </li>
-        </ul>
-      </article>
+      <Overview
+        slug={slug}
+        title={plan.title}
+        whenLocal={isoToLocal(plan.starts_at)}
+        whenLabel={formatWhen(plan.starts_at)}
+        where={where}
+        whereNote={voting ? ["Anyone going adds places", plan.vote_deadline ? `closes ${formatShort(plan.vote_deadline)}` : null].filter(Boolean).join(" · ") : null}
+        placeSet={Boolean(plan.venue_name) && !voting}
+        description={plan.description ?? null}
+      />
 
       <div className="flex flex-col gap-2">
         <span className="label-sm" id="link-l">
