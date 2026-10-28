@@ -137,3 +137,6 @@
   .pf-rise, .pf-hello__dibby, .pf-hello__hi { animation: none; }
   .pf-reveal { transition: none; }
 }
+
+/* A question at the top of a sheet: one size down from a screen's question. */
+.pf-q--sheet { font: 700 30px/36px var(--font-display); letter-spacing: -0.01em; }

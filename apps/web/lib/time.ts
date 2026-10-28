@@ -53,3 +53,11 @@ export function formatStamp(iso: string): string {
   const time = new Intl.DateTimeFormat("en-AU", { timeZone: TZ, hour: "numeric", minute: "2-digit" }).format(d).replace(/\s/g, "").toUpperCase();
   return `${day} · ${time}`;
 }
+
+/** ISO → "2026-10-23T19:00" in Sydney wall-clock time ("" for none), for pickers. */
+export function isoToLocal(iso: string | null, tz = TZ): string {
+  if (!iso) return "";
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date(iso));
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
+}
