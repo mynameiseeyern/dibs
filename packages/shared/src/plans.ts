@@ -188,7 +188,7 @@ export function rememberCategory(saved: readonly string[], label: string | null)
 export const PLAN_EXTRAS = [
   { id: "chat", label: "Group chat", icon: "ri-chat-3-line", hint: "Talk it out and tag @dibby for ideas. Dibby's reminders show up here too." },
   { id: "photos", label: "Upload pics", icon: "ri-image-add-line", hint: "Three pics each once it starts. Everyone sees them at wrap-up." },
-  { id: "bills", label: "Bills", icon: "ri-receipt-line", hint: "Someone pays, Dibby does the maths and shares their PayID. Dibby never touches the money." },
+  { id: "bills", label: "Bills", icon: "ri-receipt-line", hint: "Someone pays and it's split for you, with their PayID to pay them back. No money goes through the app." },
   { id: "recap", label: "Recap", icon: "ri-star-smile-line", hint: "After the night: stars, best moment and an MVP vote." },
 ] as const;
 

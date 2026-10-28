@@ -2,7 +2,7 @@
 
 import * as Checkbox from "@/components/ui/checkbox";
 import * as Label from "@/components/ui/label";
-import { Field } from "@/components/Field";
+import { Field, FieldError } from "@/components/Field";
 
 export type Organising = { kind: "account" } | { kind: "guest"; name: string } | { kind: "new" };
 
@@ -10,7 +10,7 @@ export type Organising = { kind: "account" } | { kind: "guest"; name: string } |
  * The "check out as a guest" part of the form, at the end, once the plan's filled in. Your name
  * is all it takes; an email is a nice-to-have that keeps your plans and unlocks the extras.
  */
-export function Organiser({ who }: { who: Organising }) {
+export function Organiser({ who, errorFor = () => undefined }: { who: Organising; errorFor?: (field: string) => string | undefined }) {
   if (who.kind === "account") return null;
   return (
     <section className="db-card section" aria-labelledby="org-h">
@@ -23,13 +23,16 @@ export function Organiser({ who }: { who: Organising }) {
             <p className="paragraph-xs muted">No account needed. Your crew sees your name on the plan.</p>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="First name" name="first_name" autoComplete="given-name" maxLength={40} required />
-            <Field label="Last name" name="last_name" autoComplete="family-name" maxLength={40} required />
+            <Field label="First name" name="first_name" autoComplete="given-name" maxLength={40} required error={errorFor("first_name")} />
+            <Field label="Last name" name="last_name" autoComplete="family-name" maxLength={40} required error={errorFor("last_name")} />
           </div>
-          <label className="flex min-h-11 cursor-pointer items-center gap-3">
-            <Checkbox.Root name="adult" required />
-            <span className="paragraph-sm">I&rsquo;m 18 or over</span>
-          </label>
+          <div className="flex flex-col gap-1">
+            <label className="flex min-h-11 cursor-pointer items-center gap-3">
+              <Checkbox.Root name="adult" required data-field="adult" aria-invalid={errorFor("adult") ? true : undefined} />
+              <span className="paragraph-sm">I&rsquo;m 18 or over</span>
+            </label>
+            <FieldError error={errorFor("adult")} />
+          </div>
         </>
       ) : (
         <div>
@@ -50,6 +53,7 @@ export function Organiser({ who }: { who: Organising }) {
           placeholder="you@example.com"
           maxLength={200}
           icon="ri-mail-line"
+          error={errorFor("email")}
         />
         <Label.Root asChild>
           <span className="paragraph-xs muted">Add it to keep this plan and get:</span>

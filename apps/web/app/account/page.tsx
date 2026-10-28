@@ -80,7 +80,7 @@ export default async function Account() {
         <section className="db-card section" aria-labelledby="keep-h">
           <h2 id="keep-h" className="title-h5">Keep your plans on every device</h2>
           <p className="paragraph-sm muted">
-            Right now Dibby only knows you on this browser. Add your email and your plans come with you to your phone, laptop or the WhatsApp browser.
+            Right now you&rsquo;re only on this browser. Add your email and your plans come with you to your phone, laptop or the WhatsApp browser.
           </p>
           <KeepPlansForm demo={!usingSupabase} />
         </section>

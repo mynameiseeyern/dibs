@@ -4,7 +4,7 @@ import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { locate } from "@/lib/locate";
 import type { Vibe } from "@dibs/shared/types";
 import { createPlan } from "../actions";
-import { Field, FormError } from "@/components/Field";
+import { Field, FieldError, FormError } from "@/components/Field";
 import { VibePick } from "@/components/VibePick";
 import * as Button from "@/components/ui/button";
 import * as Input from "@/components/ui/input";
@@ -20,9 +20,12 @@ import { CategoryPick } from "./CategoryPick";
 import { Description } from "./Description";
 import { Organiser, type Organising } from "./Organiser";
 import { Extras } from "./Extras";
+import { DibbyName } from "@/components/Logo";
 
 type Where = "place" | "vote";
 type Who = "dibby" | "us";
+/** Fields on step 1: an error about one of these takes you back there. */
+const STEP_1_FIELDS = new Set(["title", "place", "ask", "area", "description", "category"]);
 
 /**
  * One form for every plan. Name and when are shared; "where" is either a place from the map
@@ -51,20 +54,39 @@ export function NewPlanForm({ organising, savedCategories = [] }: { organising: 
   // Two steps on one form, so everything posts together: the plan itself, then Dibby and extras.
   // Step 3 (share it) is its own page once the plan exists.
   const [step, setStep] = useState<1 | 2>(1);
-  const [stepError, setStepError] = useState<string>();
   const formRef = useRef<HTMLFormElement>(null);
+  // One problem at a time, shown under the field it's about (or at the top if it's not about
+  // a field). Fixing that field clears it.
+  const [err, setErr] = useState<{ field?: string; msg: string } | null>(null);
+  const errFor = (field: string) => (err?.field === field ? err.msg : undefined);
+  const show = (e: { field?: string; msg: string }) => {
+    setErr(e);
+    const n = e.field && STEP_1_FIELDS.has(e.field) ? 1 : step;
+    setStep(n);
+    // After the step shows: bring the field into view and put the cursor in it.
+    requestAnimationFrame(() => {
+      const el = e.field ? formRef.current?.querySelector<HTMLElement>(`[name="${e.field}"]:not([type=hidden]), [data-field="${e.field}"]`) : formRef.current;
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (el && "focus" in el && el.tagName !== "FORM") el.focus({ preventScroll: true });
+    });
+  };
   const go = (n: 1 | 2) => {
     setStep(n);
-    setStepError(undefined);
+    setErr(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
   const next = () => {
     const title = String(new FormData(formRef.current!).get("title") ?? "").trim();
-    if (!title && mode !== "dibby") return setStepError("Give it a name, like “Friday dinner”.");
-    if (where === "place" && !place) return setStepError("Pick the place, or start a poll.");
-    if (mode === "dibby" && !ask.trim() && !search.spend) return setStepError("Tell Dibby what you're after, like “dumplings” or “bowling”.");
+    if (!title && mode !== "dibby") return show({ field: "title", msg: "Give it a name, like “Friday dinner”." });
+    if (where === "place" && !place) return show({ field: "place", msg: "Pick the place, or start a poll." });
+    if (mode === "dibby" && !ask.trim() && !search.spend) return show({ field: "ask", msg: "Tell Dibby what you're after, like “dumplings” or “bowling”." });
     go(2);
   };
+  // What the server sent back after Make the plan.
+  useEffect(() => {
+    if (state?.error) show({ field: state.field, msg: state.error });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
 
   // Dibby listens to the form: everything below feeds the bubble that talks back as you fill it.
   const days = useMemo(nextDays, []);
@@ -86,7 +108,12 @@ export function NewPlanForm({ organising, savedCategories = [] }: { organising: 
     <form
       ref={formRef}
       action={action}
+      noValidate
       className="form"
+      onInput={(e) => {
+        const name = (e.target as HTMLInputElement).name;
+        if (err?.field && name === err.field) setErr(null);
+      }}
       onKeyDown={(e) => {
         // Enter in a step 1 field means Next, not "make the plan" before you've seen step 2.
         if (step === 1 && e.key === "Enter" && e.target instanceof HTMLInputElement) {
@@ -96,8 +123,10 @@ export function NewPlanForm({ organising, savedCategories = [] }: { organising: 
       }}
     >
       <input type="hidden" name="where" value={mode} />
+      {/* Only problems that aren't about one field show here, at the top. */}
+      {err && !err.field && <FormError error={err.msg} />}
       <div className="form" hidden={step !== 1}>
-      <Field label="Name it" name="title" placeholder="Friday dinner" maxLength={80} autoComplete="off" hint={mode === "dibby" ? "Leave it blank and Dibby names it." : undefined} />
+      <Field label="Name it" name="title" placeholder="Friday dinner" maxLength={80} autoComplete="off" hint={mode === "dibby" ? "Leave it blank and Dibby names it." : undefined} error={errFor("title")} />
       <Description />
 
       <CategoryPick saved={savedCategories} signedIn={organising.kind === "account"} />
@@ -133,19 +162,23 @@ export function NewPlanForm({ organising, savedCategories = [] }: { organising: 
               onChange={() => setPicking(true)}
             />
           ) : (
-            <Button.Root type="button" variant="neutral" mode="lighter" block onClick={() => setPicking(true)}>
+            <Button.Root type="button" data-field="place" variant="neutral" mode="lighter" block onClick={() => setPicking(true)}>
               <i className="ri-map-2-line db-icon" aria-hidden="true" />
               Pick the place
             </Button.Root>
           )}
-          <PlacePicker open={picking} onOpenChange={setPicking} title="Where's it at?" cta="Use this place" onPick={setPlace} />
+          <FieldError error={errFor("place")} />
+          <PlacePicker open={picking} onOpenChange={setPicking} title="Where's it at?" cta="Use this place" onPick={(p) => {
+              setPlace(p);
+              if (err?.field === "place") setErr(null);
+            }} />
         </div>
       </SegmentedControl.Content>
       <SegmentedControl.Content value="vote" forceMount hidden={where !== "vote"}>
         <div className="db-card section">
           <label className="flex min-h-11 cursor-pointer items-center gap-3">
             <span className="flex-1">
-              <span className="label-md block">Let Dibby help</span>
+              <span className="label-md block">Let <DibbyName /> help</span>
               <span className="paragraph-xs muted block">Three real spots to start the vote</span>
             </span>
             <Switch.Root checked={who === "dibby"} onCheckedChange={(on) => setWho(on ? "dibby" : "us")} />
@@ -154,11 +187,12 @@ export function NewPlanForm({ organising, savedCategories = [] }: { organising: 
             <>
               <DibbyBubble vibe={vibe} parts={{ ask, day: dayWord(days, when.date), time: timeWord(when.time), spend: search.spend, near: !!search.near }} />
               <label htmlFor="ask" className="label-md">What are you after?</label>
-              <Input.Root>
+              <Input.Root hasError={Boolean(errFor("ask"))}>
                 <Input.Wrapper>
-                  <Input.Input id="ask" name="ask" value={ask} onChange={(e) => setAsk(e.target.value)} placeholder={placeholder} maxLength={500} autoComplete="off" />
+                  <Input.Input id="ask" name="ask" aria-invalid={errFor("ask") ? true : undefined} value={ask} onChange={(e) => setAsk(e.target.value)} placeholder={placeholder} maxLength={500} autoComplete="off" />
                 </Input.Wrapper>
               </Input.Root>
+              <FieldError error={errFor("ask")} />
               <SearchChips
                 value={search}
                 onChange={(v) => {
@@ -185,18 +219,17 @@ export function NewPlanForm({ organising, savedCategories = [] }: { organising: 
       <div className="form" hidden={step !== 2}>
       <fieldset className="m-0 min-w-0 border-0 p-0">
         <Label.Root asChild className="mb-2">
-          <legend>How Dibby talks</legend>
+          <legend>How <DibbyName /> talks</legend>
         </Label.Root>
         <VibePick onPick={setVibe} />
-        <p className="paragraph-xs muted mt-2">Dibby&rsquo;s tone in the group chat, and the app&rsquo;s. You can change it later.</p>
+        <p className="paragraph-xs muted mt-2">How Dibby sounds in the chat and its reminders. You can change it later.</p>
       </fieldset>
 
       <Extras />
 
-      <Organiser who={organising} />
+      <Organiser who={organising} errorFor={errFor} />
       </div>
 
-      <FormError error={stepError ?? state?.error} />
       {pending && mode === "dibby" && <DibbyWorking where={search.near ? "near you" : null} />}
 
       <div className="dock">

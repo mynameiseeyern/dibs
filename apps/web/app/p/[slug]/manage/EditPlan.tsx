@@ -208,7 +208,7 @@ export function EditPlan(p: EditPlanProps) {
           <Modal.Header title="How Dibby talks" />
           <Modal.Body>
             <div className="db-stack">
-              <p className="paragraph-sm muted">Changes how Dibby and the app talk on this plan, straight away. Dibby&rsquo;s reminders already in the chat change too.</p>
+              <p className="paragraph-sm muted">Changes how Dibby sounds on this plan, straight away, including reminders already in the chat.</p>
               <VibePick value={p.vibe} onChange={p.actions.setVibe} />
             </div>
           </Modal.Body>

@@ -571,3 +571,4 @@ gmp-place-details {
 .made__url { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono, monospace); font-size: 14px; }
 .made__badge .db-icon { font-size: 28px; }
 .description-field { field-sizing: content; min-height: 4.5rem; max-height: 16rem; }
+.dibby-name { display: inline-flex; align-items: center; gap: 4px; vertical-align: -3px; }

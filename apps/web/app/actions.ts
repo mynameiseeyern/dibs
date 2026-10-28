@@ -17,7 +17,8 @@ import { cleanCategory, cleanCustomPlace, cleanDescription, extrasOffFrom, remem
 import { getPlace } from "@/lib/places";
 import { withPlaces } from "@/lib/place-ids";
 
-export type FormState = { error?: string; sent?: string } | undefined;
+/** `field`: which form field the error is about, so it shows under that field. */
+export type FormState = { error?: string; field?: string; sent?: string } | undefined;
 
 const clean = (v: FormDataEntryValue | null, max = 80) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, max);
 
@@ -166,7 +167,7 @@ export async function saveProfile(_prev: FormState, form: FormData): Promise<For
  */
 export async function createPlan(_prev: FormState, form: FormData): Promise<FormState> {
   const host = await whoIsOrganising(form);
-  if ("error" in host) return { error: host.error };
+  if ("error" in host) return host;
 
   const where = String(form.get("where") ?? "vote");
   const picks = readPicks(form);
@@ -183,7 +184,7 @@ export async function createPlan(_prev: FormState, form: FormData): Promise<Form
   // Dibby seeds the vote: name and area can come from what you're after, if you left them blank.
   if (where === "dibby") {
     const ask = String(form.get("ask") ?? "").replace(/^\s*@dibby\s*/i, "").trim().slice(0, 500);
-    if (!ask && !picks.spend) return { error: "Tell Dibby what you're after, like “dumplings” or “bowling”." };
+    if (!ask && !picks.spend) return { error: "Tell Dibby what you're after, like “dumplings” or “bowling”.", field: "ask" };
     if (!process.env.ANTHROPIC_API_KEY) return { error: "Dibby can't find places just yet. Pick a place, or vote on it and add your own." };
     let draft;
     try {
@@ -220,7 +221,7 @@ export async function createPlan(_prev: FormState, form: FormData): Promise<Form
     redirect(await landingFor(host, plan.slug));
   }
 
-  if (!title) return { error: "Give it a name, like “Friday dinner”." };
+  if (!title) return { error: "Give it a name, like “Friday dinner”.", field: "title" };
 
   // "Already decided": a real business from the map, or a place typed in, and the plan starts locked to it.
   let venue: { placeId: string | null; name: string; address: string | null } | null = null;
@@ -229,7 +230,7 @@ export async function createPlan(_prev: FormState, form: FormData): Promise<Form
     if (custom) venue = { placeId: null, name: custom.name, address: custom.address };
     else {
       const place = await getPlace(String(form.get("venue_place_id") ?? ""));
-      if (!place) return { error: "Pick the place on the map or type it in, or put it to a vote." };
+      if (!place) return { error: "Pick the place on the map or type it in, or start a poll.", field: "place" };
       venue = { placeId: place.placeId, name: place.name, address: null };
     }
   }
@@ -266,7 +267,7 @@ type Host = {
  * Like checking out as a guest: a signed-in organiser makes the plan as themselves; anyone else
  * just gives their name (and says they're 18+), with an email only if they want to keep it.
  */
-async function whoIsOrganising(form: FormData): Promise<Host | { error: string }> {
+async function whoIsOrganising(form: FormData): Promise<Host | { error: string; field: string }> {
   const me = await currentOrganiser();
   if (me) {
     const profile = await store.getProfile(me.id);
@@ -280,7 +281,7 @@ async function whoIsOrganising(form: FormData): Promise<Host | { error: string }
     };
   }
   const email = clean(form.get("email"), 200).toLowerCase() || null;
-  if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { error: "That email doesn't look right. Leave it blank to skip it." };
+  if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { error: "That email doesn't look right. Leave it blank to skip it.", field: "email" };
   const guest = await currentGuest();
   if (guest) {
     return {
@@ -293,8 +294,9 @@ async function whoIsOrganising(form: FormData): Promise<Host | { error: string }
   }
   const first = clean(form.get("first_name"), 40);
   const last = clean(form.get("last_name"), 40);
-  if (!first || !last) return { error: "Add your first and last name so the crew knows who's organising." };
-  if (form.get("adult") !== "on") return { error: "You need to be 18 or over to organise a plan." };
+  if (!first) return { error: "Add your first name.", field: "first_name" };
+  if (!last) return { error: "Add your last name.", field: "last_name" };
+  if (form.get("adult") !== "on") return { error: "You need to be 18 or over to organise a plan.", field: "adult" };
   let made: Guest | null = null;
   return {
     name: `${first} ${last}`,
