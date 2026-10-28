@@ -53,6 +53,8 @@ export interface PlanMember {
   colour: MonogramColour;
   rsvp: Rsvp | null;
   plus_one: boolean;
+  /** The +1's first name, if they gave one. Null: just "+ 1". */
+  plus_one_name?: string | null;
   waitlisted: boolean;
   attended: boolean | null;
   /** Hide Dibby's automatic nudges for this member. */

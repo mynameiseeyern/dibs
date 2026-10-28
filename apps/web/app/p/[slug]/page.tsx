@@ -22,7 +22,7 @@ import { owedToYou, youOwe } from "@/lib/copy";
 import { store } from "@/lib/store";
 import { formatShort, formatWhen } from "@/lib/time";
 import { loadPlan } from "@/lib/viewer";
-import { removeMyPhoto, addTime, goWithTime, markFree, removeTime, appInterest, trackShare, addOption, askDibbyMore, joinPlan, lockPlan, removeMe, removeOption, setRsvp, vote } from "./actions";
+import { removeMyPhoto, setPlusOne, removePlusOne, addTime, goWithTime, markFree, removeTime, appInterest, trackShare, addOption, askDibbyMore, joinPlan, lockPlan, removeMe, removeOption, setRsvp, vote } from "./actions";
 import { hostRejoinLink, setHost, setPlace } from "./manage/actions";
 import { SaveSpot } from "@/components/SaveSpot";
 import { guestRejoinUrl } from "@/lib/rejoin";
@@ -33,6 +33,7 @@ import { CameraCard } from "./CameraCard";
 import { PhotoRoll } from "./PhotoRoll";
 import { loadRoll } from "@/lib/photos";
 import { CircleAction } from "@/components/CircleAction";
+import { RemovePlusOne } from "./RemovePlusOne";
 import { WhenWorks } from "./WhenWorks";
 import { MAX_TIMES, rankTimes } from "@dibs/shared/when";
 import { VoteList } from "./Vote";
@@ -255,7 +256,7 @@ export default async function PlanPage({ params, searchParams }: Props) {
         {me && !isHost && !cancelled && !wrapped && (
           <section className="db-card section" aria-labelledby="rsvp-h">
             {iAmIn && <Once id={`in:${plan.id}:${me.id}`} kind="pop" size={140} colour={me.colour} label="You popped up. You're in." />}
-            <RsvpPicker rsvp={me.rsvp ?? null} waitlisted={me.waitlisted} plusOne={me.plus_one} plusOnes={plan.plus_ones} setRsvp={setRsvp.bind(null, slug)} vibe={plan.vibe} />
+            <RsvpPicker rsvp={me.rsvp ?? null} waitlisted={me.waitlisted} plusOne={me.plus_one} plusOneName={me.plus_one_name ?? null} plusOnes={plan.plus_ones} setRsvp={setRsvp.bind(null, slug)} setPlusOne={setPlusOne.bind(null, slug)} vibe={plan.vibe} />
             {readOnly && (
               <p className="paragraph-sm muted rsvp-note">
                 <i className="ri-eye-line db-icon" aria-hidden="true" /> {readOnly}
@@ -401,18 +402,19 @@ export default async function PlanPage({ params, searchParams }: Props) {
                   ORDER.flatMap((g) =>
                     members
                       .filter((m) => groupOf(m) === g)
-                      .map((m) => (
+                      .flatMap((m) => [
                         <li key={m.id} className="person">
                           <Monogram name={m.display_name} colour={m.colour} />
                           <span className="label-md person__name">
-                            {m.display_name}
+                            {/* A +1 with no name rides along: "Ee + 1". A named one gets a row of their own below. */}
+                            {m.plus_one && !m.plus_one_name ? `${m.display_name} + 1` : m.display_name}
                             {m.id === me?.id ? " (you)" : ""}
                             <small>
                               {m.role === "organiser" ? "Organiser · " : m.role === "cohost" ? "Co-host · " : ""}
                               {GROUP_LABEL[g]}
-                              {m.plus_one ? " · +1" : ""}
                             </small>
                           </span>
+                          {isHost && m.plus_one && !m.plus_one_name && m.id !== me?.id && <RemovePlusOne label={`${m.display_name.split(" ")[0]}'s +1`} remove={removePlusOne.bind(null, slug, m.id)} />}
                           {isHost && m.id !== me?.id && m.role !== "organiser" && (me?.role === "organiser" ? g === "in" || m.role === "cohost" || !m.user_id : !m.user_id) && (
                             <HostMenu
                               name={m.display_name}
@@ -424,8 +426,18 @@ export default async function PlanPage({ params, searchParams }: Props) {
                               canManage={me?.role === "organiser"}
                             />
                           )}
-                        </li>
-                      ))
+                        </li>,
+                        m.plus_one && m.plus_one_name ? (
+                          <li key={`${m.id}-plus`} className="person person--plus">
+                            <Monogram name={m.plus_one_name} colour={m.colour} size="sm" />
+                            <span className="label-md person__name">
+                              {m.plus_one_name}
+                              <small>with {m.display_name.split(" ")[0]}</small>
+                            </span>
+                            {isHost && m.id !== me?.id && <RemovePlusOne label={m.plus_one_name} remove={removePlusOne.bind(null, slug, m.id)} />}
+                          </li>
+                        ) : null,
+                      ])
                   )}
               </ul>
               {!wrapped && <p className="paragraph-xs muted who__cap">{inCount} of {plan.capacity} spots taken</p>}

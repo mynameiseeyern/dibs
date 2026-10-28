@@ -572,3 +572,7 @@ gmp-place-details {
 .made__badge .db-icon { font-size: 28px; }
 .description-field { field-sizing: content; min-height: 4.5rem; max-height: 16rem; }
 .dibby-name { display: inline-flex; align-items: center; gap: 4px; vertical-align: -3px; }
+
+/* Plus-ones: the "Bringing someone?" switch under I'm in, and a named +1's row in who's going. */
+.plus-one { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-2); }
+.person--plus { padding-left: var(--space-6); }

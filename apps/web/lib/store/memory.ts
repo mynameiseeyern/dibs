@@ -224,6 +224,7 @@ export const memoryStore: Store = {
       colour: pickColour(m.name, existing),
       rsvp: null,
       plus_one: false,
+      plus_one_name: null,
       waitlisted: false,
       attended: null,
       dibby_muted: false,

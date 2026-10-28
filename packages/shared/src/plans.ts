@@ -208,3 +208,15 @@ export function withExtra(off: readonly string[] | null | undefined, extra: Plan
   else next.add(extra);
   return PLAN_EXTRAS.filter((e) => next.has(e.id)).map((e) => e.id);
 }
+
+/** A +1's name: one line, at most 40 characters. Blank means no name ("+ 1"). */
+export function cleanPlusOneName(v: unknown): string | null {
+  const t = String(v ?? "").replace(/\s+/g, " ").trim().slice(0, 40).trim();
+  return t || null;
+}
+
+/** "Ee & Sam", or "Ee + 1" when the guest has no name. Just the member's name without a +1. */
+export function withPlusOne(name: string, m: { plus_one: boolean; plus_one_name?: string | null }): string {
+  if (!m.plus_one) return name;
+  return m.plus_one_name ? `${name} & ${m.plus_one_name}` : `${name} + 1`;
+}

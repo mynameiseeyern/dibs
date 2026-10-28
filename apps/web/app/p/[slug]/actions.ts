@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { READ_ONLY_NOTE, cleanCustomPlace, extraOn, hasRoom, planAccess } from "@dibs/shared/plans";
+import { READ_ONLY_NOTE, cleanCustomPlace, cleanPlusOneName, countIn, extraOn, hasRoom, planAccess } from "@dibs/shared/plans";
 import type { PlanMember, Rsvp } from "@dibs/shared/types";
 import { asSearchMemo, BRB, mentionsDibby, replyInThread, suggestMore, type PlanDraft } from "@/lib/dibby";
 import { clearGuestSession, createGuestSession } from "@/lib/guest";
@@ -66,12 +66,14 @@ export async function joinPlan(slug: string, _prev: FormState, form: FormData): 
   return undefined;
 }
 
-export async function setRsvp(slug: string, rsvp: Rsvp, form: FormData): Promise<void> {
+export async function setRsvp(slug: string, rsvp: Rsvp, _form?: FormData): Promise<void> {
   const view = await loadPlan(slug);
   if (!view?.me || view.plan.status === "cancelled" || view.plan.status === "wrapped") return;
   // Hosts are always going: changing that is a change to the plan (manage), not an RSVP.
   if (view.me.role === "organiser") return;
-  const plusOne = view.plan.plus_ones && form.get("plus_one") === "on";
+  // A +1 belongs to "I'm in": it stays while you're in (even if plus-ones were switched off
+  // since), and goes when you step back. Adding one is setPlusOne.
+  const plusOne = rsvp === "in" && view.me.plus_one;
 
   let waitlisted = false;
   if (rsvp === "in") {
@@ -80,7 +82,7 @@ export async function setRsvp(slug: string, rsvp: Rsvp, form: FormData): Promise
     const holding = view.me.rsvp === "in" && !view.me.waitlisted;
     waitlisted = !holding && !hasRoom(others, view.plan.capacity, plusOne);
   }
-  await store.updateMember(view.me.id, { rsvp, plus_one: rsvp === "in" ? plusOne : false, waitlisted });
+  await store.updateMember(view.me.id, { rsvp, plus_one: plusOne, plus_one_name: plusOne ? (view.me.plus_one_name ?? null) : null, waitlisted });
   // Only people going vote. Stepping back to maybe or can't go, before the plan starts,
   // takes their vote back so it doesn't decide a night they might not come to.
   const started = Boolean(view.plan.starts_at && Date.parse(view.plan.starts_at) <= Date.now());
@@ -90,6 +92,37 @@ export async function setRsvp(slug: string, rsvp: Rsvp, form: FormData): Promise
   // Was in, now can't go: Dibby gives the crew a heads-up (respects mute volume and the cap).
   if (rsvp === "out" && view.me.rsvp === "in" && !view.me.waitlisted) await nudgeOnBail(view.plan, view.me);
   revalidatePlan(slug);
+}
+
+/**
+ * "Bringing someone?" under I'm in. On needs plus-ones welcome and a spot for them; off always
+ * works. The name is optional: blank shows as "+ 1". Changing just the name is fine too.
+ */
+export async function setPlusOne(slug: string, on: boolean, rawName: string): Promise<{ error?: string }> {
+  const view = await loadPlan(slug);
+  if (!view?.me || view.plan.status === "cancelled" || view.plan.status === "wrapped") return { error: "This plan's finished, so it can't be changed." };
+  const me = view.me;
+  if (me.rsvp !== "in" || me.waitlisted) return { error: "Say you're in first, then you can bring someone." };
+  const name = on ? cleanPlusOneName(rawName) : null;
+  if (on && !me.plus_one) {
+    if (!view.plan.plus_ones) return { error: "Plus-ones aren't on for this one." };
+    if (countIn(view.members) + 1 > view.plan.capacity) return { error: "It's full, so there's no room for a +1 right now." };
+  }
+  if (on === me.plus_one && name === (me.plus_one_name ?? null)) return {};
+  await store.updateMember(me.id, { plus_one: on, plus_one_name: name });
+  revalidatePlan(slug);
+  return {};
+}
+
+/** A host takes someone's +1 off: a quiet fix, no chat message. */
+export async function removePlusOne(slug: string, memberId: string): Promise<{ error?: string }> {
+  const view = await loadPlan(slug);
+  if (!view?.isHost) return { error: "Only hosts can do that." };
+  const them = view.members.find((m) => m.id === memberId);
+  if (!them?.plus_one) return {};
+  await store.updateMember(them.id, { plus_one: false, plus_one_name: null });
+  revalidatePlan(slug);
+  return {};
 }
 
 /** Someone tapped a share button. Counted, nothing else: the share sheet itself is the phone's. */

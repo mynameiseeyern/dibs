@@ -210,10 +210,6 @@ export function NewPlanForm({ organising, savedCategories = [] }: { organising: 
       </SegmentedControl.Content>
       </SegmentedControl.Root>
 
-      <label className="flex min-h-11 cursor-pointer items-center gap-3">
-        <Switch.Root name="plus_ones" />
-        Plus-ones welcome
-      </label>
       </div>
 
       <div className="form" hidden={step !== 2}>

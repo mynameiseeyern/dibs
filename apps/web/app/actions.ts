@@ -172,7 +172,8 @@ export async function createPlan(_prev: FormState, form: FormData): Promise<Form
   const where = String(form.get("where") ?? "vote");
   const picks = readPicks(form);
   const vibe = (["chill", "extra", "straight"].includes(String(form.get("vibe"))) ? form.get("vibe") : "chill") as Vibe;
-  const plusOnes = form.get("plus_ones") === "on";
+  // Plus-ones are welcome unless the organiser switches them off in Edit plan.
+  const plusOnes = true;
   const title = clean(form.get("title"), 80);
   const startLocal = resolveStart(null, picks);
   const startsAt = startLocal ? localToIso(startLocal) : null;
