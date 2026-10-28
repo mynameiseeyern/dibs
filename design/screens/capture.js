@@ -49,7 +49,7 @@ async function ctx(b) {
   await snap(p, 'plan-host-voting');
   const planUrl = p.url();
   for (let i = 0; i < 3; i++) {
-    await p.getByRole('button', { name: 'Add a place' }).click();
+    await p.getByRole('button', { name: 'Add an option' }).click();
     await p.fill('#place-q', 'dumplings');
     await p.waitForTimeout(1800);
     await p.locator('.place-row:not([disabled])').nth(0).click();
@@ -80,7 +80,7 @@ async function ctx(b) {
   await snap(g, 'chat');
   // Host locks it in.
   await p.goto(planUrl, { waitUntil: 'networkidle' }); await p.waitForTimeout(1500);
-  await p.getByRole('button', { name: /Lock it in now/ }).click(); await p.waitForTimeout(1200);
+  await p.getByRole('button', { name: /^Lock it in$/ }).click(); await p.waitForTimeout(1200);
   const confirm = p.locator('[role=dialog] button', { hasText: /Lock/ }); if (await confirm.count()) await confirm.last().click();
   await p.waitForTimeout(3000);
   await snap(p, 'plan-locked');

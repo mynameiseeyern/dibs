@@ -15,6 +15,7 @@ import { locate } from "@/lib/locate";
 import * as Input from "@/components/ui/input";
 import * as Button from "@/components/ui/button";
 import * as Modal from "@/components/ui/modal";
+import * as Dropdown from "@/components/ui/dropdown";
 import { toast } from "@/components/ui/toast";
 import { send } from "@/lib/send";
 
@@ -36,6 +37,7 @@ export function VoteList({
   area,
   askDibby,
   decide,
+  lock,
 }: {
   rows: VoteRow[];
   canVote: boolean;
@@ -55,6 +57,8 @@ export function VoteList({
   askDibby?: (f: FormData) => Promise<{ error?: string; added?: string[] }>;
   /** Host only: skip the vote and lock in a place from the map. */
   decide?: (pick: string | CustomPlace) => Promise<{ error?: string }>;
+  /** Host only: close the vote now and go with whatever's in front. */
+  lock?: () => Promise<void>;
 }) {
   const [adding, startAdding] = useTransition();
   // The tap moves your vote straight away: counts and bars update here, the server saves it behind,
@@ -84,6 +88,12 @@ export function VoteList({
   const [viewing, setViewing] = useState<VoteRow | null>(null);
   const [confirming, setConfirming] = useState<VoteRow | null>(null);
   const [removing, setRemoving] = useState(false);
+  // One way in for new options (search the map, or let Dibby suggest), and one for the host to
+  // finish the vote (go with the leader, or pick somewhere else).
+  const [choosingAdd, setChoosingAdd] = useState(false);
+  const [locking, setLocking] = useState(false);
+  const [lockBusy, startLock] = useTransition();
+  const leader = top > 0 ? ranked[0] : null;
   const canRemove = (r: VoteRow) => !readOnly && Boolean(remove) && open && (canRemoveAll || (meId !== null && r.added_by === meId));
 
   const confirmRemove = async () => {
@@ -103,29 +113,52 @@ export function VoteList({
       {visible.map((r) => {
         const share = total ? Math.round((r.votes / total) * 100) : 0;
         const winning = top > 0 && r.votes === top;
-        // The place (Google's photos, stars and reviews, or a typed-in name and address), the
-        // tally, then plain buttons: vote, view the place, and delete for whoever may.
+        // The place (Google's photos, stars and reviews, or a typed-in name and address), then one
+        // row: the tally once anyone's voted, the vote toggle, and a ⋯ menu for details and removing.
+        // Removing lives in the menu, not on every card, and only for whoever may.
         return (
           <article key={r.id} data-fresh-id={r.id} className="vote-card" data-mine={r.mine || undefined} data-winning={winning || undefined} aria-label={r.label}>
             <PlaceCard placeId={r.place_id} name={r.label} address={r.note} />
-            <div className="vote-card__tally">
-              <span className="vote-card__bar" aria-hidden="true">
-                <span style={{ width: `${share}%` }} />
-              </span>
-              <span className="paragraph-xs muted">
-                {r.votes} {r.votes === 1 ? "vote" : "votes"}
-                {total ? ` · ${share}%` : ""}
-                {winning && total ? " · in front" : ""}
-              </span>
-            </div>
             <div className="vote-card__actions">
+              {total > 0 ? (
+                <div className="vote-card__tally">
+                  <span className="vote-card__bar" aria-hidden="true">
+                    <span style={{ width: `${share}%` }} />
+                  </span>
+                  <span className="paragraph-xs muted">
+                    {r.votes} {r.votes === 1 ? "vote" : "votes"}
+                    {winning ? " · in front" : ""}
+                  </span>
+                </div>
+              ) : (
+                <span className="vote-card__tally" />
+              )}
+              <Dropdown.Root>
+                <Dropdown.Trigger asChild>
+                  <Button.Root type="button" variant="neutral" mode="ghost" iconOnly aria-label={`More for ${r.label}`}>
+                    <Button.Icon as="i" className="ri-more-fill" />
+                  </Button.Root>
+                </Dropdown.Trigger>
+                <Dropdown.Content align="end" className="w-60">
+                  <Dropdown.Item onSelect={() => setViewing(r)}>
+                    <i className="ri-information-line db-icon" aria-hidden="true" />
+                    See details
+                  </Dropdown.Item>
+                  {canRemove(r) && (
+                    <Dropdown.Item className="text-error-base" onSelect={() => setConfirming(r)}>
+                      <i className="ri-delete-bin-line db-icon" aria-hidden="true" />
+                      Take it off the vote
+                    </Dropdown.Item>
+                  )}
+                </Dropdown.Content>
+              </Dropdown.Root>
               {open && (
                 <Button.Root
                   type="button"
-                  variant="primary"
-                  mode={r.mine ? "lighter" : "filled"}
-                  size="small"
-                  className="flex-1"
+                  variant={r.mine ? "primary" : "neutral"}
+                  mode={r.mine ? "filled" : "stroke"}
+                  iconOnly
+                  className="rounded-full"
                   aria-pressed={r.mine}
                   aria-label={r.mine ? `Your pick: ${r.label}` : `Vote for ${r.label}`}
                   disabled={!canVote || (voting && !r.mine)}
@@ -138,17 +171,7 @@ export function VoteList({
                     });
                   }}
                 >
-                  <i className={`${r.mine ? "ri-checkbox-circle-fill" : "ri-check-line"} db-icon`} aria-hidden="true" />
-                  {r.mine ? "Your pick" : "Vote"}
-                </Button.Root>
-              )}
-              <Button.Root type="button" variant="neutral" mode="lighter" size="small" className="flex-1" aria-label={`View ${r.label}`} onClick={() => setViewing(r)}>
-                <i className="ri-eye-line db-icon" aria-hidden="true" />
-                View
-              </Button.Root>
-              {canRemove(r) && (
-                <Button.Root type="button" variant="error" mode="lighter" size="small" iconOnly aria-label={`Take ${r.label} off the vote`} onClick={() => setConfirming(r)}>
-                  <i className="ri-delete-bin-line db-icon" aria-hidden="true" />
+                  <Button.Icon as="i" className="ri-check-line" />
                 </Button.Root>
               )}
             </div>
@@ -164,24 +187,73 @@ export function VoteList({
       )}
 
       {canVote && open && rows.length < 8 && (
-        <div className="flex gap-2">
-          {askDibby && (
-            <Button.Root type="button" variant="neutral" mode="lighter" className="flex-1" disabled={dibbyBusy} onClick={() => (readOnly ? toast.info(readOnly) : setAsking(true))}>
-              <DibbyMark size={20} />
-              {dibbyBusy ? "Dibby's on it…" : "Ask Dibby for more"}
-            </Button.Root>
-          )}
-          <Button.Root type="button" variant="neutral" mode="lighter" className="flex-1" disabled={adding} onClick={() => (readOnly ? toast.info(readOnly) : setPicking(true))}>
-            <i className="ri-map-pin-add-line db-icon" aria-hidden="true" />
-            {adding ? "Adding…" : "Add a place"}
-          </Button.Root>
-        </div>
-      )}
-      {decide && open && (
-        <Button.Root type="button" mode="ghost" size="small" onClick={() => setDeciding(true)}>
-          <i className="ri-map-pin-2-line db-icon" aria-hidden="true" />
-          Already decided? Pick the place
+        <Button.Root
+          type="button"
+          variant="neutral"
+          mode="stroke"
+          disabled={adding || dibbyBusy}
+          onClick={() => (readOnly ? toast.info(readOnly) : askDibby ? setChoosingAdd(true) : setPicking(true))}
+        >
+          <Button.Icon as="i" className="ri-add-line" />
+          {adding ? "Adding…" : dibbyBusy ? "Dibby's on it…" : "Add an option"}
         </Button.Root>
+      )}
+      {open && (lock || decide) && (
+        <Button.Root type="button" mode="ghost" size="small" disabled={lockBusy} onClick={() => (leader && lock ? setLocking(true) : setDeciding(true))}>
+          <i className="ri-lock-2-line db-icon" aria-hidden="true" />
+          {lockBusy ? "Locking it in…" : leader ? "Lock it in" : "Already decided? Pick the place"}
+        </Button.Root>
+      )}
+
+      <Modal.Root open={choosingAdd} onOpenChange={setChoosingAdd}>
+        <Modal.Content>
+          <Modal.Header title="Add an option" />
+          <Modal.Body>
+            <div className="flex flex-col gap-3">
+              <Button.Root type="button" variant="neutral" mode="lighter" size="large" block onClick={() => { setChoosingAdd(false); setPicking(true); }}>
+                <Button.Icon as="i" className="ri-search-line" />
+                Search a place
+              </Button.Root>
+              <Button.Root type="button" variant="primary" mode="lighter" size="large" block onClick={() => { setChoosingAdd(false); setAsking(true); }}>
+                <DibbyMark size={20} />
+                Let Dibby suggest a few
+              </Button.Root>
+            </div>
+          </Modal.Body>
+        </Modal.Content>
+      </Modal.Root>
+
+      {lock && leader && (
+        <Modal.Root open={locking} onOpenChange={(o) => !lockBusy && setLocking(o)}>
+          <Modal.Content>
+            <Modal.Header title={`Lock in ${leader.label}?`} />
+            <Modal.Body>
+              {`It's in front with ${leader.votes} ${leader.votes === 1 ? "vote" : "votes"}. Voting closes and everyone sees where it's at.`}
+            </Modal.Body>
+            <Modal.Footer>
+              <Button.Root
+                type="button"
+                variant="dibs"
+                size="large"
+                block
+                disabled={lockBusy}
+                onClick={() =>
+                  startLock(async () => {
+                    await send(lock, { what: "that" });
+                    setLocking(false);
+                  })
+                }
+              >
+                {lockBusy ? "Locking it in…" : `Lock in ${leader.label}`}
+              </Button.Root>
+              {decide && (
+                <Button.Root type="button" variant="neutral" mode="lighter" size="large" block disabled={lockBusy} onClick={() => { setLocking(false); setDeciding(true); }}>
+                  Pick somewhere else
+                </Button.Root>
+              )}
+            </Modal.Footer>
+          </Modal.Content>
+        </Modal.Root>
       )}
 
       <Modal.Root open={asking} onOpenChange={(o) => !dibbyBusy && setAsking(o)}>

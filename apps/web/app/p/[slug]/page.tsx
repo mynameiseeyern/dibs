@@ -138,6 +138,7 @@ export default async function PlanPage({ params, searchParams }: Props) {
   const unread = me ? unreadCount(me.dibby_muted ? messages.filter((m) => !m.auto) : messages, me) : 0;
   const voteOpen = plan.status === "voting";
   const iAmIn = Boolean(me && me.rsvp === "in" && !me.waitlisted);
+  const showAppPrompt = iAmIn && (!voteOpen || voteRows.some((r) => r.mine));
   // Extras the organiser switched off are hidden; whatever was there stays for if they're back on.
   const chatOn = extraOn(plan, "chat");
   const photosOn = extraOn(plan, "photos");
@@ -481,15 +482,8 @@ export default async function PlanPage({ params, searchParams }: Props) {
                   area={plan.area}
                   askDibby={me && process.env.ANTHROPIC_API_KEY ? askDibbyMore.bind(null, slug) : undefined}
                   decide={isHost ? setPlace.bind(null, slug) : undefined}
+                  lock={isHost ? lockPlan.bind(null, slug) : undefined}
                 />
-                {isHost && options.length > 0 && (
-                  <form action={lockPlan.bind(null, slug)}>
-                    <Button.Root mode="ghost" size="small">
-                      <i className="ri-lock-2-line db-icon" aria-hidden="true" />
-                      Lock it in now
-                    </Button.Root>
-                  </form>
-                )}
               </section>
             )}
 
@@ -498,8 +492,9 @@ export default async function PlanPage({ params, searchParams }: Props) {
 
         {me?.guest_id && view.guest && me.guest_id === view.guest.id && (
           <footer className="plan-foot">
-            {iAmIn && <GetTheApp onTap={appInterest.bind(null, slug)} />}
-            {!view.organiser && (
+            {/* One app prompt at a time, and not while they've still got a vote to make. */}
+            {showAppPrompt && <GetTheApp onTap={appInterest.bind(null, slug)} />}
+            {!view.organiser && !showAppPrompt && (
               <a className="label-sm" href="/account">
                 <i className="ri-smartphone-line db-icon" aria-hidden="true" /> Keep this plan on your other devices
               </a>
