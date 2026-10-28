@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { categoryIcon, shareText } from "@dibs/shared/plans";
 import { Wordmark } from "@/components/Logo";
-import { WizardSteps } from "@/components/WizardSteps";
 import { CopyButton } from "@/components/CopyButton";
 import * as Alert from "@/components/ui/alert";
 import * as Button from "@/components/ui/button";
@@ -43,8 +42,6 @@ export default async function Made({ params, searchParams }: { params: Promise<{
       <header className="topbar">
         <Wordmark href="/" />
       </header>
-
-      <WizardSteps step={3} />
 
       <section className="made__hero" aria-labelledby="made-h">
         <span className="made__badge" aria-hidden="true">
