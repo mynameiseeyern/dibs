@@ -80,7 +80,7 @@ export function PlaceSection({
         open={picking}
         onOpenChange={setPicking}
         title={mode === "place" ? "Change the place" : "Where's it at?"}
-        cta="Use"
+        cta="Use this place"
         area={area}
         onPick={(p) => run(() => setPlace(pickArg(p)), mode === "vote" ? `Locked in: ${p.name}` : `Now at ${p.name}`)}
       />
