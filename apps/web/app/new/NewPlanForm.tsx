@@ -20,6 +20,7 @@ import { CategoryPick } from "./CategoryPick";
 import { Description } from "./Description";
 import { Organiser, type Organising } from "./Organiser";
 import { Extras } from "./Extras";
+import { WizardSteps } from "@/components/WizardSteps";
 
 type Where = "place" | "vote";
 type Who = "dibby" | "us";
@@ -48,6 +49,23 @@ export function NewPlanForm({ organising, savedCategories = [] }: { organising: 
   const [place, setPlace] = useState<PlacePick | null>(null);
   const [picking, setPicking] = useState(false);
   const mode = where === "place" ? "place" : who === "dibby" ? "dibby" : "vote";
+  // Two steps on one form, so everything posts together: the plan itself, then Dibby and extras.
+  // Step 3 (share it) is its own page once the plan exists.
+  const [step, setStep] = useState<1 | 2>(1);
+  const [stepError, setStepError] = useState<string>();
+  const formRef = useRef<HTMLFormElement>(null);
+  const go = (n: 1 | 2) => {
+    setStep(n);
+    setStepError(undefined);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const next = () => {
+    const title = String(new FormData(formRef.current!).get("title") ?? "").trim();
+    if (!title && mode !== "dibby") return setStepError("Give it a name, like “Friday dinner”.");
+    if (where === "place" && !place) return setStepError("Pick the place, or start a poll.");
+    if (mode === "dibby" && !ask.trim() && !search.spend) return setStepError("Tell Dibby what you're after, like “dumplings” or “bowling”.");
+    go(2);
+  };
 
   // Dibby listens to the form: everything below feeds the bubble that talks back as you fill it.
   const days = useMemo(nextDays, []);
@@ -66,8 +84,21 @@ export function NewPlanForm({ organising, savedCategories = [] }: { organising: 
   }, [mode, search.near]);
 
   return (
-    <form action={action} className="form">
+    <form
+      ref={formRef}
+      action={action}
+      className="form"
+      onKeyDown={(e) => {
+        // Enter in a step 1 field means Next, not "make the plan" before you've seen step 2.
+        if (step === 1 && e.key === "Enter" && e.target instanceof HTMLInputElement) {
+          e.preventDefault();
+          next();
+        }
+      }}
+    >
+      <WizardSteps step={step} onPick={go} />
       <input type="hidden" name="where" value={mode} />
+      <div className="form" hidden={step !== 1}>
       <Field label="Name it" name="title" placeholder="Friday dinner" maxLength={80} autoComplete="off" hint={mode === "dibby" ? "Leave it blank and Dibby names it." : undefined} />
 
       <CategoryPick saved={savedCategories} signedIn={organising.kind === "account"} />
@@ -148,6 +179,13 @@ export function NewPlanForm({ organising, savedCategories = [] }: { organising: 
 
       <Description />
 
+      <label className="flex min-h-11 cursor-pointer items-center gap-3">
+        <Switch.Root name="plus_ones" />
+        Plus-ones welcome
+      </label>
+      </div>
+
+      <div className="form" hidden={step !== 2}>
       <fieldset className="m-0 min-w-0 border-0 p-0">
         <Label.Root asChild className="mb-2">
           <legend>How Dibby talks</legend>
@@ -156,23 +194,31 @@ export function NewPlanForm({ organising, savedCategories = [] }: { organising: 
         <p className="paragraph-xs muted mt-2">Dibby&rsquo;s tone in the group chat, and the app&rsquo;s. You can change it later.</p>
       </fieldset>
 
-      <label className="flex min-h-11 cursor-pointer items-center gap-3">
-        <Switch.Root name="plus_ones" />
-        Plus-ones welcome
-      </label>
-
       <Extras />
 
       <Organiser who={organising} />
+      </div>
 
-      <FormError error={state?.error} />
+      <FormError error={stepError ?? state?.error} />
       {pending && mode === "dibby" && <DibbyWorking where={search.near ? "near you" : null} />}
 
       <div className="dock">
         <div className="dock__inner">
-          <Button.Root variant="dibs" size="large" block disabled={pending || (where === "place" && !place)}>
-            {pending ? (mode === "dibby" ? "Dibby's on it…" : "Making it…") : mode === "dibby" ? "Let Dibby pick" : "Make the plan"}
-          </Button.Root>
+          {step === 1 ? (
+            <Button.Root key="next" type="button" size="large" block onClick={next}>
+              Next: Dibby and extras
+              <Button.Icon as="i" className="ri-arrow-right-line" />
+            </Button.Root>
+          ) : (
+            <>
+              <Button.Root key="make" variant="dibs" size="large" block disabled={pending}>
+                {pending ? (mode === "dibby" ? "Dibby's on it…" : "Making it…") : mode === "dibby" ? "Let Dibby pick" : "Make the plan"}
+              </Button.Root>
+              <Button.Root type="button" variant="neutral" mode="ghost" block disabled={pending} onClick={() => go(1)}>
+                Back
+              </Button.Root>
+            </>
+          )}
         </div>
       </div>
     </form>

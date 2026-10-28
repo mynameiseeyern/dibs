@@ -322,20 +322,21 @@ async function afterCreate(host: Host, category: string | null) {
   }
 }
 
-/** Straight to the plan. A guest who left an email gets the keep-your-plans link on the way. */
+/** On to "share it", the last step. A guest who left an email gets the keep-your-plans link on the way. */
 async function landingFor(host: Host, slug: string): Promise<string> {
-  if (!host.email) return `/p/${slug}`;
+  const made = `/p/${slug}/made`;
+  if (!host.email) return made;
   const guest = await currentGuest();
-  if (!guest) return `/p/${slug}`;
+  if (!guest) return made;
   try {
     await store.setGuestEmail(guest.id, host.email);
   } catch (e) {
     report("keep plans email", e);
-    return `/p/${slug}`;
+    return made;
   }
-  if (!usingSupabase) return `/p/${slug}`;
+  if (!usingSupabase) return made;
   const sent = await sendLink(host.email, `/p/${slug}`);
-  return sent?.sent ? `/p/${slug}?kept=1` : `/p/${slug}`;
+  return sent?.sent ? `${made}?kept=1` : made;
 }
 
 /** The Ask Dibby chips. Anything malformed is dropped rather than guessed at. */
