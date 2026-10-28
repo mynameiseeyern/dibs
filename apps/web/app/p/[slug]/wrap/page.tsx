@@ -6,7 +6,7 @@ import * as Button from "@/components/ui/button";
 import * as Checkbox from "@/components/ui/checkbox";
 import { planPreview } from "@/lib/plan-preview";
 import * as Alert from "@/components/ui/alert";
-import { extraOn, wrapState } from "@dibs/shared/plans";
+import { extraOn, withPlusOne, wrapState } from "@dibs/shared/plans";
 import { formatWhen } from "@/lib/time";
 import { WalkIns } from "./WalkIns";
 
@@ -62,11 +62,10 @@ export default async function Wrap({ params }: { params: Promise<{ slug: string 
               <label key={m.id} className="tick">
                 <Monogram name={m.display_name} colour={m.colour} />
                 <span className="label-md person__name">
-                  {m.display_name}
+                  {withPlusOne(m.display_name, m)}
                   <small>
                     {m.role === "organiser" ? "Organiser · " : ""}
                     {!m.user_id && !m.guest_id ? "Came last minute" : m.rsvp === "in" ? "Said they were in" : m.rsvp === "maybe" ? "Said maybe" : "Didn't reply"}
-                    {m.plus_one ? " · +1" : ""}
                   </small>
                 </span>
                 <Checkbox.Root name="came" value={m.id} defaultChecked={ticked(m)} aria-label={`${m.display_name} came`} />

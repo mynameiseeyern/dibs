@@ -151,7 +151,7 @@ export async function setPlusOnes(slug: string, on: boolean): Promise<Result> {
   const view = await editable(slug);
   if (!isView(view)) return view;
   if (on === view.plan.plus_ones) return {};
-  await announce(slug, view, { plus_ones: on }, on ? "Plus-ones welcome." : "No plus-ones this time.");
+  await announce(slug, view, { plus_ones: on }, on ? "Plus-ones welcome." : "No new plus-ones. Anyone already bringing someone still can.");
   return {};
 }
 

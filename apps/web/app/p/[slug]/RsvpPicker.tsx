@@ -6,6 +6,7 @@ import type { Rsvp, Vibe } from "@dibs/shared/types";
 import { rsvpHeading } from "@/lib/copy";
 import * as Button from "@/components/ui/button";
 import { send } from "@/lib/send";
+import { PlusOne } from "./PlusOne";
 
 /**
  * RSVP buttons that answer the tap straight away. The choice shows immediately
@@ -16,16 +17,20 @@ export function RsvpPicker({
   rsvp,
   waitlisted,
   plusOne,
+  plusOneName = null,
   plusOnes,
   setRsvp,
+  setPlusOne,
   vibe = "chill",
 }: {
   vibe?: Vibe;
   rsvp: Rsvp | null;
   waitlisted: boolean;
   plusOne: boolean;
+  plusOneName?: string | null;
   plusOnes: boolean;
-  setRsvp: (rsvp: Rsvp, form: FormData) => Promise<void>;
+  setRsvp: (rsvp: Rsvp) => Promise<void>;
+  setPlusOne?: (on: boolean, name: string) => Promise<{ error?: string }>;
 }) {
   const [pending, startTransition] = useTransition();
   const [shown, setShown] = useOptimistic(rsvp);
@@ -34,11 +39,9 @@ export function RsvpPicker({
 
   function choose(r: Rsvp) {
     if (pending && shown === r) return;
-    const form = new FormData();
-    if (r === "in" && plusOnes) form.set("plus_one", plusOne ? "on" : "");
     startTransition(async () => {
       setShown(r);
-      await send(() => setRsvp(r, form), { what: "your answer" });
+      await send(() => setRsvp(r), { what: "your answer" });
     });
   }
 
@@ -65,6 +68,7 @@ export function RsvpPicker({
         ))}
       </div>
       {showWaitlist && <p className="paragraph-sm muted">It's full. The host will let you know if a spot opens up.</p>}
+      {shown === "in" && rsvp === "in" && !waitlisted && setPlusOne && <PlusOne on={plusOne} name={plusOneName} allowed={plusOnes} save={setPlusOne} />}
     </>
   );
 }

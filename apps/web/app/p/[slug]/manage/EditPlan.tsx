@@ -287,9 +287,15 @@ function PlusOnesRow({ on, save }: { on: boolean; save: (on: boolean) => Promise
   const [pending, start] = useTransition();
   const [shown, setShown] = useOptimistic(on);
   return (
-    <label className="edit-plan__row">
-      <span className="label-md">Plus-ones</span>
-      <span className="edit-plan__value paragraph-sm">{shown ? "Welcome" : "Off"}</span>
+    <label className="edit-plan__row edit-plan__row--extra">
+      <span className="edit-plan__extra">
+        <span className="label-md block">Plus-ones</span>
+        <span className="paragraph-xs muted block">
+          {shown
+            ? "People who are in can bring someone. Their guest takes a spot, and they cover the guest's share of bills."
+            : "Off: nobody new can bring someone. Anyone already bringing a +1 keeps them."}
+        </span>
+      </span>
       <Switch.Root
         checked={shown}
         disabled={pending}
