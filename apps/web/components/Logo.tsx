@@ -49,3 +49,16 @@ export function CrewWave() {
     </svg>
   );
 }
+
+/**
+ * "Dibby" meaning the helper: the name with Dibby's face, so it reads as someone in the group,
+ * not the app. The app itself is the wordmark, and isn't called "Dibby" in running copy.
+ */
+export function DibbyName() {
+  return (
+    <span className="dibby-name">
+      <DibbyMark size={18} />
+      Dibby
+    </span>
+  );
+}
