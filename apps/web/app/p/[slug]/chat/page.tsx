@@ -44,6 +44,13 @@ export default async function Chat({ params }: { params: Promise<{ slug: string 
             <h1 className="label-lg">{plan.title}</h1>
             <span className="paragraph-xs muted">Chat</span>
           </div>
+          {!wrapped && (
+            <form action={toggleDibbyMute.bind(null, slug)}>
+              <Button.Root variant="neutral" mode="ghost" iconOnly aria-pressed={me.dibby_muted} aria-label={me.dibby_muted ? "Show Dibby's nudges" : "Mute Dibby's nudges"}>
+                <i className={`${me.dibby_muted ? "ri-notification-off-line" : "ri-notification-3-line"} db-icon`} aria-hidden="true" />
+              </Button.Root>
+            </form>
+          )}
         </header>
         <Thread
           messages={me.dibby_muted ? messages.filter((m) => !m.auto) : messages}
@@ -58,14 +65,6 @@ export default async function Chat({ params }: { params: Promise<{ slug: string 
           placeNames={Object.fromEntries(options.filter((o) => o.place_id).map((o) => [o.place_id!, o.label]))}
           post={postMessage.bind(null, slug)}
         />
-        {!wrapped && (
-          <form action={toggleDibbyMute.bind(null, slug)} className="dibby-mute">
-            <Button.Root mode="ghost" aria-pressed={me.dibby_muted}>
-              <i className={`${me.dibby_muted ? "ri-notification-3-line" : "ri-notification-off-line"} db-icon`} aria-hidden="true" />
-              {me.dibby_muted ? "Show Dibby's nudges" : "Mute Dibby's nudges"}
-            </Button.Root>
-          </form>
-        )}
       </main>
     </>
   );

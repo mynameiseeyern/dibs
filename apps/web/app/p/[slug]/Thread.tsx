@@ -51,7 +51,7 @@ export function Thread({
   return (
     <section className="section" aria-labelledby="thread-h">
       <h2 id="thread-h" className="sr-only">Plan chat</h2>
-      <div className="db-card thread">
+      <div className="thread">
         {summary && (
           <p className="thread__pin">
             <i className="ri-pushpin-2-line db-icon" aria-hidden="true" />
@@ -59,7 +59,7 @@ export function Thread({
           </p>
         )}
         {messages.length === 0 ? (
-          <p className="paragraph-sm muted">Nothing yet. {canPost ? "Try “@dibby find us somewhere cheap”." : ""}</p>
+          <p className="paragraph-sm muted thread__empty">Nothing yet. {canPost ? "Try “@dibby find us somewhere cheap”." : ""}</p>
         ) : (
           <div className="db-chat" role="log" aria-live="polite">
             <Fresh>
