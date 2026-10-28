@@ -56,6 +56,22 @@ export function Composer({ action }: { action: (s: FormState, f: FormData) => Pr
       )}
       <input type="hidden" name="near_lat" value={tagging && near ? near.lat : ""} />
       <input type="hidden" name="near_lng" value={tagging && near ? near.lng : ""} />
+      {/* Above the input, where a thumb finds it, and it stays put while you type. */}
+      {!tagging && (
+        <Button.Root
+          type="button"
+          variant="primary"
+          mode="lighter"
+          size="small"
+          className="composer__chip"
+          onClick={() => {
+            setText((t) => `@dibby ${t}`);
+            document.getElementById("body")?.focus();
+          }}
+        >
+          <i className="ri-sparkling-line db-icon" aria-hidden="true" /> Ask Dibby
+        </Button.Root>
+      )}
       <div className="composer__row">
         <label htmlFor="body" className="sr-only">
           Message
@@ -77,11 +93,6 @@ export function Composer({ action }: { action: (s: FormState, f: FormData) => Pr
           <i className="ri-send-plane-2-fill db-icon" aria-hidden="true" />
         </Button.Root>
       </div>
-      {!text && (
-        <Button.Root type="button" mode="ghost" size="small" className="composer__chip" onClick={() => setText("@dibby ")}>
-          <i className="ri-sparkling-line db-icon" aria-hidden="true" /> Ask Dibby
-        </Button.Root>
-      )}
       {tagging && (
         <p className="paragraph-xs muted composer__where">
           <i className={`${near ? "ri-map-pin-fill" : "ri-map-pin-line"} db-icon`} aria-hidden="true" />{" "}
