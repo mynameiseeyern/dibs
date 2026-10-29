@@ -16,7 +16,6 @@ export function OnboardingForm({ next }: { next: string }) {
         <Field label="First name" name="first_name" autoComplete="given-name" required maxLength={40} />
         <Field label="Last name" name="last_name" autoComplete="family-name" required maxLength={40} />
       </div>
-      <Field label="Date of birth" name="dob" type="date" autoComplete="bday" required hint="You need to be 18+ to organise. We don't show this to anyone." />
       <Field
         label="PayID (optional)"
         name="payid"
