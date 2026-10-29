@@ -19,7 +19,7 @@ export interface Here {
   guest: Guest | null;
   /** First and last name if we know it, else the email. Null when nobody's here. */
   name: string | null;
-  /** Signed in and has a profile (name and 18+), so can organise. */
+  /** Signed in and has a profile (a name), so can organise. */
   canOrganise: boolean;
 }
 

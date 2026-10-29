@@ -5,7 +5,8 @@ export interface Profile {
   user_id: string;
   first_name: string;
   last_name: string;
-  dob: string;
+  /** No longer asked for; older profiles may still have one. */
+  dob: string | null;
   payid: string | null;
   payid_name: string | null;
   /** When they said yes or no to beta updates anywhere. Null: show the one-time card. */

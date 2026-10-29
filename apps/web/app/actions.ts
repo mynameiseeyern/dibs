@@ -121,26 +121,16 @@ function safeNext(n: string) {
   return n.startsWith("/") && !n.startsWith("//") ? n : "/home";
 }
 
-function isAdult(dob: string): boolean {
-  const d = new Date(dob + "T00:00:00Z");
-  if (Number.isNaN(d.getTime())) return false;
-  const now = new Date();
-  const eighteen = new Date(Date.UTC(d.getUTCFullYear() + 18, d.getUTCMonth(), d.getUTCDate()));
-  return eighteen <= now;
-}
-
-/** First sign-up: name, date of birth (18+), and optional PayID for getting paid back. */
+/** First sign-up: name, and optional PayID for getting paid back. */
 export async function saveProfile(_prev: FormState, form: FormData): Promise<FormState> {
   const me = await currentOrganiser();
   if (!me) redirect("/login");
   const first = clean(form.get("first_name"), 40);
   const last = clean(form.get("last_name"), 40);
-  const dob = clean(form.get("dob"), 10);
   const payid = clean(form.get("payid"), 100) || null;
   if (!first || !last) return { error: "We need your first and last name." };
-  if (!isAdult(dob)) return { error: "You need to be 18 or over to organise plans on Dibby." };
   try {
-    await store.upsertProfile({ user_id: me.id, first_name: first, last_name: last, dob, payid, payid_name: payid ? `${first} ${last}` : null });
+    await store.upsertProfile({ user_id: me.id, first_name: first, last_name: last, dob: null, payid, payid_name: payid ? `${first} ${last}` : null });
   } catch (e) {
     // Shows in Vercel's logs with the database's reason.
     console.error("[onboarding] save profile failed", me.id, e);
@@ -266,7 +256,7 @@ type Host = {
 
 /**
  * Like checking out as a guest: a signed-in organiser makes the plan as themselves; anyone else
- * just gives their name (and says they're 18+), with an email only if they want to keep it.
+ * just gives their name, with an email only if they want to keep it.
  */
 async function whoIsOrganising(form: FormData): Promise<Host | { error: string; field: string }> {
   const me = await currentOrganiser();

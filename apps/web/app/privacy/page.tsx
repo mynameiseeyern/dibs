@@ -21,9 +21,6 @@ export default function Privacy() {
           anyone.
         </li>
         <li>
-          <strong>Your date of birth,</strong> if you organise plans, to check you&rsquo;re 18 or over. We don&rsquo;t show it to anyone.
-        </li>
-        <li>
           <strong>Your PayID and the name on it,</strong> if you add them, so people who owe you can pay you. Only people with a share on a bill you
           paid, who were confirmed as there on the night, can see it.
         </li>
