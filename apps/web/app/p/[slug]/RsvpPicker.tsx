@@ -16,6 +16,7 @@ import { PlusOne } from "./PlusOne";
 export function RsvpPicker({
   rsvp,
   waitlisted,
+  waitlistPlace = null,
   plusOne,
   plusOneName = null,
   plusOnes,
@@ -26,6 +27,8 @@ export function RsvpPicker({
   vibe?: Vibe;
   rsvp: Rsvp | null;
   waitlisted: boolean;
+  /** Where you are in line on the waitlist (1 = next in). */
+  waitlistPlace?: number | null;
   plusOne: boolean;
   plusOneName?: string | null;
   plusOnes: boolean;
@@ -67,7 +70,11 @@ export function RsvpPicker({
           </Button.Root>
         ))}
       </div>
-      {showWaitlist && <p className="paragraph-sm muted">It's full. The host will let you know if a spot opens up.</p>}
+      {showWaitlist && (
+        <p className="paragraph-sm muted">
+          It&rsquo;s full, so you&rsquo;re {waitlistPlace ? `number ${waitlistPlace} ` : ""}in line. If someone drops out, you&rsquo;re in straight away and the chat hears about it.
+        </p>
+      )}
       {shown === "in" && rsvp === "in" && !waitlisted && setPlusOne && <PlusOne on={plusOne} name={plusOneName} allowed={plusOnes} save={setPlusOne} />}
     </>
   );

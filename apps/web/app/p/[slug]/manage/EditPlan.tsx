@@ -12,7 +12,7 @@ import * as Switch from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
 import { PlaceSection } from "./PlaceSection";
 import { CategoryPick } from "@/app/new/CategoryPick";
-import { DESCRIPTION_MAX, PLAN_EXTRAS, type PlanExtra } from "@dibs/shared/plans";
+import { DESCRIPTION_MAX, MAX_SPOTS, MIN_SPOTS, PLAN_EXTRAS, type PlanExtra } from "@dibs/shared/plans";
 import * as Textarea from "@/components/ui/textarea";
 import * as Label from "@/components/ui/label";
 
@@ -41,7 +41,8 @@ export interface EditPlanProps {
   venue: string | null;
   area: string | null;
   optionCount: number;
-  capacity: number;
+  /** Null: open, no limit. */
+  capacity: number | null;
   going: number;
   plusOnes: boolean;
   vibe: Vibe;
@@ -55,7 +56,7 @@ export interface EditPlanProps {
     setWhen: (v: string) => Promise<Result>;
     setArea: (v: string) => Promise<Result>;
     setVoteDeadline: (v: string) => Promise<Result>;
-    setCapacity: (n: number) => Promise<Result>;
+    setCapacity: (n: number | null) => Promise<Result>;
     setPlusOnes: (on: boolean) => Promise<Result>;
     setExtra: (extra: PlanExtra, on: boolean) => Promise<Result>;
     setPlace: (pick: string | CustomPlace) => Promise<Result>;
@@ -110,7 +111,7 @@ export function EditPlan(p: EditPlanProps) {
       </Group>
 
       <Group label="Who's coming">
-        <Row label="Spots" value={`${p.capacity} · ${p.going} going`} onOpen={() => setSheet("spots")} />
+        <Row label="Spots" value={`${p.capacity === null ? "Open" : `${p.capacity} max`} · ${p.going} going`} onOpen={() => setSheet("spots")} />
         <PlusOnesRow on={p.plusOnes} save={p.actions.setPlusOnes} />
       </Group>
 
@@ -181,10 +182,12 @@ export function EditPlan(p: EditPlanProps) {
         open={sheet === "spots"}
         onClose={close}
         title="Spots"
-        body={`${p.going} going now, plus-ones included. Anyone over the limit goes on the waitlist.`}
-        field={{ label: "How many spots", name: "capacity", type: "number", inputMode: "numeric", min: 2, max: 20, defaultValue: String(p.capacity), required: true }}
-        save={(v) => p.actions.setCapacity(Number(v))}
-      />
+        body={`${p.going} going now, plus-ones included.`}
+        name="capacity"
+        save={(v) => p.actions.setCapacity(v === "" ? null : Number(v))}
+      >
+        <SpotsField capacity={p.capacity} going={p.going} />
+      </TextSheet>
 
       <Modal.Root open={sheet === "where"} onOpenChange={(o) => !o && close()}>
         <Modal.Content>
@@ -492,6 +495,43 @@ function DescriptionField({ initial }: { initial: string }) {
         <Textarea.CharCounter current={text.length} max={DESCRIPTION_MAX} />
       </Textarea.Root>
       <p className="paragraph-xs muted">Anyone with the link sees this. Clear it to take it off.</p>
+    </div>
+  );
+}
+
+/**
+ * Open by default: anyone with the link can say they're in. Closing it sets a limit; past that,
+ * people go on a waitlist and move up, first on, first off, as spots open.
+ * The number field only sends a value while the plan is closed, so an empty value means open.
+ */
+function SpotsField({ capacity, going }: { capacity: number | null; going: number }) {
+  const [closed, setClosed] = useState(capacity !== null);
+  return (
+    <div className="db-stack">
+      <label className="flex items-center gap-3">
+        <span className="flex-1">
+          <span className="label-md block">Cap the numbers</span>
+          <span className="paragraph-xs muted block">
+            {closed
+              ? "Once it’s full, anyone else who’s in goes on a waitlist. When someone drops out, the first person waiting gets their spot, and the chat hears about it."
+              : "Off: no limit, everyone who’s keen is in. Turn it on for a booking, a car or a table with a set number of seats."}
+          </span>
+        </span>
+        <Switch.Root checked={closed} onCheckedChange={(v: boolean) => setClosed(v)} aria-label="Cap the numbers" />
+      </label>
+      {closed && (
+        <Field
+          label="How many spots"
+          name="capacity"
+          type="number"
+          inputMode="numeric"
+          min={Math.max(MIN_SPOTS, going)}
+          max={MAX_SPOTS}
+          defaultValue={String(capacity ?? Math.max(going, 10))}
+          hint={going >= MIN_SPOTS ? `At least ${going}, since ${going} are already going. Nobody gets bumped.` : `Anywhere from ${MIN_SPOTS} to ${MAX_SPOTS}.`}
+          required
+        />
+      )}
     </div>
   );
 }

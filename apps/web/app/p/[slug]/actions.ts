@@ -8,7 +8,7 @@ import { asSearchMemo, BRB, mentionsDibby, replyInThread, suggestMore, type Plan
 import { clearGuestSession, createGuestSession } from "@/lib/guest";
 import { store } from "@/lib/store";
 import { REACTIONS, type Reaction } from "@/lib/store/types";
-import { closeVote } from "@/lib/plan-ops";
+import { closeVote, fillFromWaitlist } from "@/lib/plan-ops";
 import { nudgeOnBail } from "@/lib/nudges";
 import { loadPlan } from "@/lib/viewer";
 import { formatShort, formatWhen, localToIso } from "@/lib/time";
@@ -82,7 +82,13 @@ export async function setRsvp(slug: string, rsvp: Rsvp, _form?: FormData): Promi
     const holding = view.me.rsvp === "in" && !view.me.waitlisted;
     waitlisted = !holding && !hasRoom(others, view.plan.capacity, plusOne);
   }
-  await store.updateMember(view.me.id, { rsvp, plus_one: plusOne, plus_one_name: plusOne ? (view.me.plus_one_name ?? null) : null, waitlisted });
+  // Gave up a spot (or a +1's)? Worked out before saving, while `me` still says what it was.
+  const freedSpot = view.me.rsvp === "in" && !view.me.waitlisted && (rsvp !== "in" || (view.me.plus_one && !plusOne));
+  // Keep your place in line if you were already waiting; join the back of it if you're new to it.
+  const waitlistedAt = waitlisted ? (view.me.waitlisted && view.me.waitlisted_at ? view.me.waitlisted_at : new Date().toISOString()) : null;
+  await store.updateMember(view.me.id, { rsvp, plus_one: plusOne, plus_one_name: plusOne ? (view.me.plus_one_name ?? null) : null, waitlisted, waitlisted_at: waitlistedAt });
+  // The next person waiting gets it.
+  if (freedSpot) await fillFromWaitlist(view.plan);
   // Only people going vote. Stepping back to maybe or can't go, before the plan starts,
   // takes their vote back so it doesn't decide a night they might not come to.
   const started = Boolean(view.plan.starts_at && Date.parse(view.plan.starts_at) <= Date.now());
@@ -106,10 +112,12 @@ export async function setPlusOne(slug: string, on: boolean, rawName: string): Pr
   const name = on ? cleanPlusOneName(rawName) : null;
   if (on && !me.plus_one) {
     if (!view.plan.plus_ones) return { error: "Plus-ones aren't on for this one." };
-    if (countIn(view.members) + 1 > view.plan.capacity) return { error: "It's full, so there's no room for a +1 right now." };
+    if (view.plan.capacity !== null && countIn(view.members) + 1 > view.plan.capacity) return { error: "It's full, so there's no room for a +1 right now." };
   }
   if (on === me.plus_one && name === (me.plus_one_name ?? null)) return {};
+  const droppedPlusOne = !on && me.plus_one;
   await store.updateMember(me.id, { plus_one: on, plus_one_name: name });
+  if (droppedPlusOne) await fillFromWaitlist(view.plan);
   revalidatePlan(slug);
   return {};
 }
@@ -121,6 +129,7 @@ export async function removePlusOne(slug: string, memberId: string): Promise<{ e
   const them = view.members.find((m) => m.id === memberId);
   if (!them?.plus_one) return {};
   await store.updateMember(them.id, { plus_one: false, plus_one_name: null });
+  await fillFromWaitlist(view.plan);
   revalidatePlan(slug);
   return {};
 }
@@ -145,6 +154,7 @@ export async function removeMe(slug: string): Promise<void> {
   if (view?.guest && view.me?.guest_id === view.guest.id) {
     await store.removeGuest(view.guest.id);
     await clearGuestSession();
+    await fillFromWaitlist(view.plan);
   }
   redirect(`/p/${slug}`);
 }

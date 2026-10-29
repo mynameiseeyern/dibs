@@ -35,9 +35,35 @@ export function countIn(members: readonly Pick<PlanMember, "rsvp" | "plus_one" |
   return members.filter((m) => m.rsvp === "in" && !m.waitlisted).reduce((n, m) => n + 1 + (m.plus_one ? 1 : 0), 0);
 }
 
-/** Whether a new "in" RSVP fits, or goes on the waitlist. */
-export function hasRoom(members: Parameters<typeof countIn>[0], capacity: number, plusOne = false): boolean {
-  return countIn(members) + 1 + (plusOne ? 1 : 0) <= capacity;
+/** The most spots a closed plan can have, and the fewest. Open plans (null) have no limit. */
+export const MIN_SPOTS = 2;
+export const MAX_SPOTS = 100;
+
+/** Whether a new "in" RSVP fits, or goes on the waitlist. An open plan always has room. */
+export function hasRoom(members: Parameters<typeof countIn>[0], capacity: number | null, plusOne = false): boolean {
+  return capacity === null || countIn(members) + 1 + (plusOne ? 1 : 0) <= capacity;
+}
+
+type Waiting = Pick<PlanMember, "id" | "rsvp" | "plus_one" | "waitlisted" | "joined_at"> & { waitlisted_at?: string | null };
+
+/**
+ * Who comes off the waitlist now: first on, first off, while there's room for them (and their +1).
+ * Someone whose +1 doesn't fit waits, but the next person in line can still take a single spot.
+ */
+export function offWaitlist(members: readonly Waiting[], capacity: number | null): string[] {
+  const queue = members
+    .filter((m) => m.waitlisted && m.rsvp === "in")
+    .sort((a, b) => (a.waitlisted_at ?? a.joined_at).localeCompare(b.waitlisted_at ?? b.joined_at));
+  if (capacity === null) return queue.map((m) => m.id);
+  let taken = countIn(members);
+  const out: string[] = [];
+  for (const m of queue) {
+    const need = 1 + (m.plus_one ? 1 : 0);
+    if (taken + need > capacity) continue;
+    taken += need;
+    out.push(m.id);
+  }
+  return out;
 }
 
 export const RSVP_LABEL: Record<Rsvp, string> = { in: "I'm in", maybe: "Maybe", out: "Can't go" };
