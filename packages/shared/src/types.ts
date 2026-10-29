@@ -27,7 +27,8 @@ export interface Plan {
   vibe: Vibe;
   status: PlanStatus;
   vote_deadline: string | null;
-  capacity: number;
+  /** Spots, counting plus-ones. Null: open, no limit and no waitlist. */
+  capacity: number | null;
   plus_ones: boolean;
   version: number;
   updated_note: string | null;
@@ -56,6 +57,8 @@ export interface PlanMember {
   /** The +1's first name, if they gave one. Null: just "+ 1". */
   plus_one_name?: string | null;
   waitlisted: boolean;
+  /** When they went on the waitlist: first on, first off. */
+  waitlisted_at?: string | null;
   attended: boolean | null;
   /** Hide Dibby's automatic nudges for this member. */
   dibby_muted: boolean;

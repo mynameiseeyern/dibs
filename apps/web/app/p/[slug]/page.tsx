@@ -81,7 +81,7 @@ export default async function PlanPage({ params, searchParams }: Props) {
   const inCount = countIn(members);
   const when = formatWhen(plan.starts_at);
   const cancelled = plan.status === "cancelled";
-  const full = inCount >= plan.capacity;
+  const full = plan.capacity !== null && inCount >= plan.capacity;
   const wrapped = plan.status === "wrapped";
   const wrap = wrapState(plan);
   // After the night, Who came is just the people ticked at wrap-up.
@@ -138,6 +138,8 @@ export default async function PlanPage({ params, searchParams }: Props) {
   const unread = me ? unreadCount(me.dibby_muted ? messages.filter((m) => !m.auto) : messages, me) : 0;
   const voteOpen = plan.status === "voting";
   const iAmIn = Boolean(me && me.rsvp === "in" && !me.waitlisted);
+  const line = members.filter((m) => m.waitlisted && m.rsvp === "in").sort((a, b) => (a.waitlisted_at ?? a.joined_at).localeCompare(b.waitlisted_at ?? b.joined_at));
+  const waitlistPlace = me?.waitlisted ? line.findIndex((m) => m.id === me.id) + 1 || null : null;
   const showAppPrompt = iAmIn && (!voteOpen || voteRows.some((r) => r.mine));
   // Extras the organiser switched off are hidden; whatever was there stays for if they're back on.
   const chatOn = extraOn(plan, "chat");
@@ -257,7 +259,7 @@ export default async function PlanPage({ params, searchParams }: Props) {
         {me && !isHost && !cancelled && !wrapped && (
           <section className="db-card section" aria-labelledby="rsvp-h">
             {iAmIn && <Once id={`in:${plan.id}:${me.id}`} kind="pop" size={140} colour={me.colour} label="You popped up. You're in." />}
-            <RsvpPicker rsvp={me.rsvp ?? null} waitlisted={me.waitlisted} plusOne={me.plus_one} plusOneName={me.plus_one_name ?? null} plusOnes={plan.plus_ones} setRsvp={setRsvp.bind(null, slug)} setPlusOne={setPlusOne.bind(null, slug)} vibe={plan.vibe} />
+            <RsvpPicker rsvp={me.rsvp ?? null} waitlisted={me.waitlisted} waitlistPlace={waitlistPlace} plusOne={me.plus_one} plusOneName={me.plus_one_name ?? null} plusOnes={plan.plus_ones} setRsvp={setRsvp.bind(null, slug)} setPlusOne={setPlusOne.bind(null, slug)} vibe={plan.vibe} />
             {readOnly && (
               <p className="paragraph-sm muted rsvp-note">
                 <i className="ri-eye-line db-icon" aria-hidden="true" /> {readOnly}
@@ -441,7 +443,11 @@ export default async function PlanPage({ params, searchParams }: Props) {
                       ])
                   )}
               </ul>
-              {!wrapped && <p className="paragraph-xs muted who__cap">{inCount} of {plan.capacity} spots taken</p>}
+              {!wrapped && plan.capacity !== null && (
+                <p className="paragraph-xs muted who__cap">
+                  {inCount} of {plan.capacity} spots taken{waitlist ? `. ${waitlist} waiting, and they move up in order as spots open.` : ""}
+                </p>
+              )}
             </details>
 
             {/* 4. Decide: only while something's open. */}

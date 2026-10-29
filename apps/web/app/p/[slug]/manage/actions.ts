@@ -1,5 +1,7 @@
 "use server";
 
+import { MAX_SPOTS, MIN_SPOTS } from "@dibs/shared/plans";
+import { fillFromWaitlist } from "@/lib/plan-ops";
 import { memberRejoinUrl } from "@/lib/rejoin";
 
 import { revalidatePath } from "next/cache";
@@ -141,15 +143,21 @@ export async function setVoteDeadline(slug: string, local: string): Promise<Resu
   return {};
 }
 
-/** How many spots (2 to 20). Never fewer than are already going; lowering it doesn't bump anyone. */
-export async function setCapacity(slug: string, n: number): Promise<Result> {
+/**
+ * Open (null, the default: no limit, no waitlist) or closed at a number of spots. Never fewer than
+ * are already going; closing doesn't bump anyone. Raising the limit or opening up lets the waitlist in.
+ */
+export async function setCapacity(slug: string, n: number | null): Promise<Result> {
   const view = await editable(slug);
   if (!isView(view)) return view;
-  if (!Number.isInteger(n) || n < 2 || n > 20) return { error: "Spots can be anywhere from 2 to 20." };
-  const going = countIn(view.members);
-  if (n < going) return { error: `${going} are already going, so it can't be fewer than that.` };
+  if (n !== null) {
+    if (!Number.isInteger(n) || n < MIN_SPOTS || n > MAX_SPOTS) return { error: `Spots can be anywhere from ${MIN_SPOTS} to ${MAX_SPOTS}.` };
+    const going = countIn(view.members);
+    if (n < going) return { error: `${going} are already going, plus-ones included, so it can't be fewer than that.` };
+  }
   if (n === view.plan.capacity) return {};
-  await store.updatePlan(view.plan.id, { capacity: n });
+  const plan = await store.updatePlan(view.plan.id, { capacity: n });
+  await fillFromWaitlist(plan);
   revalidatePath(`/p/${slug}`);
   revalidatePath(`/p/${slug}/manage`);
   return {};

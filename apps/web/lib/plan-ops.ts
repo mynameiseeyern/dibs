@@ -1,5 +1,6 @@
 import "server-only";
 import { seededPick } from "@dibs/shared/bills";
+import { offWaitlist } from "@dibs/shared/plans";
 import type { Plan } from "@dibs/shared/types";
 import { store } from "./store";
 import { renderTemplate, type Template } from "./copy";
@@ -44,4 +45,19 @@ export async function closeIfDue(plan: Plan): Promise<boolean> {
   if (plan.status !== "voting" || !plan.vote_deadline) return false;
   if (Date.parse(plan.vote_deadline) > Date.now()) return false;
   return closeVote(plan, "deadline");
+}
+
+/**
+ * A spot opened up (someone stepped back, a +1 came off, the host raised the limit or opened the
+ * plan): move people off the waitlist, first on, first off, and say so in the chat so they see it.
+ */
+export async function fillFromWaitlist(plan: Plan): Promise<void> {
+  if (plan.status === "cancelled" || plan.status === "wrapped") return;
+  const members = await store.listMembers(plan.id);
+  const ids = offWaitlist(members, plan.capacity);
+  if (ids.length === 0) return;
+  for (const id of ids) await store.updateMember(id, { waitlisted: false, waitlisted_at: null });
+  const names = members.filter((m) => ids.includes(m.id)).map((m) => m.display_name.split(" ")[0]);
+  const who = names.length === 1 ? `${names[0]} is` : `${names.slice(0, -1).join(", ")} and ${names.at(-1)} are`;
+  await store.addMessage({ planId: plan.id, memberId: null, kind: "system", body: `A spot opened up: ${who} off the waitlist and in.` });
 }
