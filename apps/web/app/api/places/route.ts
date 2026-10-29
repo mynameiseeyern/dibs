@@ -2,16 +2,18 @@ import { NextResponse, type NextRequest } from "next/server";
 import { currentOrganiser } from "@/lib/auth";
 import { currentGuest } from "@/lib/guest";
 import { searchPlaces } from "@/lib/places";
+import { checkPlacesPass } from "@/lib/places-pass";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Search for the map picker. Only for someone signed in or with a guest session on this
- * browser, so it isn't an open proxy to the Places API.
+ * Search for the map picker. Only for someone signed in, with a guest session on this browser,
+ * or holding the pass the plan flow hands someone making their first plan, so it isn't an open
+ * proxy to the Places API.
  */
 export async function GET(req: NextRequest) {
   const [organiser, guest] = await Promise.all([currentOrganiser(), currentGuest()]);
-  if (!organiser && !guest) return NextResponse.json({ error: "Join the plan first." }, { status: 401 });
+  if (!organiser && !guest && !checkPlacesPass(req.nextUrl.searchParams.get("pass"))) return NextResponse.json({ error: "Join the plan first." }, { status: 401 });
 
   const sp = req.nextUrl.searchParams;
   const lat = Number(sp.get("lat"));

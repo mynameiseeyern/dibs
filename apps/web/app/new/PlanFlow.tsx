@@ -72,7 +72,7 @@ function whenLine(date: string | null, time: string | null): string | null {
  * who finds three real spots to vote on. Someone new gets a short intro first, and a guest
  * who's never organised says who they are last. Everything posts together to createPlan.
  */
-export function PlanFlow({ organising, intro }: { organising: Organising; intro: boolean }) {
+export function PlanFlow({ organising, intro, searchPass }: { organising: Organising; intro: boolean; searchPass?: string }) {
   const [step, setStep] = useState<Step>(intro ? "intro" : "what");
   // The intro's Make plans: a white circle grows from the button, then the first question lands.
   const [revealing, setRevealing] = useState(false);
@@ -422,6 +422,7 @@ export function PlanFlow({ organising, intro }: { organising: Organising; intro:
           onOpenChange={setPicking}
           title="Where's it at?"
           cta="Use this place"
+          pass={searchPass}
           onPick={(p) => {
             setPlace(p);
             setErr(null);
