@@ -19,3 +19,11 @@
 .ov-row--title { padding-top: var(--space-4); padding-bottom: var(--space-4); }
 .ov-row--title .ov-row__val { font: 700 30px/36px var(--font-display); letter-spacing: -0.01em; }
 .ov-more { align-self: flex-start; margin-left: calc(var(--space-5) * -1); }
+
+/* Keep this plan: asked once it exists, like Shop's "Connect email" card. */
+.keep-card { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); border-radius: var(--radius-lg); background: var(--primary-lighter); }
+.keep-card__head { display: flex; gap: var(--space-3); align-items: flex-start; }
+.keep-card__ico { flex: none; width: 40px; height: 40px; border-radius: var(--radius-full); display: grid; place-content: center; background: var(--primary-base); color: var(--static-white); font-size: 20px; }
+.keep-card__text { flex: 1; min-width: 0; }
+.keep-card__x { margin: -10px -10px 0 0; flex: none; }
+.keep-card__row { display: flex; gap: var(--space-2); align-items: center; }
