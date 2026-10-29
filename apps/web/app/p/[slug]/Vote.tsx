@@ -38,6 +38,7 @@ export function VoteList({
   askDibby,
   decide,
   lock,
+  closes = null,
 }: {
   rows: VoteRow[];
   canVote: boolean;
@@ -59,6 +60,8 @@ export function VoteList({
   decide?: (pick: string | CustomPlace) => Promise<{ error?: string }>;
   /** Host only: close the vote now and go with whatever's in front. */
   lock?: () => Promise<void>;
+  /** When the vote closes on its own ("Fri 30 Oct · 6:00 pm"), for the host's bar. */
+  closes?: string | null;
 }) {
   const [adding, startAdding] = useTransition();
   // The tap moves your vote straight away: counts and bars update here, the server saves it behind,
@@ -94,6 +97,9 @@ export function VoteList({
   const [locking, setLocking] = useState(false);
   const [lockBusy, startLock] = useTransition();
   const leader = top > 0 ? ranked[0] : null;
+  const tied = top > 0 && shownRows.filter((r) => r.votes === top).length > 1;
+  // The section heading already says when it closes, so this just says what happens then.
+  const auto = closes ? "When voting closes, the top pick locks in on its own." : "Lock it in whenever you're ready.";
   const canRemove = (r: VoteRow) => !readOnly && Boolean(remove) && open && (canRemoveAll || (meId !== null && r.added_by === meId));
 
   const confirmRemove = async () => {
@@ -109,7 +115,29 @@ export function VoteList({
   return (
     <GoogleMaps>
     <Fresh>
+      {/* The organiser's call, up top where it's seen: who's ahead, that it'll sort itself out at the
+          deadline, and the button to lock it in now. */}
+      {open && (lock || decide) && rows.length > 0 && (
+        <div className="db-card vote-host">
+          <div className="vote-host__text">
+            <span className="label-md">
+              {leader ? (tied ? `It's a tie at ${top} ${top === 1 ? "vote" : "votes"}` : `${leader.label} is ahead with ${top} ${top === 1 ? "vote" : "votes"}`) : "No votes yet"}
+            </span>
+            <span className="paragraph-xs muted">{auto}</span>
+          </div>
+          <Button.Root type="button" variant="primary" size="small" disabled={lockBusy} onClick={() => (leader && lock ? setLocking(true) : setDeciding(true))}>
+            <i className="ri-lock-2-line db-icon" aria-hidden="true" />
+            {lockBusy ? "Locking…" : leader ? "Lock it in" : "Pick it"}
+          </Button.Root>
+        </div>
+      )}
       {rows.length === 0 && <p className="paragraph-sm muted">No options yet. Add a place, or ask Dibby.</p>}
+      {open && decide && rows.length === 0 && (
+        <Button.Root type="button" mode="ghost" size="small" onClick={() => setDeciding(true)}>
+          <i className="ri-map-pin-2-line db-icon" aria-hidden="true" />
+          Already decided? Pick the place
+        </Button.Root>
+      )}
       {visible.map((r) => {
         const share = total ? Math.round((r.votes / total) * 100) : 0;
         const winning = top > 0 && r.votes === top;
@@ -198,12 +226,6 @@ export function VoteList({
           {adding ? "Adding…" : dibbyBusy ? "Dibby's on it…" : "Add an option"}
         </Button.Root>
       )}
-      {open && (lock || decide) && (
-        <Button.Root type="button" mode="ghost" size="small" disabled={lockBusy} onClick={() => (leader && lock ? setLocking(true) : setDeciding(true))}>
-          <i className="ri-lock-2-line db-icon" aria-hidden="true" />
-          {lockBusy ? "Locking it in…" : leader ? "Lock it in" : "Already decided? Pick the place"}
-        </Button.Root>
-      )}
 
       <Modal.Root open={choosingAdd} onOpenChange={setChoosingAdd}>
         <Modal.Content>
@@ -226,9 +248,11 @@ export function VoteList({
       {lock && leader && (
         <Modal.Root open={locking} onOpenChange={(o) => !lockBusy && setLocking(o)}>
           <Modal.Content>
-            <Modal.Header title={`Lock in ${leader.label}?`} />
+            <Modal.Header title={tied ? "Lock it in?" : `Lock in ${leader.label}?`} />
             <Modal.Body>
-              {`It's in front with ${leader.votes} ${leader.votes === 1 ? "vote" : "votes"}. Voting closes and everyone sees where it's at.`}
+              {tied
+                ? `It's a tie, so Dibby spins between the ones in front. Voting closes and everyone sees where it's at.`
+                : `It's in front with ${leader.votes} ${leader.votes === 1 ? "vote" : "votes"}. Voting closes and everyone sees where it's at.`}
             </Modal.Body>
             <Modal.Footer>
               <Button.Root
@@ -244,7 +268,7 @@ export function VoteList({
                   })
                 }
               >
-                {lockBusy ? "Locking it in…" : `Lock in ${leader.label}`}
+                {lockBusy ? "Locking it in…" : tied ? "Spin for it" : `Lock in ${leader.label}`}
               </Button.Root>
               {decide && (
                 <Button.Root type="button" variant="neutral" mode="lighter" size="large" block disabled={lockBusy} onClick={() => { setLocking(false); setDeciding(true); }}>

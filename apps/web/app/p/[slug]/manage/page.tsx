@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { TZ, formatWhen } from "@/lib/time";
-import { countIn } from "@dibs/shared/plans";
+import { countIn, wrapState } from "@dibs/shared/plans";
 import { loadPlan } from "@/lib/viewer";
 import { cancelPlan, openVote, setArea, setExtra, setCategory, setDescription, setCapacity, setDibbyVolume, setPlace, setPlusOnes, setTitle, setVibe, setVoteDeadline, setWhen } from "./actions";
 import { store } from "@/lib/store";
@@ -77,6 +77,7 @@ export default async function Manage({ params }: { params: Promise<{ slug: strin
         plusOnes={plan.plus_ones}
         vibe={plan.vibe}
         volume={plan.dibby_volume ?? "normal"}
+        wrapEarlyHref={wrapState(plan) === "early" ? `/p/${slug}/wrap` : null}
         actions={{
           setTitle: setTitle.bind(null, slug),
           setCategory: setCategory.bind(null, slug),

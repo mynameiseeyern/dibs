@@ -20,7 +20,7 @@ import { closeIfDue } from "@/lib/plan-ops";
 import { nudgeIfDue } from "@/lib/nudges";
 import { owedToYou, youOwe } from "@/lib/copy";
 import { store } from "@/lib/store";
-import { formatShort, formatWhen } from "@/lib/time";
+import { countdown, formatShort, formatWhen } from "@/lib/time";
 import { loadPlan } from "@/lib/viewer";
 import { removeMyPhoto, setPlusOne, removePlusOne, addTime, goWithTime, markFree, removeTime, appInterest, trackShare, addOption, askDibbyMore, joinPlan, lockPlan, removeMe, removeOption, setRsvp, vote } from "./actions";
 import { hostRejoinLink, setHost, setPlace } from "./manage/actions";
@@ -245,6 +245,16 @@ export default async function PlanPage({ params, searchParams }: Props) {
         </article>
 
         {plan.status === "locked" && me && <Once id={`locked:${plan.id}`} kind="lock" size={150} label={`Locked in: ${plan.venue_name ?? "the plan"}`} />}
+        {/* Locked and coming up: when it is, and how long to go, instead of an empty page. */}
+        {plan.status === "locked" && wrap === "early" && (
+          <section className="db-card countdown" aria-label="Coming up">
+            <span className="subheading-xs muted">See you</span>
+            <strong className="title-h4">{formatWhen(plan.starts_at)}</strong>
+            <span className="countdown__left label-md">
+              <i className="ri-timer-line db-icon" aria-hidden="true" /> {countdown(plan.starts_at)}
+            </span>
+          </section>
+        )}
 
         {/* 2. Your one job. Strangers join; guests answer; hosts are already going. */}
         {!cancelled && !me && (
@@ -286,15 +296,6 @@ export default async function PlanPage({ params, searchParams }: Props) {
             <a href={`/p/${slug}/wrap`}>
               <i className="ri-flag-line db-icon" aria-hidden="true" />
               Wrap it up: who came?
-            </a>
-          </Button.Root>
-        )}
-        {/* Before the start, a quiet way through for when it happened early or got sorted elsewhere. */}
-        {isHost && wrap === "early" && (
-          <Button.Root asChild mode="ghost" size="small">
-            <a href={`/p/${slug}/wrap`}>
-              <i className="ri-flag-line db-icon" aria-hidden="true" />
-              Already happened? Wrap it up
             </a>
           </Button.Root>
         )}
@@ -482,6 +483,7 @@ export default async function PlanPage({ params, searchParams }: Props) {
                   area={plan.area}
                   askDibby={me && process.env.ANTHROPIC_API_KEY ? askDibbyMore.bind(null, slug) : undefined}
                   decide={isHost ? setPlace.bind(null, slug) : undefined}
+                  closes={formatWhen(plan.vote_deadline)}
                   lock={isHost ? lockPlan.bind(null, slug) : undefined}
                 />
               </section>
