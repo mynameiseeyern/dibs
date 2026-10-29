@@ -66,7 +66,7 @@ export default async function Account() {
 
       {record.played > 0 && (
         <section className="db-card section account-record" aria-labelledby="rec-h">
-          <h2 id="rec-h" className="subheading-sm eyebrow">Your roulette record</h2>
+          <h2 id="rec-h" className="subheading-sm eyebrow">Your wheel record</h2>
           <p className="title-h4">
             {record.lost === 0 ? `Dodged ${record.played} ${record.played === 1 ? "spin" : "spins"}` : `Lost ${record.lost} of ${record.played}`}
           </p>

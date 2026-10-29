@@ -41,7 +41,7 @@ export function RecapForm({
         <Label.Root htmlFor="best_moment">Best moment</Label.Root>
         <Input.Root>
           <Input.Wrapper>
-            <Input.Input id="best_moment" name="best_moment" defaultValue={initial.best ?? ""} maxLength={280} placeholder="Tom losing roulette on his birthday week" autoComplete="off" />
+            <Input.Input id="best_moment" name="best_moment" defaultValue={initial.best ?? ""} maxLength={280} placeholder="The wheel picking Tom on his birthday week" autoComplete="off" />
           </Input.Wrapper>
         </Input.Root>
       </div>
