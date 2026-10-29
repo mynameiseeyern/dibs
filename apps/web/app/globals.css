@@ -559,10 +559,31 @@ gmp-place-details {
 .landing__promise .db-icon { font-size: 22px; color: var(--primary-base); }
 .landing__soon { display: flex; gap: var(--space-3); align-items: flex-start; padding: var(--space-4); border-radius: var(--radius-lg); border: 1.5px dashed var(--stroke-sub-300); }
 .landing__soon .db-icon { font-size: 22px; color: var(--primary-base); }
+/* Free, all of it: the badge, the perks grid, browser vs app, and the catch. */
+.landing__free-line { display: flex; align-items: center; gap: var(--space-2); margin: 0; color: var(--text-strong-950); }
+.landing__free-line .db-icon { color: var(--success-base); }
+.landing__badge { align-self: flex-start; display: inline-flex; align-items: center; gap: var(--space-1); padding: var(--space-1) var(--space-3); border-radius: var(--radius-full); background: var(--success-lighter); color: var(--success-dark); }
+.landing__perks { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2) var(--space-4); }
+.landing__perks li { display: flex; align-items: center; gap: var(--space-2); }
+.landing__perks .db-icon { color: var(--success-base); flex: none; }
+.landing__compare { display: grid; gap: var(--space-3); }
+.landing__side { display: flex; flex-direction: column; gap: var(--space-1); }
+.landing__side[data-app] { border-color: var(--primary-base); }
+.landing__side h3 { display: flex; align-items: center; gap: var(--space-2); margin: 0; }
+.landing__side h3 .db-icon { color: var(--primary-base); }
+.landing__side ul { margin: var(--space-2) 0 0; padding-left: var(--space-5); display: flex; flex-direction: column; gap: var(--space-1); }
+.landing__side li.landing__plus { list-style: none; margin-left: calc(-1 * var(--space-5)); font-weight: 600; }
+.landing__side > a { display: inline-flex; align-items: center; gap: var(--space-1); min-height: var(--size-tap); margin-top: var(--space-1); color: var(--primary-dark); text-decoration: none; }
+.landing__faq { margin: 0; display: grid; gap: var(--space-3); }
+.landing__faq dt { margin: 0 0 var(--space-1); }
+.landing__faq dd { margin: 0; }
+.app-hero__status { align-self: flex-start; }
 @media (min-width: 720px) {
   .landing { max-width: 960px; }
   .landing__hero { max-width: 520px; }
   .landing__steps { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .landing__perks { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .landing__compare, .landing__faq { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .landing__step { grid-template-columns: 1fr; align-items: start; }
   .landing__step img { width: 88px; height: 88px; }
 }

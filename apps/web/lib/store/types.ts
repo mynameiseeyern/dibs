@@ -90,7 +90,7 @@ export interface Store {
    * and unsubscribing keeps the row with unsubscribed_at as the record that we stopped.
    */
   getSubscription(list: string, who: { userId: string } | { token: string }): Promise<Subscription | null>;
-  subscribe(list: string, s: { email: string; userId: string | null; source: "onboarding" | "account" | "resubscribe" | "home-card" }): Promise<Subscription>;
+  subscribe(list: string, s: { email: string; userId: string | null; source: "onboarding" | "account" | "resubscribe" | "home-card" | "app-page" }): Promise<Subscription>;
   /** They answered the beta updates question (yes or no), so the card stops showing. */
   answerBetaPrompt(userId: string): Promise<void>;
   unsubscribe(list: string, who: { userId: string } | { token: string }): Promise<Subscription | null>;
