@@ -206,6 +206,8 @@ export function PlanFlow({ organising, intro, searchPass }: { organising: Organi
       // doesn't wipe the names someone typed (React resets a form after its action runs).
       onSubmit={(e) => {
         e.preventDefault();
+        // Put the keyboard away before the page moves on, or iPhones keep its space.
+        if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
         const f = new FormData(e.currentTarget);
         startTransition(() => action(f));
       }}

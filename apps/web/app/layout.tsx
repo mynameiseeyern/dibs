@@ -17,6 +17,7 @@ import { THEME_SCRIPT } from "@/lib/theme";
 import { FinishSignIn } from "@/components/FinishSignIn";
 import { Toaster } from "@/components/ui/toast";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { KeyboardReset } from "@/components/KeyboardReset";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
@@ -53,6 +54,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {children}
         <FinishSignIn />
         <Toaster />
+        <KeyboardReset />
       </body>
     </html>
   );

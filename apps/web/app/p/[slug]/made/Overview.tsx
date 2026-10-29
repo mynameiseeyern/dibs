@@ -60,7 +60,9 @@ export function Overview({
     setNote(description ?? "");
     setSheet(s);
   };
-  const save = (run: () => Promise<{ error?: string }>) =>
+  const save = (run: () => Promise<{ error?: string }>) => {
+    // Keyboard away before the sheet closes, so iPhones don't keep its space.
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
     start(async () => {
       const r = await run();
       if (r.error) return setError(r.error);
@@ -68,6 +70,7 @@ export function Overview({
       toast.success("Saved");
       router.refresh();
     });
+  };
 
   const pen = <i className="ri-pencil-line ov-row__pen" aria-hidden="true" />;
 
