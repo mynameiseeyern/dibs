@@ -289,7 +289,7 @@
 .edit-plan__row > .label-md { flex: none; }
 .edit-plan__value { flex: 1; min-width: 0; text-align: right; color: var(--text-sub-600); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .edit-plan__row > .db-icon { flex: none; color: var(--text-soft-400); }
-.edit-plan__danger { display: flex; justify-content: center; }
+.edit-plan__danger { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); }
 .edit-plan__choices { display: flex; flex-direction: column; gap: var(--space-2); }
 .edit-plan__choice { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-height: 44px; padding: var(--space-3); border-radius: var(--radius-md); border: 1.5px solid var(--stroke-soft-200); background: var(--bg-white-0); color: var(--text-strong-950); text-align: left; cursor: pointer; font: inherit; }
 .edit-plan__choice[aria-checked="true"] { border-color: var(--primary-base); background: var(--primary-lighter); }
@@ -614,3 +614,12 @@ gmp-place-details {
 /* Plus-ones: the "Bringing someone?" switch under I'm in, and a named +1's row in who's going. */
 .plus-one { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-2); }
 .person--plus { padding-left: var(--space-6); }
+
+/* Locked and coming up: when, and how long to go. */
+.countdown { display: flex; flex-direction: column; align-items: center; gap: var(--space-1); text-align: center; }
+.countdown .title-h4 { margin: 0; }
+.countdown__left { display: inline-flex; align-items: center; gap: var(--space-1); margin-top: var(--space-1); padding: var(--space-1) var(--space-3); border-radius: var(--radius-full); background: var(--primary-lighter); color: var(--primary-dark); }
+
+/* The organiser's call on a vote, at the top of it: who's ahead, when it closes, lock it in now. */
+.vote-host { display: flex; align-items: center; gap: var(--space-3); }
+.vote-host__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }

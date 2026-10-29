@@ -46,6 +46,8 @@ export interface EditPlanProps {
   plusOnes: boolean;
   vibe: Vibe;
   volume: DibbyVolume;
+  /** Locked but not started yet: a way to wrap it up early (it happened sooner, or got sorted elsewhere). */
+  wrapEarlyHref?: string | null;
   actions: {
     setTitle: (v: string) => Promise<Result>;
     setCategory: (v: string) => Promise<Result>;
@@ -120,6 +122,14 @@ export function EditPlan(p: EditPlanProps) {
       </Group>
 
       <div className="edit-plan__danger">
+        {p.wrapEarlyHref && (
+          <Button.Root asChild variant="neutral" mode="ghost">
+            <a href={p.wrapEarlyHref}>
+              <i className="ri-flag-line db-icon" aria-hidden="true" />
+              Already happened? Wrap it up early
+            </a>
+          </Button.Root>
+        )}
         <Button.Root type="button" variant="error" mode="ghost" onClick={() => setSheet("cancel")}>
           Call it off
         </Button.Root>

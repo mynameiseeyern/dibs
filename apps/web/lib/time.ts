@@ -61,3 +61,27 @@ export function isoToLocal(iso: string | null, tz = TZ): string {
   const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
   return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
 }
+
+/**
+ * How long until a plan starts, in plain words, by Sydney calendar day: "Starting now",
+ * "In 3 hours", "Tonight", "Tomorrow", "4 days to go". Null once it's started.
+ */
+export function countdown(iso: string | null, now = Date.now()): string | null {
+  if (!iso) return null;
+  const start = Date.parse(iso);
+  const ms = start - now;
+  if (ms <= 0) return null;
+  if (ms < 60 * 60 * 1000) return "Starting soon";
+  const day = (t: number) => {
+    const p = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(t));
+    return Date.parse(`${p}T00:00:00Z`) / 86_400_000;
+  };
+  const days = day(start) - day(now);
+  if (days === 0) {
+    const hours = Math.round(ms / 3_600_000);
+    const hour = Number(new Intl.DateTimeFormat("en-AU", { timeZone: TZ, hour: "numeric", hourCycle: "h23" }).format(new Date(start)));
+    return hour >= 17 ? "Tonight" : `In ${hours} ${hours === 1 ? "hour" : "hours"}`;
+  }
+  if (days === 1) return "Tomorrow";
+  return `${days} days to go`;
+}
