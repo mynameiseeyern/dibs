@@ -100,7 +100,7 @@ export function rouletteTally(bills: readonly { roulette_entrants: readonly stri
 }
 
 export function spinRoulette(entrantIds: readonly string[], seed: string): string {
-  if (entrantIds.length < 2) throw new BillError("Roulette needs at least 2 people in");
+  if (entrantIds.length < 2) throw new BillError("The wheel needs at least 2 people in");
   return seededPick(entrantIds, seed);
 }
 
@@ -160,7 +160,7 @@ export function splitBill(bill: BillInput, people: readonly BillPerson[]): Share
     }
     case "roulette": {
       const loser = bill.rouletteLoserId;
-      if (!loser || !ids.has(loser)) throw new BillError("Spin the wheel before saving a roulette bill");
+      if (!loser || !ids.has(loser)) throw new BillError("Spin the wheel before saving this bill");
       cents.set(loser, bill.totalCents);
       break;
     }

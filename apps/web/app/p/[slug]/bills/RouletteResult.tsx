@@ -67,8 +67,8 @@ export function RouletteResult({
   };
 
   return (
-    <section className={big ? "moment" : "db-card section roulette-done"} aria-label={`Card roulette for ${title}`}>
-      <span className="subheading-sm eyebrow">Card roulette · {title}</span>
+    <section className={big ? "moment" : "db-card section roulette-done"} aria-label={`Spin the wheel for ${title}`}>
+      <span className="subheading-sm eyebrow">Spin the wheel · {title}</span>
       <Wheel names={names} loserIndex={loserIndex} mode={mode} onLanded={landed} />
       <div className="roulette-done__result" aria-live="polite">
         {mode === "landed" ? (

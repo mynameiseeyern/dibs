@@ -17,7 +17,7 @@ const MODES = [
   { id: "exclude", label: "Not all", name: "Split evenly, not everyone" },
   { id: "amount", label: "$", name: "Dollar amounts" },
   { id: "percent", label: "%", name: "Percentages" },
-  { id: "roulette", label: "Spin", name: "Card roulette" },
+  { id: "roulette", label: "Spin", name: "Spin the wheel" },
 ] as const;
 
 const cents = (raw: string) => {
@@ -79,7 +79,7 @@ export function AddBill({ action, people, needsPayid }: { action: (s: FormState,
                   value={m.id}
                   aria-label={m.name}
                   disabled={tooBig}
-                  title={tooBig ? `Roulette is for bills up to ${aud(ROULETTE_CAP_CENTS)}` : m.name}
+                  title={tooBig ? `The wheel is for bills up to ${aud(ROULETTE_CAP_CENTS)}` : m.name}
                   className="disabled:cursor-not-allowed disabled:text-text-disabled-300"
                 >
                   {m.label}
@@ -91,10 +91,10 @@ export function AddBill({ action, people, needsPayid }: { action: (s: FormState,
       </div>
 
       {cents(total) > ROULETTE_CAP_CENTS && mode !== "roulette" && (
-        <p className="paragraph-xs muted">Too big for roulette: the game is for bills up to {aud(ROULETTE_CAP_CENTS)}.</p>
+        <p className="paragraph-xs muted">Too big for the wheel: it&rsquo;s for bills up to {aud(ROULETTE_CAP_CENTS)}.</p>
       )}
       {mode === "roulette" ? (
-        <p className="paragraph-sm muted">Card roulette: people opt in, you spin, the loser pays the lot. Nobody's on the wheel unless they tap in. 18+ only.</p>
+        <p className="paragraph-sm muted">Spin the wheel: people tap in, you spin, and whoever it lands on pays the lot. Nobody's on the wheel unless they tap in.</p>
       ) : (
         <div className="db-card">
           <div className="people">

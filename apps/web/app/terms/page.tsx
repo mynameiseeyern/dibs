@@ -23,7 +23,7 @@ export default function Terms() {
       <h2>Money</h2>
       <p>
         Dibby never holds, moves or guarantees money. It works out who owes what and shows PayID details so you can pay each other from your own
-        bank. Whether and how people pay is between you and them. Card roulette is a bit of fun between friends; nobody has to opt in.
+        bank. Whether and how people pay is between you and them. Spinning the wheel is a bit of fun between friends; nobody has to opt in.
       </p>
 
       <h2>The AI and places</h2>

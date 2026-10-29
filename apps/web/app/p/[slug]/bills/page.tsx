@@ -86,7 +86,6 @@ export default async function Bills({ params, searchParams }: Props) {
   // Every spun roulette bill stays on the page, newest first. Only the newest gets the big moment.
   const spunBills = bills.filter((b) => b.split_mode === "roulette" && b.roulette_loser_id).sort((a, b) => b.created_at.localeCompare(a.created_at));
   const tally = rouletteTally(spunBills);
-  // Members with a DOB on file are checked server-side; guests tick 18+ when they opt in.
   const meProfile = me.user_id ? await store.getProfile(me.user_id) : null;
   const meAdultOnFile = Boolean(meProfile?.dob);
 
@@ -176,7 +175,7 @@ export default async function Bills({ params, searchParams }: Props) {
 
         {tally.length > 0 && (
           <section className="db-card section" aria-labelledby="tally-h">
-            <h2 id="tally-h" className="subheading-sm eyebrow">Roulette record</h2>
+            <h2 id="tally-h" className="subheading-sm eyebrow">Wheel record</h2>
             <ul className="people">
               {tally.map((r) => {
                 const m = byId.get(r.memberId);
@@ -305,8 +304,8 @@ export default async function Bills({ params, searchParams }: Props) {
           const inIt = b.roulette_entrants.includes(me.id);
           const isPayer = b.payer_member_id === me.id;
           return (
-            <section key={b.id} className="db-card section" aria-label={`Card roulette for ${b.title}`}>
-              <span className="db-plan__eyebrow">Card roulette · {b.title}</span>
+            <section key={b.id} className="db-card section" aria-label={`Spin the wheel for ${b.title}`}>
+              <span className="db-plan__eyebrow">Spin the wheel · {b.title}</span>
               <h2 className="title-h4">Loser pays the lot: <span className="money">{formatAud(b.total_cents)}</span></h2>
               <Wheel names={b.roulette_entrants.map(first)} loserIndex={null} mode="idle" />
               <p className="paragraph-sm muted center">

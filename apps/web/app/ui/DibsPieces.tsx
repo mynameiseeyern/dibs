@@ -209,7 +209,7 @@ export function DibsPieces() {
         </State>
       </Piece>
 
-      <Piece title="Card roulette">
+      <Piece title="Spin the wheel">
         <State label="Idle">
           <Wheel names={["Ee", "Sam", "Jo", "Mo"]} loserIndex={null} mode="idle" />
         </State>

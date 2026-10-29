@@ -92,7 +92,7 @@ export async function addBill(slug: string, _prev: FormState, form: FormData): P
   };
 
   if (mode === "roulette") {
-    if (!rouletteAllowed(total)) return { error: "Too big for roulette. Split it instead." };
+    if (!rouletteAllowed(total)) return { error: "Too big for the wheel. Split it instead." };
     // Shares are made after the spin; until then everyone opts in or out.
     await store.createBill({ ...base, split_mode: "roulette" }, []);
   } else {
@@ -148,10 +148,7 @@ async function billFor(slug: string, billId: string) {
 }
 
 /** Opt in or out of a roulette spin. Nobody is on the wheel without choosing to be. */
-/**
- * Opt in or out of a spin. 18+ only: members are checked from their date of birth,
- * guests (no account, no DOB) confirm with a tick when they opt in.
- */
+/** Opt in or out of a spin. Nobody's on the wheel without tapping in. */
 export async function toggleSpin(slug: string, billId: string, form?: FormData): Promise<void> {
   const r = await billFor(slug, billId);
   if (!r || r.bill.split_mode !== "roulette" || r.bill.roulette_loser_id) return;
@@ -165,18 +162,10 @@ export async function toggleSpin(slug: string, billId: string, form?: FormData):
   revalidatePath(path(slug));
 }
 
-async function canPlay(me: { user_id: string | null }, form?: FormData): Promise<boolean> {
-  if (me.user_id) {
-    const profile = await store.getProfile(me.user_id);
-    return profile ? isAdult(profile.dob) : form?.get("adult") === "on";
-  }
-  return form?.get("adult") === "on";
-}
-
-function isAdult(dob: string): boolean {
-  const d = new Date(dob + "T00:00:00Z");
-  if (Number.isNaN(d.getTime())) return false;
-  return new Date(Date.UTC(d.getUTCFullYear() + 18, d.getUTCMonth(), d.getUTCDate())) <= new Date();
+// No 18+ check on the wheel for now: no money moves through the app. Kept as one place to
+// turn it back on.
+async function canPlay(_me: { user_id: string | null }, _form?: FormData): Promise<boolean> {
+  return true;
 }
 
 /** The payer spins. The result is saved before any animation, so a refresh can't re-roll it. */

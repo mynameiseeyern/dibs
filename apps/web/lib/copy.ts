@@ -109,7 +109,7 @@ export function renderTemplate(t: Template, vibe: Vibe): string {
         vibe,
         t.payerSpun ? `Spun it. ${t.name} already paid for ${t.bill} and it's staying that way. Legend 🎉` : `Spun it. ${t.name}'s shouting ${t.bill} 🎉 Next round's on someone else.`,
         `THE WHEEL HAS SPOKEN 🎡 ${t.name} is shouting ${t.bill} 💀 legend`,
-        `Card roulette on ${t.bill}: ${t.name} pays.`
+        `The wheel picked ${t.name} to pay for ${t.bill}.`
       );
     case "locked":
       if (t.tie)
