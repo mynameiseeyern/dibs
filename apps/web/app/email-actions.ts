@@ -59,3 +59,17 @@ export async function resubscribeWithToken(_prev: ListState, form: FormData): Pr
   await store.subscribe(BETA_LIST, { email: sub.email, userId: null, source: "resubscribe" });
   return { subscribed: true };
 }
+
+/** "Tell me when it's out" on /app. Joins the opt-in beta list, which is where the app launch goes. */
+export async function joinAppWaitlist(): Promise<ListState> {
+  const me = await currentOrganiser();
+  if (!me) return { subscribed: false, error: "Add your email first, then we can tell you." };
+  if (!me.email) return { subscribed: false, error: "Your account doesn't have an email to send to." };
+  try {
+    await store.subscribe(BETA_LIST, { email: me.email, userId: me.id, source: "app-page" });
+  } catch (e) {
+    console.error("[app waitlist]", me.id, e);
+    return { subscribed: false, error: "Couldn't save that. Try again in a sec." };
+  }
+  return { subscribed: true };
+}

@@ -4,6 +4,7 @@ import * as Button from "@/components/ui/button";
 import { SiteFooter } from "@/components/SiteFooter";
 import { AccountButton } from "@/components/AccountButton";
 import { whoIsHere } from "@/lib/viewer";
+import { AllFree, BrowserOrApp, TheCatch } from "@/components/FreeAndApp";
 
 export const metadata: Metadata = { title: "About", robots: { index: true, follow: true }, alternates: { canonical: "/about" } };
 
@@ -31,6 +32,9 @@ export default async function About() {
         </div>
         <h1 className="title-h2">Everyone&rsquo;s keen. Nobody locks it in.</h1>
         <p className="paragraph-lg muted">Get the group chat from &ldquo;we should&rdquo; to a day, a spot and who&rsquo;s coming.</p>
+        <p className="landing__free-line label-md">
+          <i className="ri-check-double-line db-icon" aria-hidden="true" /> Free for everyone. No app, no sign-up for your mates.
+        </p>
         <Button.Root asChild variant="dibs" size="large" block>
           <a href="/">Make plans</a>
         </Button.Root>
@@ -54,6 +58,10 @@ export default async function About() {
         </ol>
       </section>
 
+      <AllFree />
+
+      <BrowserOrApp />
+
       <p className="db-card landing__promise">
         <i className="ri-shield-check-line db-icon" aria-hidden="true" />
         <span className="paragraph-sm">
@@ -61,12 +69,11 @@ export default async function About() {
         </span>
       </p>
 
-      <section className="landing__soon" aria-label="iPhone app">
-        <i className="ri-smartphone-line db-icon" aria-hidden="true" />
-        <p className="paragraph-sm">
-          <strong>Coming soon to the App Store.</strong> Until then it works in your phone&rsquo;s browser, nothing to install.
-        </p>
-      </section>
+      <TheCatch />
+
+      <Button.Root asChild variant="primary" size="large" block>
+        <a href="/">Make a plan, it&rsquo;s free</a>
+      </Button.Root>
 
       <SiteFooter />
     </main>
