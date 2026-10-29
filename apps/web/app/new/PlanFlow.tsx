@@ -402,7 +402,7 @@ export function PlanFlow({ organising, intro, searchPass }: { organising: Organi
         <div className="pf-choices" role="group" aria-label="Where" data-field="place">
           <button type="button" className="pf-choice" aria-pressed={where === "place"} onClick={() => { setWhere("place"); if (!place) setPicking(true); setErr(null); }}>
             <span className="pf-choice__ico"><i className="ri-map-pin-2-line" aria-hidden="true" /></span>
-            <span className="pf-choice__text"><b>I&rsquo;ve got a spot</b><span>Pick it on the map and it&rsquo;s locked in</span></span>
+            <span className="pf-choice__text"><b>I&rsquo;ve got a spot</b><span>Already know where? Find it on the map</span></span>
           </button>
           <button type="button" className="pf-choice" aria-pressed={where === "vote"} onClick={() => { setWhere("vote"); setErr(null); }}>
             <span className="pf-choice__ico"><i className="ri-bar-chart-2-line" aria-hidden="true" /></span>
