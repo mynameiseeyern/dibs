@@ -81,7 +81,8 @@ export function PlanFlow({ organising, intro, searchPass }: { organising: Organi
   const [date, setDate] = useState<string | null>(null);
   const [time, setTime] = useState<string | null>(null);
   const [exact, setExact] = useState(false);
-  const [where, setWhere] = useState<Where>("vote");
+  // Nothing picked until someone picks: no option is the "right" one.
+  const [where, setWhere] = useState<Where | null>(null);
   const [place, setPlace] = useState<PlacePick | null>(null);
   const [picking, setPicking] = useState(false);
   const [ask, setAsk] = useState("");
@@ -92,7 +93,7 @@ export function PlanFlow({ organising, intro, searchPass }: { organising: Organi
   const placeholder = useCyclingPlaceholder(step === "dibby" && ask === "");
   const needsWho = organising.kind === "new";
   // Dibby can be reached two ways: "Not sure? Let Dibby plan it" on the first question, or
-  // "Let Dibby find three" on where. Back goes the way you came.
+  // "Ask Dibby" on where. Back goes the way you came.
   const fromWhere = useRef(false);
 
   // Dibby searches near you: asked for on "Let Dibby pick", not before. Turning Near me off means no.
@@ -159,14 +160,18 @@ export function PlanFlow({ organising, intro, searchPass }: { organising: Organi
         return titleRef.current?.focus();
       }
       // Next (not "Not sure?") means you're picking the place yourself, unless you chose Dibby there.
-      if (where === "dibby" && !fromWhere.current) setWhere("vote");
+      if (where === "dibby" && !fromWhere.current) setWhere(null);
       return go("when");
     }
     if (step === "when") return go(where === "dibby" ? "dibby" : "where");
     if (step === "where") {
+      if (!where) {
+        setErr({ field: "place", msg: "Pick one to keep going." });
+        return;
+      }
       if (where === "dibby") return go("dibby");
       if (where === "place" && !place) {
-        setErr({ field: "place", msg: "Pick the place, or put it to a vote." });
+        setErr({ field: "place", msg: "Pick the place, or let the crew vote." });
         return;
       }
       return needsWho ? go("who") : formRef.current?.requestSubmit();
@@ -217,7 +222,7 @@ export function PlanFlow({ organising, intro, searchPass }: { organising: Organi
       }}
     >
       {/* Everything the server needs, whichever screen it was answered on. */}
-      <input type="hidden" name="where" value={where} />
+      <input type="hidden" name="where" value={where ?? ""} />
       <input type="hidden" name="title" value={title} />
       <input type="hidden" name="category" value={category ?? ""} />
       <input type="hidden" name="pick_date" value={date ?? ""} />
@@ -393,19 +398,19 @@ export function PlanFlow({ organising, intro, searchPass }: { organising: Organi
 
       {/* 3 · Where */}
       <section className="pf-step" hidden={step !== "where"}>
-        <h1 className="pf-q">Where at?</h1>
+        <h1 className="pf-q">Where are we going?</h1>
         <div className="pf-choices" role="group" aria-label="Where" data-field="place">
           <button type="button" className="pf-choice" aria-pressed={where === "place"} onClick={() => { setWhere("place"); if (!place) setPicking(true); setErr(null); }}>
             <span className="pf-choice__ico"><i className="ri-map-pin-2-line" aria-hidden="true" /></span>
-            <span className="pf-choice__text"><b>I&rsquo;ve got a spot</b><span>Pick it on the map</span></span>
+            <span className="pf-choice__text"><b>I&rsquo;ve got a spot</b><span>Already know where? Find it on the map</span></span>
           </button>
           <button type="button" className="pf-choice" aria-pressed={where === "vote"} onClick={() => { setWhere("vote"); setErr(null); }}>
             <span className="pf-choice__ico"><i className="ri-bar-chart-2-line" aria-hidden="true" /></span>
-            <span className="pf-choice__text"><b>Put it to a vote</b><span>Anyone going adds places. Top pick wins</span></span>
+            <span className="pf-choice__text"><b>Let the crew vote</b><span>Everyone chucks in ideas. Most votes wins</span></span>
           </button>
           <button type="button" className="pf-choice" aria-pressed={where === "dibby"} onClick={() => { setWhere("dibby"); fromWhere.current = true; setErr(null); }}>
             <span className="pf-choice__ico pf-choice__ico--dibby"><DibbyMark size={48} /></span>
-            <span className="pf-choice__text"><b>Let Dibby find three</b><span>Three real spots to start the vote</span></span>
+            <span className="pf-choice__text"><b>Ask Dibby</b><span>Dibby digs up three real spots for the crew to vote on</span></span>
           </button>
         </div>
         <FieldError error={errFor("place")} />
@@ -416,7 +421,7 @@ export function PlanFlow({ organising, intro, searchPass }: { organising: Organi
             onChange={() => setPicking(true)}
           />
         )}
-        {where === "vote" && <Field label="Where-ish (optional)" name="area" placeholder="Surry Hills" icon="ri-map-pin-line" maxLength={80} autoComplete="off" error={errFor("area")} />}
+        {where === "vote" && <Field label="Roughly where? (optional)" name="area" placeholder="Surry Hills" icon="ri-map-pin-line" maxLength={80} autoComplete="off" hint="So everyone searches nearby." error={errFor("area")} />}
         <PlacePicker
           open={picking}
           onOpenChange={setPicking}
