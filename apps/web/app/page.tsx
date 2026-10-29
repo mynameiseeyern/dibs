@@ -5,6 +5,7 @@ import { AccountButton } from "@/components/AccountButton";
 import * as Alert from "@/components/ui/alert";
 import { whoIsHere } from "@/lib/viewer";
 import { PlanFlow } from "./new/PlanFlow";
+import { placesPass } from "@/lib/places-pass";
 import type { Organising } from "./new/Organiser";
 
 export const metadata: Metadata = { robots: { index: true, follow: true }, alternates: { canonical: "/" } };
@@ -39,7 +40,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
         </Alert.Root>
       )}
 
-      <PlanFlow organising={who} intro={who.kind === "new" && !sp.bye} />
+      <PlanFlow organising={who} intro={who.kind === "new" && !sp.bye} searchPass={who.kind === "new" ? placesPass() : undefined} />
     </main>
   );
 }

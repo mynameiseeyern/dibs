@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AdvancedMarker, ColorScheme, Map, useMap } from "@vis.gl/react-google-maps";
+import { AdvancedMarker, ColorScheme, ControlPosition, Map, MapControl, useMap } from "@vis.gl/react-google-maps";
 import { GoogleMaps, MAPS_KEY, MAP_ID } from "@/components/maps/GoogleMaps";
 import * as Modal from "@/components/ui/modal";
 import * as Button from "@/components/ui/button";
@@ -9,6 +9,8 @@ import * as Input from "@/components/ui/input";
 import * as Hint from "@/components/ui/hint";
 import { Field } from "@/components/Field";
 import { resolvedTheme } from "@/lib/theme";
+import { locate } from "@/lib/locate";
+import { toast } from "@/components/ui/toast";
 import { CUSTOM_PLACE_LIMITS, looksLikeAddress, type CustomPlace } from "@dibs/shared/plans";
 
 /** A business picked on the map. The server checks the ID again before it's saved. */
@@ -45,6 +47,7 @@ export function PlacePicker({
   cta,
   area,
   exclude = [],
+  pass,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -56,6 +59,8 @@ export function PlacePicker({
   area?: string | null;
   /** Place IDs already used (options on the poll), shown as taken. */
   exclude?: string[];
+  /** Search pass for someone making their first plan, with no session yet (lib/places-pass). */
+  pass?: string;
 }) {
   const [q, setQ] = useState("");
   const [places, setPlaces] = useState<PickedPlace[]>([]);
@@ -84,6 +89,7 @@ export function PlacePicker({
         sp.set("lat", String(centre.lat));
         sp.set("lng", String(centre.lng));
       } else if (area) sp.set("area", area);
+      if (pass) sp.set("pass", pass);
       try {
         const res = await fetch(`/api/places?${sp}`);
         if (n !== seq.current) return;
@@ -283,6 +289,7 @@ function PlaceMap({
       style={{ width: "100%", height: "100%" }}
     >
       <FitToPlaces places={places} picked={picked} />
+      <CentreOnYou hasPlaces={places.length > 0} />
       {places.map((p) => {
         const selected = picked?.placeId === p.placeId;
         const taken = exclude.includes(p.placeId);
@@ -324,4 +331,46 @@ function FitToPlaces({ places, picked }: { places: PickedPlace[]; picked: Picked
     if (map && picked) map.panTo({ lat: picked.lat, lng: picked.lng });
   }, [map, picked]);
   return null;
+}
+
+/**
+ * Starts the map where you are if the browser already lets us know (nothing pops up), and a
+ * button to find you otherwise. Rounded to ~100m by locate(); only biases the search.
+ */
+function CentreOnYou({ hasPlaces }: { hasPlaces: boolean }) {
+  const map = useMap();
+  const [busy, setBusy] = useState(false);
+  const moveTo = (c: { lat: number; lng: number }) => {
+    map?.panTo(c);
+    map?.setZoom(15);
+  };
+  useEffect(() => {
+    if (!map || hasPlaces) return;
+    let live = true;
+    locate({ ask: false }).then((c) => live && c && moveTo(c));
+    return () => {
+      live = false;
+    };
+    // Only when the map first appears.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map]);
+  return (
+    <MapControl position={ControlPosition.RIGHT_BOTTOM}>
+      <button
+        type="button"
+        className="place-locate"
+        aria-label="Find me on the map"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          const c = await locate({ ask: true });
+          setBusy(false);
+          if (c) moveTo(c);
+          else toast.error("Couldn't find you", { description: "Check location is on for this browser, or search a suburb." });
+        }}
+      >
+        <i className={busy ? "ri-loader-4-line db-spin" : "ri-focus-3-line"} aria-hidden="true" />
+      </button>
+    </MapControl>
+  );
 }
