@@ -14,7 +14,7 @@ import { DibbyMark, LogoMark } from "@/components/Logo";
 import { DibbyWorking } from "@/components/DibbyWorking";
 import { Chip, SearchChips, type SearchValue } from "./chips";
 import { useCyclingPlaceholder } from "./DibbyBubble";
-import { Organiser, type Organising } from "./Organiser";
+import type { Organising } from "./Organiser";
 import { BigTime } from "./BigTime";
 import "./plan-flow.css";
 
@@ -49,8 +49,6 @@ const FIELD_STEP: Record<string, Step> = {
   ask: "dibby",
   first_name: "who",
   last_name: "who",
-  adult: "who",
-  email: "who",
 };
 
 function addDay(ymd: string, n: number) {
@@ -462,11 +460,29 @@ export function PlanFlow({ organising, intro, searchPass }: { organising: Organi
         {pending && <DibbyWorking where={search.near ? "near you" : null} />}
       </section>
 
-      {/* Who's organising: only someone who's never organised on this browser. */}
+      {/* Who's organising: only someone who's never organised on this browser. Just a name; an
+          email to keep the plan is asked for on "It's on.", once the plan exists. */}
       {needsWho && (
         <section className="pf-step" hidden={step !== "who"}>
-          <h1 className="pf-q">One last thing</h1>
-          <Organiser who={organising} errorFor={errFor} />
+          <div className="pf-head">
+            <h1 className="pf-q">What&rsquo;s your name?</h1>
+            <p className="paragraph-md muted">So the crew knows who&rsquo;s organising. No account needed.</p>
+          </div>
+          <div className="pf-names">
+            <label className="pf-name">
+              <span className="label-sm muted">First name</span>
+              <input className="pf-big" name="first_name" autoComplete="given-name" maxLength={40} aria-invalid={errFor("first_name") ? true : undefined} />
+              <FieldError error={errFor("first_name")} />
+            </label>
+            <label className="pf-name">
+              <span className="label-sm muted">Last name</span>
+              <input className="pf-big" name="last_name" autoComplete="family-name" maxLength={40} aria-invalid={errFor("last_name") ? true : undefined} />
+              <FieldError error={errFor("last_name")} />
+            </label>
+          </div>
+          <p className="paragraph-sm muted">
+            Got an account? <a href="/login?next=/">Sign in</a>
+          </p>
           {pending && where === "dibby" && <DibbyWorking where={search.near ? "near you" : null} />}
         </section>
       )}

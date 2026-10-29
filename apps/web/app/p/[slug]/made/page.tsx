@@ -11,6 +11,8 @@ import { siteUrl } from "@/lib/site";
 import { ShareButton } from "../ShareButton";
 import { trackShare } from "../actions";
 import { Overview } from "./Overview";
+import { KeepCard } from "./KeepCard";
+import { usingSupabase } from "@/lib/store";
 
 export const metadata: Metadata = { title: "Plan's made", robots: { index: false } };
 
@@ -71,6 +73,9 @@ export default async function Made({ params, searchParams }: { params: Promise<{
         placeSet={Boolean(plan.venue_name) && !voting}
         description={plan.description ?? null}
       />
+
+      {/* A guest organiser has no email yet: ask now the plan exists, not while making it. */}
+      {!view.organiser && view.guest && !kept && <KeepCard planId={plan.id} demo={!usingSupabase} />}
 
       <div className="flex flex-col gap-2">
         <span className="label-sm" id="link-l">

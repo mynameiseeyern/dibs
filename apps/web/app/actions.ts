@@ -297,7 +297,6 @@ async function whoIsOrganising(form: FormData): Promise<Host | { error: string; 
   const last = clean(form.get("last_name"), 40);
   if (!first) return { error: "Add your first name.", field: "first_name" };
   if (!last) return { error: "Add your last name.", field: "last_name" };
-  if (form.get("adult") !== "on") return { error: "You need to be 18 or over to organise a plan.", field: "adult" };
   let made: Guest | null = null;
   return {
     name: `${first} ${last}`,
