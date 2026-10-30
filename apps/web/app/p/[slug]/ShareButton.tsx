@@ -2,6 +2,7 @@
 
 import * as Button from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
+import { CircleAction } from "@/components/CircleAction";
 
 /** Opens the share sheet (WhatsApp on most phones); falls back to a WhatsApp link, then copy. */
 export function ShareButton({
@@ -10,6 +11,7 @@ export function ShareButton({
   title,
   label = "Share to the group chat",
   quiet = false,
+  circle = false,
   tone = "dibs",
   onShare,
 }: {
@@ -19,6 +21,8 @@ export function ShareButton({
   label?: string;
   /** Secondary style, for share moments that aren't the screen's main action. */
   quiet?: boolean;
+  /** A round action in the plan's action row instead of a full-width button (a locked plan). */
+  circle?: boolean;
   /** Lime ("dibs") is the one call-dibs moment per screen; violet when lime's already taken (attendees' I'm in). */
   tone?: "dibs" | "primary";
   /** Counts the tap (a server action). Fire and forget: sharing never waits on it. */
@@ -46,6 +50,8 @@ export function ShareButton({
       toast.info("Copy this link to the group chat", { description: url, duration: 10000 });
     }
   }
+
+  if (circle) return <CircleAction icon="ri-whatsapp-line" label={label} onClick={share} tone={tone === "dibs" ? "dibs" : undefined} />;
 
   return (
     <Button.Root

@@ -155,8 +155,40 @@ export default async function PlanPage({ params, searchParams }: Props) {
   const [whenDay, whenTime] = when ? when.split(" · ") : [null, null];
   const spotsLeft = plan.capacity !== null ? Math.max(plan.capacity - inCount, 0) : null;
 
-  const planActions = !cancelled && !wrapped && (isHost || calendar || directions || chatOpen) && (
+  // Share: pinned while the plan is still coming together; once it's locked it's one of the actions.
+  const shareProps = {
+    tone: isHost ? ("dibs" as const) : ("primary" as const),
+    onShare: trackShare.bind(null, slug, isHost ? "invite" : "im_in"),
+    title: plan.title,
+    url,
+    text:
+      !isHost && iAmIn
+        ? `I'm in for ${[plan.title, formatShort(plan.starts_at), plan.venue_name].filter(Boolean).join(" · ")}. ${inCount} going so far, you coming? 👉 ${url}`
+        : shareText({
+            title: plan.title,
+            when: formatShort(plan.starts_at),
+            place: plan.venue_name ?? plan.area,
+            voting: voteOpen,
+            deadline: formatShort(plan.vote_deadline),
+            url,
+          }),
+  };
+
+  const shareInStrip = Boolean(me) && lockedView;
+  // Locked in: the pinned button is the host's next job, if there is one (a time, then the wrap-up).
+  const nextStep: { label: string; icon: string; href: string } | null =
+    !lockedView || !isHost || cancelled
+      ? null
+      : !plan.starts_at
+        ? times.length > 0
+          ? { label: "Lock in a time", icon: "ri-calendar-check-line", href: "#when" }
+          : { label: "Set the time", icon: "ri-calendar-line", href: `/p/${slug}/manage` }
+        : wrap === "ready"
+          ? { label: "Wrap it up: who came?", icon: "ri-flag-line", href: `/p/${slug}/wrap` }
+          : null;
+  const planActions = !cancelled && !wrapped && (shareInStrip || isHost || calendar || directions || chatOpen) && (
     <div className="plan-actions" role="group" aria-label="Plan actions">
+      {shareInStrip && <ShareButton circle label="Share" {...shareProps} />}
       {calendar && (
         <AddToCalendar
           links={{
@@ -293,11 +325,13 @@ export default async function PlanPage({ params, searchParams }: Props) {
                 ) : null}
               </div>
               <div className="plan-fact">
-                <dt>Spots</dt>
-                <dd className="plan-fact__main">{plan.capacity !== null ? `${inCount} of ${plan.capacity} in` : `${inCount} in`}</dd>
-                <dd className="plan-fact__sub">
-                  {full ? (waitlist ? `Full · ${waitlist} waiting` : "Full, waitlist's open") : spotsLeft !== null ? `${spotsLeft} still open` : maybes ? `${maybes} maybe` : "No limit"}
-                </dd>
+                <dt>Going</dt>
+                <dd className="plan-fact__main">{plan.capacity !== null ? `${inCount} of ${plan.capacity}` : `${inCount} ${inCount === 1 ? "person" : "people"}`}</dd>
+                {(full || spotsLeft !== null || maybes > 0) && (
+                  <dd className="plan-fact__sub">
+                    {full ? (waitlist ? `Full · ${waitlist} waiting` : "Full, waitlist's open") : spotsLeft !== null ? `${spotsLeft} ${spotsLeft === 1 ? "spot" : "spots"} left` : `${maybes} maybe`}
+                  </dd>
+                )}
               </div>
               <Suspense fallback={null}>
                 <WeatherFact plan={plan} />
@@ -395,7 +429,7 @@ export default async function PlanPage({ params, searchParams }: Props) {
           </div>
         )}
 
-        {isHost && wrap === "ready" && (
+        {isHost && wrap === "ready" && nextStep?.href !== `/p/${slug}/wrap` && (
           <Button.Root asChild size="large" block>
             <a href={`/p/${slug}/wrap`}>
               <i className="ri-flag-line db-icon" aria-hidden="true" />
@@ -567,29 +601,23 @@ export default async function PlanPage({ params, searchParams }: Props) {
         )}
       </main>
 
-      {/* 6. One share button, pinned. */}
-      {me && !cancelled && !wrapped && (
+      {/* 6. Pinned: the plan's next step once it's locked in, otherwise the share button. */}
+      {nextStep && (
         <div className="dock">
           <div className="dock__inner">
-            <ShareButton
-              label={isHost ? "Share to the group chat" : "Share the plan"}
-              tone={isHost ? "dibs" : "primary"}
-              onShare={trackShare.bind(null, slug, isHost ? "invite" : "im_in")}
-              title={plan.title}
-              url={url}
-              text={
-                !isHost && iAmIn
-                  ? `I'm in for ${[plan.title, formatShort(plan.starts_at), plan.venue_name].filter(Boolean).join(" · ")}. ${inCount} going so far, you coming? 👉 ${url}`
-                  : shareText({
-                      title: plan.title,
-                      when: formatShort(plan.starts_at),
-                      place: plan.venue_name ?? plan.area,
-                      voting: voteOpen,
-                      deadline: formatShort(plan.vote_deadline),
-                      url,
-                    })
-              }
-            />
+            <Button.Root asChild size="large" block>
+              <a href={nextStep.href}>
+                <i className={`${nextStep.icon} db-icon`} aria-hidden="true" />
+                {nextStep.label}
+              </a>
+            </Button.Root>
+          </div>
+        </div>
+      )}
+      {me && !cancelled && !wrapped && !lockedView && (
+        <div className="dock">
+          <div className="dock__inner">
+            <ShareButton label={isHost ? "Share to the group chat" : "Share the plan"} {...shareProps} />
           </div>
         </div>
       )}
