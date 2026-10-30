@@ -37,3 +37,16 @@ EXPO_PUBLIC_API_URL=http://<your-laptop-ip>:3000 pnpm mobile
 3. Sign-in on the phone (Supabase auth, token sent to the API), then joining, RSVP and voting endpoints.
 4. Proper Android adaptive icon (a padded foreground layer); for now it reuses the App Store icon.
 5. DM Mono for money and codes (`packages/ui/fonts`).
+
+## Building and shipping
+
+Builds run in the cloud on EAS, so no Xcode or Android Studio needed. From `apps/mobile`:
+
+| Profile | What it makes | Command |
+| --- | --- | --- |
+| `preview` | An install link for your own phones (Android APK, iOS ad hoc) | `npx eas-cli build --profile preview --platform all` |
+| `production` | Store builds (iOS `.ipa`, Android `.aab`), build number bumped automatically | `npx eas-cli build --profile production --platform all` |
+| — | Send the latest production build to TestFlight / Play internal testing | `npx eas-cli submit --platform ios` (or `android`) |
+| — | Push a JS-only change to installed apps, no review | `npx eas-cli update --channel production` |
+
+The first Android upload has to be done by hand in Play Console (download the `.aab` from the EAS build page); `eas submit` works after that.
