@@ -152,6 +152,8 @@ export default async function PlanPage({ params, searchParams }: Props) {
   const roll = photosOn && (!wrapped || !recapOn) ? await loadRoll(plan, members, me) : null;
   // Locked in and not over yet: one clean page (hero, facts, actions, who's going) instead of stacked cards.
   const lockedView = plan.status === "locked";
+  // Voting and locked in share the one-page layout: crew, title, facts, actions, who's going.
+  const onePage = lockedView || plan.status === "voting";
   const [whenDay, whenTime] = when ? when.split(" · ") : [null, null];
   const left = countdown(plan.starts_at);
   const soon = left === "Tonight" || left === "Tomorrow";
@@ -304,9 +306,9 @@ export default async function PlanPage({ params, searchParams }: Props) {
         )}
 
         {/* 1. The event: what, when, where, who's hosting. Edit, calendar and directions live on it. */}
-        {lockedView ? (
+        {onePage ? (
           <section className="locked" aria-labelledby="plan-h">
-            <LockedHero going={going} raisedId={iAmIn && me ? me.id : (host?.id ?? null)} isYou={iAmIn} />
+            <LockedHero going={going} raisedId={iAmIn && me ? me.id : (host?.id ?? null)} isYou={iAmIn} label={lockedView ? "Locked in." : "Still deciding where."} />
             <div className="locked__head">
               <h1 id="plan-h" className="title-h2 plan-title">{plan.title}</h1>
               {hostedBy && <p className="paragraph-md muted">{hostedBy}</p>}
@@ -320,9 +322,11 @@ export default async function PlanPage({ params, searchParams }: Props) {
               </div>
               <div className="plan-fact">
                 <dt>Where</dt>
-                <dd className="plan-fact__main">{plan.venue_name ?? plan.area ?? "To be decided"}</dd>
+                <dd className="plan-fact__main">{plan.venue_name ?? (voteOpen ? "Up for a vote" : (plan.area ?? "To be decided"))}</dd>
                 {/* A typed-in place's address is only for people in the plan. */}
-                {plan.venue_name && me && !plan.venue_place_id && plan.venue_address ? (
+                {!plan.venue_name && voteOpen ? (
+                  plan.area ? <dd className="plan-fact__sub">Around {plan.area}</dd> : null
+                ) : plan.venue_name && me && !plan.venue_place_id && plan.venue_address ? (
                   <dd className="plan-fact__sub">{plan.venue_address}</dd>
                 ) : plan.venue_name && plan.area && !plan.venue_name.toLowerCase().includes(plan.area.toLowerCase()) ? (
                   <dd className="plan-fact__sub">{plan.area}</dd>
@@ -518,7 +522,7 @@ export default async function PlanPage({ params, searchParams }: Props) {
         {!cancelled && access?.level !== "hidden" && (
           <>
             {/* 3. Who's going: faces and counts; tap for everyone. Locked in: everyone, laid out flat. */}
-            {lockedView ? (
+            {onePage ? (
               <section className="who-flat" aria-labelledby="who-h">
                 <div className="section__head">
                   <h2 id="who-h" className="title-h5">Who&rsquo;s going</h2>

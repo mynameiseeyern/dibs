@@ -5,11 +5,11 @@ import * as Avatar from "@/components/ui/avatar";
 type Person = { id: string; display_name: string; colour: MonogramColour };
 
 /**
- * The top of a locked-in plan: the crew pops up in a row, the raised one in the middle is you
+ * The top of a plan page (voting or locked in): the crew pops up in a row, the raised one in the middle is you
  * (or the host, for someone just looking), like the hands-up logo. Empty seats show while it's
  * just one or two of you. Plays on every visit; reduced motion shows the last frame.
  */
-export function LockedHero({ going, raisedId, isYou }: { going: Person[]; raisedId: string | null; isYou: boolean }) {
+export function LockedHero({ going, raisedId, isYou, label }: { going: Person[]; raisedId: string | null; isYou: boolean; label: string }) {
   const raised = going.find((p) => p.id === raisedId) ?? going[0] ?? null;
   const others = going.filter((p) => p !== raised);
   const shown = others.slice(0, 3);
@@ -50,8 +50,8 @@ export function LockedHero({ going, raisedId, isYou }: { going: Person[]; raised
         )}
         {rightSide.map((s, i) => seat(s, i, "r"))}
       </div>
-      {/* The crew is the "locked in" signal; screen readers get it in words. */}
-      <span className="sr-only">Locked in.</span>
+      {/* The crew is the signal; screen readers get the plan's state in words. */}
+      <span className="sr-only">{label}</span>
     </div>
   );
 }
