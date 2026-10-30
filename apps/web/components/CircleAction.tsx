@@ -12,6 +12,7 @@ export function CircleAction({
   onClick,
   badge,
   badgeLabel,
+  tone,
 }: {
   icon: string;
   label: string;
@@ -22,7 +23,10 @@ export function CircleAction({
   badge?: ReactNode;
   /** What the badge means, for screen readers: "3 messages". */
   badgeLabel?: string;
+  /** "dibs": the lime call-dibs moment (at most one per screen). */
+  tone?: "dibs";
 }) {
+  const cls = `circle-action${tone ? ` circle-action--${tone}` : ""}`;
   const name = badgeLabel ? `${label}, ${badgeLabel}` : undefined;
   const inner = (
     <>
@@ -35,13 +39,13 @@ export function CircleAction({
   );
   if (href) {
     return (
-      <a className="circle-action" href={href} aria-label={name} {...(external ? { target: "_blank", rel: "noreferrer" } : {})}>
+      <a className={cls} href={href} aria-label={name} {...(external ? { target: "_blank", rel: "noreferrer" } : {})}>
         {inner}
       </a>
     );
   }
   return (
-    <button type="button" className="circle-action" aria-label={name} onClick={onClick}>
+    <button type="button" className={cls} aria-label={name} onClick={onClick}>
       {inner}
     </button>
   );
