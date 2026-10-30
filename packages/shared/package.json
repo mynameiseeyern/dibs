@@ -9,7 +9,8 @@
     "./plans": "./src/plans.ts",
     "./when": "./src/when.ts",
     "./metrics": "./src/metrics.ts",
-    "./photos": "./src/photos.ts"
+    "./photos": "./src/photos.ts",
+    "./api": "./src/api.ts"
   },
   "scripts": {
     "test": "vitest run",

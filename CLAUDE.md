@@ -10,6 +10,7 @@ Build plan: https://claude.ai/artifact/2Lce9vh9ZvGunTKngL6sWX · Linear project 
 
 ## Commands
 
+- `pnpm mobile` — Expo dev server for the native app (scan the QR with Expo Go)
 - `pnpm dev` — web app on :3000 (in-memory demo store if Supabase env is empty)
 - `pnpm test` — bill maths, plan start times and RSVP access (Vitest, `packages/shared`). Keep them passing.
 - `pnpm build`, `pnpm typecheck`
@@ -63,6 +64,7 @@ Open `packages/ui/design-system/index.html` in a browser to see every component 
 
 ## Layout
 
+- `apps/mobile` — the iOS and Android app (Expo, Expo Router). It reads data from the web app's `/api/v1/*` routes, never Supabase directly; shapes live in `packages/shared/src/api.ts` (add fields, never rename or remove: old app versions stay installed). Colours come from `packages/ui/tokens.json`. See `apps/mobile/README.md`.
 - `apps/web` — Next.js 16 App Router. `lib/store` has the data layer (Supabase or in-memory), `lib/viewer.ts` works out who is looking at a plan.
 - `packages/shared` — bill maths, plan helpers, types.
 - `packages/ui` — tokens (and the generated Tailwind theme), Dibby-only component CSS, design-system copy.
