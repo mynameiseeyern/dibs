@@ -9,7 +9,7 @@ type Person = { id: string; display_name: string; colour: MonogramColour };
  * (or the host, for someone just looking), like the hands-up logo. Empty seats show while it's
  * just one or two of you. Plays on every visit; reduced motion shows the last frame.
  */
-export function LockedHero({ going, raisedId, isYou, left }: { going: Person[]; raisedId: string | null; isYou: boolean; left: string | null }) {
+export function LockedHero({ going, raisedId, isYou }: { going: Person[]; raisedId: string | null; isYou: boolean }) {
   const raised = going.find((p) => p.id === raisedId) ?? going[0] ?? null;
   const others = going.filter((p) => p !== raised);
   const shown = others.slice(0, 3);
@@ -50,10 +50,8 @@ export function LockedHero({ going, raisedId, isYou, left }: { going: Person[]; 
         )}
         {rightSide.map((s, i) => seat(s, i, "r"))}
       </div>
-      <span className="locked-hero__badge label-sm" role="status">
-        <i className="ri-lock-2-line db-icon" aria-hidden="true" />
-        Locked in{left ? ` · ${left.charAt(0).toLowerCase()}${left.slice(1)}` : ""}
-      </span>
+      {/* The crew is the "locked in" signal; screen readers get it in words. */}
+      <span className="sr-only">Locked in.</span>
     </div>
   );
 }

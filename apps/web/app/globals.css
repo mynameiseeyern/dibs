@@ -630,7 +630,6 @@ gmp-place-details {
 .locked-hero__seat--48 { width: 48px; height: 48px; }
 .locked-hero__seat--56 { width: 56px; height: 56px; }
 .locked-hero__raised { border: 2px solid var(--stroke-strong-950); box-shadow: var(--shadow-pop); transform: translateY(-12px); animation: locked-hop 640ms cubic-bezier(.34,1.56,.64,1) 260ms both; }
-.locked-hero__badge { display: inline-flex; align-items: center; gap: var(--space-1); min-height: 28px; padding: 0 var(--space-3); border-radius: var(--radius-full); background: var(--success-lighter); color: var(--success-dark); animation: locked-fade 360ms ease-out 560ms both; }
 .locked-hero__spark { position: absolute; border-radius: var(--radius-full); animation: locked-spark 900ms ease-out both; }
 .locked-hero__spark--1 { left: 24%; top: 28px; width: 8px; height: 8px; background: var(--primary-dark); animation-delay: 620ms; }
 .locked-hero__spark--2 { right: 22%; top: 16px; width: 6px; height: 6px; background: var(--success-dark); animation-delay: 740ms; }
@@ -651,7 +650,7 @@ gmp-place-details {
 @keyframes locked-fade { from { opacity: 0; transform: translateY(8px); } }
 @keyframes locked-spark { 0% { opacity: 0; transform: scale(0.2); } 50% { opacity: 1; } 100% { opacity: 0; transform: scale(1.4); } }
 @media (prefers-reduced-motion: reduce) {
-  .locked__head, .locked .plan-actions, .locked-hero__rise, .locked-hero__seat, .locked-hero__raised, .locked-hero__badge, .plan-facts { animation: none; }
+  .locked__head, .locked .plan-actions, .locked-hero__rise, .locked-hero__seat, .locked-hero__raised, .plan-facts { animation: none; }
   .locked-hero__spark { display: none; }
 }
 

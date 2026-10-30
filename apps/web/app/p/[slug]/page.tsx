@@ -153,6 +153,10 @@ export default async function PlanPage({ params, searchParams }: Props) {
   // Locked in and not over yet: one clean page (hero, facts, actions, who's going) instead of stacked cards.
   const lockedView = plan.status === "locked";
   const [whenDay, whenTime] = when ? when.split(" · ") : [null, null];
+  const left = countdown(plan.starts_at);
+  const soon = left === "Tonight" || left === "Tomorrow";
+  const whenMain = soon ? left : whenDay;
+  const whenSub = soon ? [whenDay, whenTime].filter(Boolean).join(" · ") : [whenTime, left?.toLowerCase()].filter(Boolean).join(" · ");
   const spotsLeft = plan.capacity !== null ? Math.max(plan.capacity - inCount, 0) : null;
 
   // Share: pinned while the plan is still coming together; once it's locked it's one of the actions.
@@ -302,7 +306,7 @@ export default async function PlanPage({ params, searchParams }: Props) {
         {/* 1. The event: what, when, where, who's hosting. Edit, calendar and directions live on it. */}
         {lockedView ? (
           <section className="locked" aria-labelledby="plan-h">
-            <LockedHero going={going} raisedId={iAmIn && me ? me.id : (host?.id ?? null)} isYou={iAmIn} left={countdown(plan.starts_at)} />
+            <LockedHero going={going} raisedId={iAmIn && me ? me.id : (host?.id ?? null)} isYou={iAmIn} />
             <div className="locked__head">
               <h1 id="plan-h" className="title-h2 plan-title">{plan.title}</h1>
               {hostedBy && <p className="paragraph-md muted">{hostedBy}</p>}
@@ -311,8 +315,8 @@ export default async function PlanPage({ params, searchParams }: Props) {
             <dl className="plan-facts">
               <div className="plan-fact">
                 <dt>When</dt>
-                <dd className="plan-fact__main">{whenDay ?? "To be decided"}</dd>
-                {whenTime && <dd className="plan-fact__sub">{whenTime}</dd>}
+                <dd className="plan-fact__main">{whenMain ?? "To be decided"}</dd>
+                {whenSub && <dd className="plan-fact__sub">{whenSub}</dd>}
               </div>
               <div className="plan-fact">
                 <dt>Where</dt>
