@@ -4,6 +4,7 @@
   "packageManager": "pnpm@10.28.0",
   "scripts": {
     "dev": "pnpm --filter @dibs/web dev",
+    "mobile": "pnpm --filter @dibs/mobile start",
     "build": "pnpm --filter @dibs/ui build && pnpm --filter @dibs/web build",
     "test": "pnpm --filter @dibs/shared test",
     "typecheck": "pnpm -r typecheck",

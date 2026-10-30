@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "Dibby",
+    "slug": "dibby",
+    "scheme": "dibby",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "bundleIdentifier": "social.dibby.app",
+      "supportsTablet": false,
+      "associatedDomains": ["applinks:dibby.social"]
+    },
+    "android": {
+      "package": "social.dibby.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#6D4AFF",
+        "foregroundImage": "./assets/icon.png"
+      },
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [{ "scheme": "https", "host": "dibby.social", "pathPrefix": "/p/" }],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        { "image": "./assets/splash-icon.png", "imageWidth": 160, "backgroundColor": "#6D4AFF" }
+      ]
+    ],
+    "experiments": { "typedRoutes": true },
+    "extra": { "apiUrl": "https://dibby.social" }
+  }
+}
