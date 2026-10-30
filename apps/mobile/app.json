@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Dibby",
-    "slug": "dibby",
+    "slug": "dibby-social",
     "scheme": "dibby",
     "version": "0.1.0",
     "orientation": "portrait",
@@ -10,7 +10,9 @@
     "ios": {
       "bundleIdentifier": "social.dibby.app",
       "supportsTablet": false,
-      "associatedDomains": ["applinks:dibby.social"]
+      "associatedDomains": [
+        "applinks:dibby.social"
+      ]
     },
     "android": {
       "package": "social.dibby.app",
@@ -22,8 +24,17 @@
         {
           "action": "VIEW",
           "autoVerify": true,
-          "data": [{ "scheme": "https", "host": "dibby.social", "pathPrefix": "/p/" }],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "data": [
+            {
+              "scheme": "https",
+              "host": "dibby.social",
+              "pathPrefix": "/p/"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -32,10 +43,21 @@
       "expo-font",
       [
         "expo-splash-screen",
-        { "image": "./assets/splash-icon.png", "imageWidth": 160, "backgroundColor": "#6D4AFF" }
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "backgroundColor": "#6D4AFF"
+        }
       ]
     ],
-    "experiments": { "typedRoutes": true },
-    "extra": { "apiUrl": "https://dibby.social" }
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "apiUrl": "https://dibby.social",
+      "eas": {
+        "projectId": "96aa814d-5503-424b-aa41-779bf043a737"
+      }
+    }
   }
 }
