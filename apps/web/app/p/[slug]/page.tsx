@@ -6,7 +6,8 @@ import type { PlanMember, Rsvp } from "@dibs/shared/types";
 import { Wordmark } from "@/components/Logo";
 import { AccountButton } from "@/components/AccountButton";
 import { Suspense } from "react";
-import { Weather } from "./Weather";
+import { Weather, WeatherFact } from "./Weather";
+import { LockedHero } from "./LockedHero";
 import { RsvpPicker } from "./RsvpPicker";
 import { HostMenu } from "./HostMenu";
 import { AddToCalendar } from "./AddToCalendar";
@@ -149,6 +150,104 @@ export default async function PlanPage({ params, searchParams }: Props) {
   const chatOpen = chatOn && Boolean(me) && access?.level !== "hidden";
   // Pics, during the night. They're revealed at wrap-up in the recap, or here if the recap's off.
   const roll = photosOn && (!wrapped || !recapOn) ? await loadRoll(plan, members, me) : null;
+  // Locked in and not over yet: one clean page (hero, facts, actions, who's going) instead of stacked cards.
+  const lockedView = plan.status === "locked";
+  const [whenDay, whenTime] = when ? when.split(" · ") : [null, null];
+  const spotsLeft = plan.capacity !== null ? Math.max(plan.capacity - inCount, 0) : null;
+
+  const planActions = !cancelled && !wrapped && (isHost || calendar || directions || chatOpen) && (
+    <div className="plan-actions" role="group" aria-label="Plan actions">
+      {calendar && (
+        <AddToCalendar
+          links={{
+            ics: `/p/${slug}/calendar`,
+            google: googleCalendarLink(plan, `${siteUrl()}/p/${slug}`),
+            outlook: outlookCalendarLink(plan, `${siteUrl()}/p/${slug}`),
+            office: outlookCalendarLink(plan, `${siteUrl()}/p/${slug}`, true),
+          }}
+        />
+      )}
+      {directions && <CircleAction icon="ri-direction-line" label="Directions" href={directions} external />}
+      {chatOpen && (
+        <CircleAction
+          icon="ri-chat-3-line"
+          label="Chat"
+          href={`/p/${slug}/chat`}
+          badge={unread ? (unread > 9 ? "9+" : unread) : undefined}
+          badgeLabel={unread ? `${unread} new ${unread === 1 ? "message" : "messages"}` : undefined}
+        />
+      )}
+      {/* Last: guests mostly need the other three. */}
+      {isHost && <CircleAction icon="ri-edit-line" label="Edit" href={`/p/${slug}/manage`} />}
+    </div>
+  );
+
+  const peopleList = (
+    <>
+      <ul className="people">
+        {wrapped &&
+          came.map((m) => (
+            <li key={m.id} className="person">
+              <Monogram name={m.display_name} colour={m.colour} />
+              <span className="label-md person__name">
+                {m.display_name}
+                {m.id === me?.id ? " (you)" : ""}
+                <small>{m.role === "organiser" ? "Organiser" : m.role === "cohost" ? "Co-host" : "Came"}</small>
+              </span>
+              {isHost && m.id !== me?.id && !m.user_id && (
+                <HostMenu name={m.display_name} role="guest" canRun={false} why={null} canManage={false} setHost={setHost.bind(null, slug, m.id)} rejoin={hostRejoinLink.bind(null, slug, m.id)} />
+              )}
+            </li>
+          ))}
+        {!wrapped &&
+          ORDER.flatMap((g) =>
+            members
+              .filter((m) => groupOf(m) === g)
+              .flatMap((m) => [
+                <li key={m.id} className="person">
+                  <Monogram name={m.display_name} colour={m.colour} />
+                  <span className="label-md person__name">
+                    {/* A +1 with no name rides along: "Ee + 1". A named one gets a row of their own below. */}
+                    {m.plus_one && !m.plus_one_name ? `${m.display_name} + 1` : m.display_name}
+                    {m.id === me?.id ? " (you)" : ""}
+                    <small>
+                      {m.role === "organiser" ? "Organiser · " : m.role === "cohost" ? "Co-host · " : ""}
+                      {GROUP_LABEL[g]}
+                    </small>
+                  </span>
+                  {isHost && m.plus_one && !m.plus_one_name && m.id !== me?.id && <RemovePlusOne label={`${m.display_name.split(" ")[0]}'s +1`} remove={removePlusOne.bind(null, slug, m.id)} />}
+                  {isHost && m.id !== me?.id && m.role !== "organiser" && (me?.role === "organiser" ? g === "in" || m.role === "cohost" || !m.user_id : !m.user_id) && (
+                    <HostMenu
+                      name={m.display_name}
+                      role={m.role === "cohost" ? "cohost" : "guest"}
+                      canRun={g === "in" && Boolean(m.user_id)}
+                      why={g !== "in" ? `${m.display_name.split(" ")[0]} isn't going right now.` : `${m.display_name.split(" ")[0]} joined without the app. They need it to help run a plan.`}
+                      setHost={setHost.bind(null, slug, m.id)}
+                      rejoin={m.user_id ? undefined : hostRejoinLink.bind(null, slug, m.id)}
+                      canManage={me?.role === "organiser"}
+                    />
+                  )}
+                </li>,
+                m.plus_one && m.plus_one_name ? (
+                  <li key={`${m.id}-plus`} className="person person--plus">
+                    <Monogram name={m.plus_one_name} colour={m.colour} size="sm" />
+                    <span className="label-md person__name">
+                      {m.plus_one_name}
+                      <small>with {m.display_name.split(" ")[0]}</small>
+                    </span>
+                    {isHost && m.id !== me?.id && <RemovePlusOne label={m.plus_one_name} remove={removePlusOne.bind(null, slug, m.id)} />}
+                  </li>
+                ) : null,
+              ])
+          )}
+      </ul>
+      {!wrapped && plan.capacity !== null && (
+        <p className="paragraph-xs muted who__cap">
+          {inCount} of {plan.capacity} spots taken{waitlist ? `. ${waitlist} waiting, and they move up in order as spots open.` : ""}
+        </p>
+      )}
+    </>
+  );
 
   return (
     <>
@@ -169,93 +268,96 @@ export default async function PlanPage({ params, searchParams }: Props) {
         )}
 
         {/* 1. The event: what, when, where, who's hosting. Edit, calendar and directions live on it. */}
-        <article className={`db-card db-plan${cancelled ? "" : " db-card--sticker"}`} aria-labelledby="plan-h">
-          <div className="plan-card__top">
-            <Badge.Root color={status.tone}>
-              <Badge.Icon as="i" className={status.icon} aria-hidden="true" />
-              {status.label}
-            </Badge.Root>
-            {plan.category && (
-              <Badge.Root color="faded" variant="lighter">
-                <Badge.Icon as="i" className={categoryIcon(plan.category)} aria-hidden="true" />
-                {plan.category}
+        {lockedView ? (
+          <section className="locked" aria-labelledby="plan-h">
+            <LockedHero going={going} raisedId={iAmIn && me ? me.id : (host?.id ?? null)} isYou={iAmIn} left={countdown(plan.starts_at)} />
+            <div className="locked__head">
+              <h1 id="plan-h" className="title-h2 plan-title">{plan.title}</h1>
+              {hostedBy && <p className="paragraph-md muted">{hostedBy}</p>}
+              {plan.description && <p className="paragraph-sm plan-desc">{plan.description}</p>}
+            </div>
+            <dl className="plan-facts">
+              <div className="plan-fact">
+                <dt>When</dt>
+                <dd className="plan-fact__main">{whenDay ?? "To be decided"}</dd>
+                {whenTime && <dd className="plan-fact__sub">{whenTime}</dd>}
+              </div>
+              <div className="plan-fact">
+                <dt>Where</dt>
+                <dd className="plan-fact__main">{plan.venue_name ?? plan.area ?? "To be decided"}</dd>
+                {/* A typed-in place's address is only for people in the plan. */}
+                {plan.venue_name && me && !plan.venue_place_id && plan.venue_address ? (
+                  <dd className="plan-fact__sub">{plan.venue_address}</dd>
+                ) : plan.venue_name && plan.area && !plan.venue_name.toLowerCase().includes(plan.area.toLowerCase()) ? (
+                  <dd className="plan-fact__sub">{plan.area}</dd>
+                ) : null}
+              </div>
+              <div className="plan-fact">
+                <dt>Spots</dt>
+                <dd className="plan-fact__main">{plan.capacity !== null ? `${inCount} of ${plan.capacity} in` : `${inCount} in`}</dd>
+                <dd className="plan-fact__sub">
+                  {full ? (waitlist ? `Full · ${waitlist} waiting` : "Full, waitlist's open") : spotsLeft !== null ? `${spotsLeft} still open` : maybes ? `${maybes} maybe` : "No limit"}
+                </dd>
+              </div>
+              <Suspense fallback={null}>
+                <WeatherFact plan={plan} />
+              </Suspense>
+            </dl>
+            {planActions}
+          </section>
+        ) : (
+          <article className={`db-card db-plan${cancelled ? "" : " db-card--sticker"}`} aria-labelledby="plan-h">
+            <div className="plan-card__top">
+              <Badge.Root color={status.tone}>
+                <Badge.Icon as="i" className={status.icon} aria-hidden="true" />
+                {status.label}
               </Badge.Root>
-            )}
-          </div>
-          <div>
-            <h1 id="plan-h" className="title-h3 plan-title">{plan.title}</h1>
-            {hostedBy && <p className="paragraph-sm muted">{hostedBy}</p>}
-          </div>
-          {plan.description && <p className="paragraph-sm plan-desc">{plan.description}</p>}
-          <ul className="db-plan__facts">
-            <li>
-              <i className="ri-calendar-line db-icon" aria-hidden="true" /> {when ?? <span className="muted">Time to be decided</span>}
-            </li>
-            <li>
-              <i className="ri-map-pin-line db-icon" aria-hidden="true" />
-              <span>
-                {plan.venue_name ? (
-                  // A typed-in place's address is only for people in the plan.
-                  <>
-                    {plan.venue_name}
-                    {me && !plan.venue_place_id && plan.venue_address ? <span className="muted"> · {plan.venue_address}</span> : null}
-                  </>
-                ) : voteOpen ? (
-                  <span className="muted">Up for a vote{plan.area ? ` around ${plan.area}` : ""}</span>
-                ) : (
-                  plan.area ?? <span className="muted">Place to be decided</span>
-                )}
-                {!cancelled && !wrapped && (
-                  <Suspense fallback={null}>
-                    <Weather plan={plan} short />
-                  </Suspense>
-                )}
-              </span>
-            </li>
-          </ul>
-          {cancelled && (
-            <p className="label-sm plan-card__note plan-card__note--off" role="status">
-              <i className="ri-close-circle-line db-icon" aria-hidden="true" />
-              <span>{`${plan.updated_note ?? "This one's not happening."} Nobody owes anything for it.`}</span>
-            </p>
-          )}
-          {!cancelled && !wrapped && (isHost || calendar || directions || chatOpen) && (
-            <div className="plan-actions" role="group" aria-label="Plan actions">
-              {isHost && <CircleAction icon="ri-edit-line" label="Edit" href={`/p/${slug}/manage`} />}
-              {calendar && (
-                <AddToCalendar
-                  links={{
-                    ics: `/p/${slug}/calendar`,
-                    google: googleCalendarLink(plan, `${siteUrl()}/p/${slug}`),
-                    outlook: outlookCalendarLink(plan, `${siteUrl()}/p/${slug}`),
-                    office: outlookCalendarLink(plan, `${siteUrl()}/p/${slug}`, true),
-                  }}
-                />
-              )}
-              {directions && <CircleAction icon="ri-direction-line" label="Directions" href={directions} external />}
-              {chatOpen && (
-                <CircleAction
-                  icon="ri-chat-3-line"
-                  label="Chat"
-                  href={`/p/${slug}/chat`}
-                  badge={unread ? (unread > 9 ? "9+" : unread) : undefined}
-                  badgeLabel={unread ? `${unread} new ${unread === 1 ? "message" : "messages"}` : undefined}
-                />
+              {plan.category && (
+                <Badge.Root color="faded" variant="lighter">
+                  <Badge.Icon as="i" className={categoryIcon(plan.category)} aria-hidden="true" />
+                  {plan.category}
+                </Badge.Root>
               )}
             </div>
-          )}
-        </article>
-
-        {plan.status === "locked" && me && <Once id={`locked:${plan.id}`} kind="lock" size={150} label={`Locked in: ${plan.venue_name ?? "the plan"}`} />}
-        {/* Locked and coming up: when it is, and how long to go, instead of an empty page. */}
-        {plan.status === "locked" && wrap === "early" && (
-          <section className="db-card countdown" aria-label="Coming up">
-            <span className="subheading-xs muted">See you</span>
-            <strong className="title-h4">{formatWhen(plan.starts_at)}</strong>
-            <span className="countdown__left label-md">
-              <i className="ri-timer-line db-icon" aria-hidden="true" /> {countdown(plan.starts_at)}
-            </span>
-          </section>
+            <div>
+              <h1 id="plan-h" className="title-h3 plan-title">{plan.title}</h1>
+              {hostedBy && <p className="paragraph-sm muted">{hostedBy}</p>}
+            </div>
+            {plan.description && <p className="paragraph-sm plan-desc">{plan.description}</p>}
+            <ul className="db-plan__facts">
+              <li>
+                <i className="ri-calendar-line db-icon" aria-hidden="true" /> {when ?? <span className="muted">Time to be decided</span>}
+              </li>
+              <li>
+                <i className="ri-map-pin-line db-icon" aria-hidden="true" />
+                <span>
+                  {plan.venue_name ? (
+                    // A typed-in place's address is only for people in the plan.
+                    <>
+                      {plan.venue_name}
+                      {me && !plan.venue_place_id && plan.venue_address ? <span className="muted"> · {plan.venue_address}</span> : null}
+                    </>
+                  ) : voteOpen ? (
+                    <span className="muted">Up for a vote{plan.area ? ` around ${plan.area}` : ""}</span>
+                  ) : (
+                    plan.area ?? <span className="muted">Place to be decided</span>
+                  )}
+                  {!cancelled && !wrapped && (
+                    <Suspense fallback={null}>
+                      <Weather plan={plan} short />
+                    </Suspense>
+                  )}
+                </span>
+              </li>
+            </ul>
+            {cancelled && (
+              <p className="label-sm plan-card__note plan-card__note--off" role="status">
+                <i className="ri-close-circle-line db-icon" aria-hidden="true" />
+                <span>{`${plan.updated_note ?? "This one's not happening."} Nobody owes anything for it.`}</span>
+              </p>
+            )}
+            {planActions}
+          </article>
         )}
 
         {/* 2. Your one job. Strangers join; guests answer; hosts are already going. */}
@@ -377,79 +479,28 @@ export default async function PlanPage({ params, searchParams }: Props) {
 
         {!cancelled && access?.level !== "hidden" && (
           <>
-            {/* 3. Who's going: faces and counts; tap for everyone. */}
-            <details className="db-card who" open={wrapped ? true : undefined}>
-              <summary className="who__summary">
-                <span className="who__text">
-                  <span className="label-md">{wrapped ? "Who came" : "Who's going"}</span>
-                  <span className="paragraph-sm muted">{wrapped ? `${came.length} came` : whoSummary}</span>
-                </span>
-                <MonogramStack people={wrapped ? came : going} max={4} />
-                <i className="ri-arrow-down-s-line db-icon who__chevron" aria-hidden="true" />
-              </summary>
-              <ul className="people">
-                {wrapped &&
-                  came.map((m) => (
-                    <li key={m.id} className="person">
-                      <Monogram name={m.display_name} colour={m.colour} />
-                      <span className="label-md person__name">
-                        {m.display_name}
-                        {m.id === me?.id ? " (you)" : ""}
-                        <small>{m.role === "organiser" ? "Organiser" : m.role === "cohost" ? "Co-host" : "Came"}</small>
-                      </span>
-                      {isHost && m.id !== me?.id && !m.user_id && (
-                        <HostMenu name={m.display_name} role="guest" canRun={false} why={null} canManage={false} setHost={setHost.bind(null, slug, m.id)} rejoin={hostRejoinLink.bind(null, slug, m.id)} />
-                      )}
-                    </li>
-                  ))}
-                {!wrapped &&
-                  ORDER.flatMap((g) =>
-                    members
-                      .filter((m) => groupOf(m) === g)
-                      .flatMap((m) => [
-                        <li key={m.id} className="person">
-                          <Monogram name={m.display_name} colour={m.colour} />
-                          <span className="label-md person__name">
-                            {/* A +1 with no name rides along: "Ee + 1". A named one gets a row of their own below. */}
-                            {m.plus_one && !m.plus_one_name ? `${m.display_name} + 1` : m.display_name}
-                            {m.id === me?.id ? " (you)" : ""}
-                            <small>
-                              {m.role === "organiser" ? "Organiser · " : m.role === "cohost" ? "Co-host · " : ""}
-                              {GROUP_LABEL[g]}
-                            </small>
-                          </span>
-                          {isHost && m.plus_one && !m.plus_one_name && m.id !== me?.id && <RemovePlusOne label={`${m.display_name.split(" ")[0]}'s +1`} remove={removePlusOne.bind(null, slug, m.id)} />}
-                          {isHost && m.id !== me?.id && m.role !== "organiser" && (me?.role === "organiser" ? g === "in" || m.role === "cohost" || !m.user_id : !m.user_id) && (
-                            <HostMenu
-                              name={m.display_name}
-                              role={m.role === "cohost" ? "cohost" : "guest"}
-                              canRun={g === "in" && Boolean(m.user_id)}
-                              why={g !== "in" ? `${m.display_name.split(" ")[0]} isn't going right now.` : `${m.display_name.split(" ")[0]} joined without the app. They need it to help run a plan.`}
-                              setHost={setHost.bind(null, slug, m.id)}
-                              rejoin={m.user_id ? undefined : hostRejoinLink.bind(null, slug, m.id)}
-                              canManage={me?.role === "organiser"}
-                            />
-                          )}
-                        </li>,
-                        m.plus_one && m.plus_one_name ? (
-                          <li key={`${m.id}-plus`} className="person person--plus">
-                            <Monogram name={m.plus_one_name} colour={m.colour} size="sm" />
-                            <span className="label-md person__name">
-                              {m.plus_one_name}
-                              <small>with {m.display_name.split(" ")[0]}</small>
-                            </span>
-                            {isHost && m.id !== me?.id && <RemovePlusOne label={m.plus_one_name} remove={removePlusOne.bind(null, slug, m.id)} />}
-                          </li>
-                        ) : null,
-                      ])
-                  )}
-              </ul>
-              {!wrapped && plan.capacity !== null && (
-                <p className="paragraph-xs muted who__cap">
-                  {inCount} of {plan.capacity} spots taken{waitlist ? `. ${waitlist} waiting, and they move up in order as spots open.` : ""}
-                </p>
-              )}
-            </details>
+            {/* 3. Who's going: faces and counts; tap for everyone. Locked in: everyone, laid out flat. */}
+            {lockedView ? (
+              <section className="who-flat" aria-labelledby="who-h">
+                <div className="section__head">
+                  <h2 id="who-h" className="title-h5">Who&rsquo;s going</h2>
+                  <span className="paragraph-sm muted who-flat__count">{whoSummary}</span>
+                </div>
+                {peopleList}
+              </section>
+            ) : (
+              <details className="db-card who" open={wrapped ? true : undefined}>
+                <summary className="who__summary">
+                  <span className="who__text">
+                    <span className="label-md">{wrapped ? "Who came" : "Who's going"}</span>
+                    <span className="paragraph-sm muted">{wrapped ? `${came.length} came` : whoSummary}</span>
+                  </span>
+                  <MonogramStack people={wrapped ? came : going} max={4} />
+                  <i className="ri-arrow-down-s-line db-icon who__chevron" aria-hidden="true" />
+                </summary>
+                {peopleList}
+              </details>
+            )}
 
             {/* 4. Decide: only while something's open. */}
             {showWhen && (

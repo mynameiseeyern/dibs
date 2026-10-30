@@ -1,6 +1,23 @@
 import { forecastFor } from "@/lib/weather";
 import type { Plan } from "@/lib/store";
 
+/** The Weather cell in a locked-in plan's facts grid. Nothing until there's a forecast. Streams in. */
+export async function WeatherFact({ plan }: { plan: Plan }) {
+  const f = await forecastFor(plan);
+  if (!f || f.kind === "too-far") return null;
+  const wet = /rain|drizzle|shower|storm/i.test(f.label) || (f.rainChance ?? 0) >= 50;
+  const hint = wet ? "Bring a brolly" : f.rainChance !== null && f.rainChance >= 20 ? `${f.rainChance}% chance of rain` : "Forecast, may change";
+  return (
+    <div className="plan-fact">
+      <dt>Weather</dt>
+      <dd className="plan-fact__main">
+        <i className={`${f.icon} db-icon`} aria-hidden="true" /> {f.label}, {f.kind === "hour" ? `${f.tempC}°` : `${f.lowC}–${f.highC}°`}
+      </dd>
+      <dd className="plan-fact__sub">{hint}</dd>
+    </div>
+  );
+}
+
 /** One line in the plan facts: the estimated weather where and when it's on. Streams in. */
 export async function Weather({ plan, short = false }: { plan: Plan; short?: boolean }) {
   const f = await forecastFor(plan);
