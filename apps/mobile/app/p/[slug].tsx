@@ -3,9 +3,9 @@ import { ActivityIndicator, Linking, ScrollView, Text, View } from "react-native
 import { useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { PlanSummary } from "@dibs/shared/api";
-import { Button } from "@/components/Button";
+import * as Button from "@/components/ui/button";
 import { getPlan } from "@/lib/api";
-import { font, radius, space, useTheme } from "@/lib/theme";
+import { useColour } from "@/lib/theme";
 
 type State = { kind: "loading" } | { kind: "missing" } | { kind: "error"; message: string } | { kind: "ok"; plan: PlanSummary };
 
@@ -15,7 +15,7 @@ type State = { kind: "loading" } | { kind: "missing" } | { kind: "error"; messag
  */
 export default function PlanScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
-  const { colour } = useTheme();
+  const spinner = useColour("primary-base");
   const [state, setState] = useState<State>({ kind: "loading" });
 
   useEffect(() => {
@@ -28,31 +28,33 @@ export default function PlanScreen() {
     };
   }, [slug]);
 
-  const body = (text: string, tone: "strong" | "sub" = "sub") => (
-    <Text style={{ fontFamily: font.sans, fontSize: 17, color: colour[tone === "strong" ? "text-strong-950" : "text-sub-600"] }}>{text}</Text>
-  );
-
-  if (state.kind === "loading") return <ActivityIndicator style={{ flex: 1 }} color={colour["primary-base"]} />;
+  if (state.kind === "loading") return <ActivityIndicator className="flex-1" color={spinner} />;
   if (state.kind !== "ok")
-    return <View style={{ padding: space["space-4"] }}>{body(state.kind === "missing" ? "Can't find that plan. It might have been called off." : state.message)}</View>;
+    return (
+      <View className="p-4">
+        <Text className="text-paragraph-md text-text-sub-600">{state.kind === "missing" ? "Can't find that plan. It might have been called off." : state.message}</Text>
+      </View>
+    );
 
   const { plan } = state;
   const facts = [plan.when, plan.voting ? "Place is up for a vote" : (plan.place ?? plan.area)].filter(Boolean).join(" · ");
   const spots = plan.capacity ? `${plan.going} of ${plan.capacity} spots taken` : `${plan.going === 0 ? "Nobody's" : plan.going} in`;
 
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
-      <ScrollView contentContainerStyle={{ padding: space["space-4"], gap: space["space-4"] }}>
-        <View style={{ backgroundColor: colour["bg-white-0"], borderRadius: radius["radius-lg"], padding: space["space-4"], gap: space["space-2"] }}>
-          {plan.category ? <Text style={{ fontFamily: font.sansMedium, fontSize: 13, color: colour["primary-base"] }}>{plan.category}</Text> : null}
-          <Text style={{ fontFamily: font.display, fontSize: 32, lineHeight: 36, color: colour["text-strong-950"] }}>{plan.title}</Text>
-          {facts ? body(facts, "strong") : null}
-          {body(plan.status === "cancelled" ? "Called off." : spots)}
-          {plan.description ? body(plan.description) : null}
+    <SafeAreaView className="flex-1" edges={["bottom"]}>
+      <ScrollView contentContainerClassName="gap-4 p-4">
+        <View className="gap-2 rounded-lg bg-bg-white-0 p-4">
+          {plan.category ? <Text className="text-label-xs text-primary-base">{plan.category}</Text> : null}
+          <Text className="text-title-h3 text-text-strong-950">{plan.title}</Text>
+          {facts ? <Text className="text-paragraph-md text-text-strong-950">{facts}</Text> : null}
+          <Text className="text-paragraph-md text-text-sub-600">{plan.status === "cancelled" ? "Called off." : spots}</Text>
+          {plan.description ? <Text className="text-paragraph-md text-text-sub-600">{plan.description}</Text> : null}
         </View>
       </ScrollView>
-      <View style={{ padding: space["space-4"] }}>
-        <Button label="Reply on the web" onPress={() => Linking.openURL(`https://dibby.social/p/${plan.slug}`)} />
+      <View className="p-4">
+        <Button.Root size="large" block onPress={() => Linking.openURL(`https://dibby.social/p/${plan.slug}`)}>
+          Reply on the web
+        </Button.Root>
       </View>
     </SafeAreaView>
   );

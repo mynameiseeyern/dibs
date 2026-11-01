@@ -1,34 +1,42 @@
+import "../global.css";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as SplashScreen from "expo-splash-screen";
-import { useFonts, BricolageGrotesque_800ExtraBold } from "@expo-google-fonts/bricolage-grotesque";
-import { Figtree_400Regular, Figtree_500Medium, Figtree_600SemiBold } from "@expo-google-fonts/figtree";
 import { useEffect } from "react";
-import { useTheme } from "@/lib/theme";
+import { useDibbyFonts } from "@/lib/fonts";
+import { ThemeRoot, useColour, useMode } from "@/lib/theme";
 
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
-  const { mode, colour } = useTheme();
-  const [loaded] = useFonts({ BricolageGrotesque_800ExtraBold, Figtree_400Regular, Figtree_500Medium, Figtree_600SemiBold });
-
-  useEffect(() => {
-    if (loaded) SplashScreen.hideAsync();
-  }, [loaded]);
-  if (!loaded) return null;
-
+function Screens() {
+  const mode = useMode();
+  const page = useColour("bg-weak-50");
+  const ink = useColour("text-strong-950");
   return (
     <>
       <StatusBar style={mode === "dark" ? "light" : "dark"} />
       <Stack
         screenOptions={{
           headerShadowVisible: false,
-          headerStyle: { backgroundColor: colour["bg-weak-50"] },
-          headerTintColor: colour["text-strong-950"],
+          headerStyle: { backgroundColor: page },
+          headerTintColor: ink,
           headerTitle: "",
-          contentStyle: { backgroundColor: colour["bg-weak-50"] },
+          contentStyle: { backgroundColor: page },
         }}
       />
     </>
+  );
+}
+
+export default function RootLayout() {
+  const [loaded] = useDibbyFonts();
+  useEffect(() => {
+    if (loaded) SplashScreen.hideAsync();
+  }, [loaded]);
+  if (!loaded) return null;
+  return (
+    <ThemeRoot>
+      <Screens />
+    </ThemeRoot>
   );
 }

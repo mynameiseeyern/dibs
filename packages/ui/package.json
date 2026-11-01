@@ -8,10 +8,12 @@
     "./components.css": "./src/components.css",
     "./fonts/*": "./fonts/*",
     "./tokens.json": "./tokens.json",
-    "./tailwind-theme.css": "./src/tailwind-theme.css"
+    "./tailwind-theme.css": "./src/tailwind-theme.css",
+    "./native/theme.cjs": "./native/theme.cjs",
+    "./native/vars": "./native/vars.ts"
   },
   "scripts": {
-    "build": "node scripts/build-tokens.mjs",
+    "build": "node scripts/build-tokens.mjs && node scripts/build-native-tokens.mjs",
     "typecheck": "true"
   }
 }
