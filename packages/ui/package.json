@@ -10,7 +10,8 @@
     "./tokens.json": "./tokens.json",
     "./tailwind-theme.css": "./src/tailwind-theme.css",
     "./native/theme.cjs": "./native/theme.cjs",
-    "./native/vars": "./native/vars.ts"
+    "./native/vars": "./native/vars.ts",
+    "./assets/*": "./assets/*"
   },
   "scripts": {
     "build": "node scripts/build-tokens.mjs && node scripts/build-native-tokens.mjs",

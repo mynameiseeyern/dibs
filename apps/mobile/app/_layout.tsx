@@ -1,10 +1,12 @@
 import "../global.css";
+import "@/lib/interop";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { useDibbyFonts } from "@/lib/fonts";
 import { ThemeRoot, useColour, useMode } from "@/lib/theme";
+import { Toaster } from "@/components/ui/toast";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -24,6 +26,7 @@ function Screens() {
           contentStyle: { backgroundColor: page },
         }}
       />
+      <Toaster />
     </>
   );
 }

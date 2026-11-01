@@ -23,6 +23,14 @@ export function ThemeRoot({ children }: { children: ReactNode }) {
 
 export const useMode = () => useContext(ModeContext);
 
+/**
+ * Sets the colour variables again, for content rendered outside the root: a Modal is its own
+ * window (a portal on the web), so it doesn't inherit them. Wrap a Modal's children in this.
+ */
+export function ThemeScope({ children }: { children: ReactNode }) {
+  return <View style={[VARS[useMode()], { flex: 1 }]}>{children}</View>;
+}
+
 /** A colour as a plain value, for the few props that can't take a class (icons, spinners, the nav bar). */
 export function useColour(name: keyof (typeof colourVars)["light"] extends `--${infer N}` ? N : never): string {
   return colourVars[useMode()][`--${name}` as keyof (typeof colourVars)["light"]];

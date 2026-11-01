@@ -9,7 +9,7 @@ import { tv } from "@/utils/tv";
 import { Monogram } from "./monogram";
 
 // Dibby's face: the raised lime friend from the logo (packages/ui/assets/logos).
-const DIBBY_FACE = require("../../../../packages/ui/assets/logos/export/dibby-ai-member-256.png");
+const DIBBY_FACE = require("@dibs/ui/assets/logos/export/dibby-ai-member-256.png");
 
 const bubble = tv({
   slots: {
@@ -49,7 +49,7 @@ export function ChatMessage({ from, children, name, colour = "violet", first = t
       {from === "them" ? (
         first && name ? <Monogram name={name} colour={colour} /> : <View className="size-7" />
       ) : from === "dibby" ? (
-        first ? <Image source={DIBBY_FACE} accessibilityIgnoresInvertColors className="size-7 rounded-full" /> : <View className="size-7" />
+        first ? <Image source={DIBBY_FACE} accessibilityIgnoresInvertColors style={{ width: 28, height: 28, borderRadius: 14 }} /> : <View className="size-7" />
       ) : null}
       <View className="shrink">
         {first && label ? (

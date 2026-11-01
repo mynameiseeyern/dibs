@@ -10,10 +10,12 @@
 
 import { useState } from "react";
 import { Modal, Platform, Pressable, Text, View } from "react-native";
-import DateTimePicker, { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
+import DateTimePicker, {
+  DateTimePickerAndroid,
+} from "@react-native-community/datetimepicker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { tv } from "@/utils/tv";
-import { useColour, useMode, useShadow } from "@/lib/theme";
+import { ThemeScope, useColour, useMode, useShadow } from "@/lib/theme";
 import * as Button from "./button";
 import { Icon } from "./icon";
 
@@ -21,7 +23,8 @@ export const TZ = "Australia/Sydney";
 
 export const datepickerVariants = tv({
   slots: {
-    field: "min-h-11 w-full flex-row items-center gap-2 rounded-md border-[1.5px] border-stroke-sub-300 bg-bg-white-0 px-4",
+    field:
+      "min-h-11 w-full flex-row items-center gap-2 rounded-md border-[1.5px] border-stroke-sub-300 bg-bg-white-0 px-4",
     value: "flex-1 text-paragraph-md text-text-strong-950",
     icon: "text-[20px] leading-[20px] text-text-soft-400",
     sheet: "gap-4 rounded-t-xl bg-bg-white-0 px-4 pt-4",
@@ -30,7 +33,13 @@ export const datepickerVariants = tv({
     open: { true: { field: "border-primary-base" } },
     empty: { true: { value: "text-text-soft-400" } },
     hasError: { true: { field: "border-error-base" } },
-    disabled: { true: { field: "border-stroke-soft-200 bg-bg-soft-200", value: "text-text-disabled-300", icon: "text-text-disabled-300" } },
+    disabled: {
+      true: {
+        field: "border-stroke-soft-200 bg-bg-soft-200",
+        value: "text-text-disabled-300",
+        icon: "text-text-disabled-300",
+      },
+    },
   },
 });
 
@@ -38,8 +47,20 @@ type Mode = "date" | "time" | "datetime";
 
 /** "Fri 7 Nov", "7:30pm" or "Fri 7 Nov, 7:30pm", in Sydney time. */
 export function formatPicked(d: Date, mode: Mode): string {
-  const day = new Intl.DateTimeFormat("en-AU", { timeZone: TZ, weekday: "short", day: "numeric", month: "short" }).format(d);
-  const time = new Intl.DateTimeFormat("en-AU", { timeZone: TZ, hour: "numeric", minute: "2-digit" }).format(d).replace(/\s/g, "").toLowerCase();
+  const day = new Intl.DateTimeFormat("en-AU", {
+    timeZone: TZ,
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  }).format(d);
+  const time = new Intl.DateTimeFormat("en-AU", {
+    timeZone: TZ,
+    hour: "numeric",
+    minute: "2-digit",
+  })
+    .format(d)
+    .replace(/\s/g, "")
+    .toLowerCase();
   return mode === "date" ? day : mode === "time" ? time : `${day}, ${time}`;
 }
 
@@ -58,18 +79,40 @@ type DatepickerProps = {
   accessibilityLabel?: string;
 };
 
-function DatepickerRoot({ value, onChange, mode = "date", placeholder = "Pick a day", minimumDate, maximumDate, minuteInterval = 5, disabled, hasError, className, accessibilityLabel }: DatepickerProps) {
+function DatepickerRoot({
+  value,
+  onChange,
+  mode = "date",
+  placeholder = "Pick a day",
+  minimumDate,
+  maximumDate,
+  minuteInterval = 5,
+  disabled,
+  hasError,
+  className,
+  accessibilityLabel,
+}: DatepickerProps) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<Date>(value ?? new Date());
   const accent = useColour("primary-base");
   const scheme = useMode();
   const shadow = useShadow(open ? null : "xs");
-  const { field, value: valueText, icon, sheet } = datepickerVariants({ open, empty: !value, hasError, disabled });
+  const {
+    field,
+    value: valueText,
+    icon,
+    sheet,
+  } = datepickerVariants({ open, empty: !value, hasError, disabled });
 
   const openPicker = () => {
     const start = value ?? minimumDate ?? new Date();
     if (Platform.OS === "android") {
-      const common = { minimumDate, maximumDate, timeZoneName: TZ, minuteInterval } as const;
+      const common = {
+        minimumDate,
+        maximumDate,
+        timeZoneName: TZ,
+        minuteInterval,
+      } as const;
       const pickTime = (day: Date) =>
         DateTimePickerAndroid.open({
           ...common,
@@ -98,13 +141,18 @@ function DatepickerRoot({ value, onChange, mode = "date", placeholder = "Pick a 
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
-        accessibilityValue={{ text: value ? formatPicked(value, mode) : placeholder }}
+        accessibilityValue={{
+          text: value ? formatPicked(value, mode) : placeholder,
+        }}
         disabled={disabled}
         onPress={openPicker}
         className={field({ class: className })}
         style={shadow}
       >
-        <Icon name={mode === "time" ? "time-line" : "calendar-line"} className={icon()} />
+        <Icon
+          name={mode === "time" ? "time-line" : "calendar-line"}
+          className={icon()}
+        />
         <Text className={valueText()} numberOfLines={1}>
           {value ? formatPicked(value, mode) : placeholder}
         </Text>
@@ -112,32 +160,43 @@ function DatepickerRoot({ value, onChange, mode = "date", placeholder = "Pick a 
       </Pressable>
 
       {Platform.OS === "ios" ? (
-        <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
-          <Pressable className="flex-1 bg-overlay" onPress={() => setOpen(false)} accessibilityLabel="Close" />
-          <SafeAreaView edges={["bottom"]} className={sheet()}>
-            <DateTimePicker
-              value={draft}
-              mode={mode}
-              display={mode === "time" ? "spinner" : "inline"}
-              minimumDate={minimumDate}
-              maximumDate={maximumDate}
-              minuteInterval={minuteInterval}
-              timeZoneName={TZ}
-              accentColor={accent}
-              themeVariant={scheme}
-              onChange={(_, d) => d && setDraft(d)}
+        <Modal
+          visible={open}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setOpen(false)}
+        >
+          <ThemeScope>
+            <Pressable
+              className="flex-1 bg-overlay"
+              onPress={() => setOpen(false)}
+              accessibilityLabel="Close"
             />
-            <Button.Root
-              size="large"
-              block
-              onPress={() => {
-                onChange(draft);
-                setOpen(false);
-              }}
-            >
-              Done
-            </Button.Root>
-          </SafeAreaView>
+            <SafeAreaView edges={["bottom"]} className={sheet()}>
+              <DateTimePicker
+                value={draft}
+                mode={mode}
+                display={mode === "time" ? "spinner" : "inline"}
+                minimumDate={minimumDate}
+                maximumDate={maximumDate}
+                minuteInterval={minuteInterval}
+                timeZoneName={TZ}
+                accentColor={accent}
+                themeVariant={scheme}
+                onChange={(_, d) => d && setDraft(d)}
+              />
+              <Button.Root
+                size="large"
+                block
+                onPress={() => {
+                  onChange(draft);
+                  setOpen(false);
+                }}
+              >
+                Done
+              </Button.Root>
+            </SafeAreaView>
+          </ThemeScope>
         </Modal>
       ) : null}
     </>
