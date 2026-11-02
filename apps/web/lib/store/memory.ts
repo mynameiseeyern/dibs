@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { FORMER_MEMBER, makeSlug, pickColour } from "@dibs/shared/plans";
 import type { LoggedEvent } from "@dibs/shared/metrics";
+import { MULTI_VOTES, maxVotes, overLimit } from "@dibs/shared/votes";
 import type { Bill, BillShare, Guest, Message, NewMember, NewPlan, Plan, PlanMember, PlanOption, PlanPhoto, PlanTime, Profile, Store, Subscription, TimeVote, Vote, RecapAnswer, Reaction } from "./types";
 
 // In-memory store for local runs without Supabase. Lost on restart.
@@ -124,6 +125,7 @@ export const memoryStore: Store = {
       vote_deadline: p.venue ? null : new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
       capacity: null,
       plus_ones: p.plusOnes,
+      max_votes: MULTI_VOTES,
       version: 1,
       updated_note: null,
       dibby_volume: "normal",
@@ -267,8 +269,18 @@ export const memoryStore: Store = {
     db.votes = db.votes.filter((v) => !(v.member_id === memberId && db.options.get(v.option_id)?.plan_id === planId));
   },
   async castVote(planId, optionId, memberId) {
-    db.votes = db.votes.filter((v) => !(v.member_id === memberId && db.options.get(v.option_id)?.plan_id === planId));
+    const onPlan = (v: Vote) => v.member_id === memberId && db.options.get(v.option_id)?.plan_id === planId;
+    // One pick each moves it; more adds one (the action checks the limit). The array is in the order votes were cast.
+    const one = maxVotes(db.plans.get(planId) ?? {}) <= 1;
+    db.votes = db.votes.filter((v) => !(onPlan(v) && (one || v.option_id === optionId)));
     db.votes.push({ option_id: optionId, member_id: memberId });
+  },
+  async uncastVote(planId, optionId, memberId) {
+    db.votes = db.votes.filter((v) => !(v.option_id === optionId && v.member_id === memberId && db.options.get(v.option_id)?.plan_id === planId));
+  },
+  async trimVotes(planId, keep) {
+    const drop = new Set(overLimit(db.votes.filter((v) => db.options.get(v.option_id)?.plan_id === planId), keep));
+    db.votes = db.votes.filter((v) => !drop.has(v));
   },
 
   async listMessages(planId, limit = 100) {

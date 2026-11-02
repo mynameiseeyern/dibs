@@ -39,11 +39,13 @@ export function VoteList({
   decide,
   lock,
   closes = null,
+  maxPicks = 1,
 }: {
   rows: VoteRow[];
   canVote: boolean;
   open: boolean;
-  vote: (optionId: string) => Promise<void>;
+  /** Pick an option, or untick it when you have more than one pick. */
+  vote: (optionId: string) => Promise<{ error?: string } | void>;
   add: (s: FormState, f: FormData) => Promise<FormState>;
   /** Take an option off the vote. Rows this person may remove become swipeable. */
   remove?: (optionId: string) => Promise<{ error?: string; label?: string }>;
@@ -62,17 +64,21 @@ export function VoteList({
   lock?: () => Promise<void>;
   /** When the vote closes on its own ("Fri 30 Oct · 6:00 pm"), for the host's bar. */
   closes?: string | null;
+  /** Places each person can pick: 1 moves your vote, more lets you tick (and untick) up to that many. */
+  maxPicks?: number;
 }) {
   const [adding, startAdding] = useTransition();
-  // The tap moves your vote straight away: counts and bars update here, the server saves it behind,
-  // and the next refresh replaces this with the real numbers (one vote per plan, so it moves, not adds).
+  // The tap shows straight away: counts and bars update here, the server saves it behind, and the
+  // next refresh replaces this with the real numbers. With one pick it moves your vote; with more
+  // it ticks or unticks that one.
   const [shownRows, moveVote] = useOptimistic(rows, (current: VoteRow[], optionId: string) =>
     current.map((r) => {
-      if (r.id === optionId) return r.mine ? r : { ...r, mine: true, votes: r.votes + 1 };
-      if (r.mine) return { ...r, mine: false, votes: Math.max(0, r.votes - 1) };
+      if (r.id === optionId) return r.mine ? (maxPicks > 1 ? { ...r, mine: false, votes: Math.max(0, r.votes - 1) } : r) : { ...r, mine: true, votes: r.votes + 1 };
+      if (r.mine && maxPicks <= 1) return { ...r, mine: false, votes: Math.max(0, r.votes - 1) };
       return r;
     })
   );
+  const picked = shownRows.filter((r) => r.mine).length;
   const [voting, startVote] = useTransition();
   // Leaders first once anyone's voted (ties keep the order they were added), and a long list
   // folds past the top few so the page stays short. Your own pick is never hidden.
@@ -132,6 +138,11 @@ export function VoteList({
         </div>
       )}
       {rows.length === 0 && <p className="paragraph-sm muted">No options yet. Add a place, or ask Dibby.</p>}
+      {open && canVote && !readOnly && maxPicks > 1 && rows.length > 1 && (
+        <p className="paragraph-xs muted" aria-live="polite">
+          {picked === 0 ? `Pick up to ${maxPicks}.` : picked >= maxPicks ? `That's your ${maxPicks} picks. Tap one to untick it.` : `${maxPicks - picked} more ${maxPicks - picked === 1 ? "pick" : "picks"} if you want.`}
+        </p>
+      )}
       {open && decide && rows.length === 0 && (
         <Button.Root type="button" mode="ghost" size="small" onClick={() => setDeciding(true)}>
           <i className="ri-map-pin-2-line db-icon" aria-hidden="true" />
@@ -188,14 +199,18 @@ export function VoteList({
                   iconOnly
                   className="rounded-full"
                   aria-pressed={r.mine}
-                  aria-label={r.mine ? `Your pick: ${r.label}` : `Vote for ${r.label}`}
-                  disabled={!canVote || (voting && !r.mine)}
+                  aria-label={r.mine ? (maxPicks > 1 ? `Untick ${r.label}` : `Your pick: ${r.label}`) : `Vote for ${r.label}`}
+                  disabled={!canVote || (voting && maxPicks <= 1 && !r.mine)}
                   onClick={() => {
                     if (readOnly) return void toast.info(readOnly);
-                    if (r.mine) return;
+                    if (r.mine && maxPicks <= 1) return;
+                    // All picks used: say so here rather than send a vote the server will turn down.
+                    if (!r.mine && picked >= maxPicks && maxPicks > 1) return void toast.info(`That's your ${maxPicks} picks. Untick one to swap it.`);
                     startVote(async () => {
                       moveVote(r.id);
-                      await send(() => vote(r.id), { what: "your vote" });
+                      // A toggle isn't safe to send twice, so no retry when it's ticking more than one.
+                      const res = await send(() => vote(r.id), { what: "your vote", retry: maxPicks <= 1 });
+                      if (res && res.error) toast.error(res.error);
                     });
                   }}
                 >

@@ -10,7 +10,8 @@
     "./when": "./src/when.ts",
     "./metrics": "./src/metrics.ts",
     "./photos": "./src/photos.ts",
-    "./api": "./src/api.ts"
+    "./api": "./src/api.ts",
+    "./votes": "./src/votes.ts"
   },
   "scripts": {
     "test": "vitest run",

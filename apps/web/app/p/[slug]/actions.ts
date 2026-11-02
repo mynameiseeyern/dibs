@@ -13,6 +13,7 @@ import { nudgeOnBail } from "@/lib/nudges";
 import { loadPlan } from "@/lib/viewer";
 import { formatShort, formatWhen, localToIso } from "@/lib/time";
 import { MAX_TIMES } from "@dibs/shared/when";
+import { maxVotes, voteStep } from "@dibs/shared/votes";
 import { DIBBY_HEADS_UP, planLinkLine } from "@/lib/thread-links";
 import { getPlace } from "@/lib/places";
 import { readNear } from "@/lib/near";
@@ -290,13 +291,25 @@ export async function toggleReaction(slug: string, messageId: string, emoji: str
 
 // ---------- Voting ----------
 
-export async function vote(slug: string, optionId: string): Promise<void> {
+/**
+ * A tap on an option. With one pick each it moves your vote there. With more (up to three, the
+ * default), it picks or unticks, and once you've used them all it asks you to untick one first.
+ */
+export async function vote(slug: string, optionId: string): Promise<{ error?: string }> {
   const view = await loadPlan(slug);
-  if (!view?.me || view.plan.status !== "voting" || blocked(view)) return;
-  const options = await store.listOptions(view.plan.id);
-  if (!options.some((o) => o.id === optionId)) return;
-  await store.castVote(view.plan.id, optionId, view.me.id);
+  if (!view?.me || view.plan.status !== "voting") return {};
+  const no = blocked(view);
+  if (no) return { error: no };
+  const [options, votes] = await Promise.all([store.listOptions(view.plan.id), store.listVotes(view.plan.id)]);
+  if (!options.some((o) => o.id === optionId)) return {};
+  const mine = votes.filter((v) => v.member_id === view.me!.id).map((v) => v.option_id);
+  const step = voteStep(mine, optionId, maxVotes(view.plan));
+  if (step.kind === "full") return { error: `That's your ${step.max} picks. Untick one to swap it.` };
+  if (step.kind === "none") return {};
+  if (step.kind === "remove") await store.uncastVote(view.plan.id, optionId, view.me.id);
+  else await store.castVote(view.plan.id, optionId, view.me.id);
   revalidatePlan(slug);
+  return {};
 }
 
 /** Anyone on the plan adds a place to the vote: a real, open business from the map, or one they type in. */

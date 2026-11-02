@@ -2,7 +2,8 @@ import { notFound, redirect } from "next/navigation";
 import { TZ, formatWhen } from "@/lib/time";
 import { countIn, wrapState } from "@dibs/shared/plans";
 import { loadPlan } from "@/lib/viewer";
-import { cancelPlan, openVote, setArea, setExtra, setCategory, setDescription, setCapacity, setDibbyVolume, setPlace, setPlusOnes, setTitle, setVibe, setVoteDeadline, setWhen } from "./actions";
+import { maxVotes } from "@dibs/shared/votes";
+import { cancelPlan, openVote, setArea, setExtra, setCategory, setDescription, setCapacity, setDibbyVolume, setMultiVote, setPlace, setPlusOnes, setTitle, setVibe, setVoteDeadline, setWhen } from "./actions";
 import { store } from "@/lib/store";
 import { EditPlan } from "./EditPlan";
 import * as Button from "@/components/ui/button";
@@ -75,6 +76,7 @@ export default async function Manage({ params }: { params: Promise<{ slug: strin
         capacity={plan.capacity}
         going={countIn(view.members)}
         plusOnes={plan.plus_ones}
+        multiVote={maxVotes(plan) > 1}
         vibe={plan.vibe}
         volume={plan.dibby_volume ?? "normal"}
         wrapEarlyHref={wrapState(plan) === "early" ? `/p/${slug}/wrap` : null}
@@ -87,6 +89,7 @@ export default async function Manage({ params }: { params: Promise<{ slug: strin
           setVoteDeadline: setVoteDeadline.bind(null, slug),
           setCapacity: setCapacity.bind(null, slug),
           setPlusOnes: setPlusOnes.bind(null, slug),
+          setMultiVote: setMultiVote.bind(null, slug),
           setExtra: setExtra.bind(null, slug),
           setPlace: setPlace.bind(null, slug),
           openVote: openVote.bind(null, slug),
