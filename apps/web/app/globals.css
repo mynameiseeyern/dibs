@@ -358,6 +358,24 @@ gmp-place-details-compact {
 .vote-card[data-winning] .vote-card__bar > span { background: var(--accent-base); box-shadow: inset 0 0 0 1.5px var(--stroke-strong-950); }
 .vote-card__actions { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3) var(--space-3); }
 @media (prefers-reduced-motion: reduce) { .vote-card__bar > span { transition: none; } }
+/* Leaders big, the rest small: two leaders side by side (photo on top), everyone else in one card of rows. */
+.vote-eyebrow { margin: var(--space-2) 0 0; font: 700 12px/16px var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-soft-400); }
+.vote-stack { display: flex; flex-direction: column; gap: var(--space-3); }
+.vote-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+.vote-card--tile { display: flex; flex-direction: column; min-width: 0; }
+.vote-card--tile .place-card--tile, .vote-card--tile .place-summary--tile { width: 100%; }
+.vote-card--tile .vote-card__actions { margin-top: auto; gap: var(--space-1); padding: var(--space-2); }
+.vote-rest { padding: 0 var(--space-3); }
+.vote-row { display: flex; align-items: center; gap: var(--space-2); min-height: 72px; border-top: 1px solid var(--stroke-soft-200); }
+.vote-row:first-child { border-top: 0; }
+.vote-row__main { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; border-radius: var(--radius-md); }
+.vote-row__main:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.vote-row__icon { flex: none; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-md); background: var(--bg-weak-50); color: var(--primary-base); }
+.vote-row[data-mine] .vote-row__icon { background: var(--primary-lighter); }
+.vote-row__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.vote-row__name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.vote-row__more { color: var(--primary-dark); font-weight: 600; }
+.vote-row__add { width: 100%; min-height: 56px; justify-content: flex-start; border-top: 1px solid var(--stroke-soft-200); border-radius: 0; color: var(--primary-dark); }
 gmp-place-details {
   --gmp-mat-font-family: var(--font-sans);
   --gmp-mat-color-surface: transparent;
