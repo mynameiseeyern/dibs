@@ -3,10 +3,10 @@
  * the sizes under public/dibby are made by logos/export.py. Rounded like a home-screen icon.
  */
 export function LogoMark({ size = 32, title }: { size?: number; title?: string }) {
-  const src = size > 64 ? "/dibby/icon-512.png" : size > 32 ? "/dibby/icon-192.png" : "/dibby/icon-64.png";
+  // Phones are 3x, so a 32px mark needs a 96px file: never serve less than 3x.
   return (
     <img
-      src={src}
+      src={size > 64 ? "/dibby/icon-512.png" : "/dibby/icon-192.png"}
       width={size}
       height={size}
       alt={title ?? ""}
@@ -22,7 +22,7 @@ export function LogoMark({ size = 32, title }: { size?: number; title?: string }
 export function DibbyMark({ size = 32 }: { size?: number }) {
   return (
     <img
-      src={size > 64 ? "/dibby/face-256.png" : "/dibby/face-64.png"}
+      src="/dibby/face-256.png"
       width={size}
       height={size}
       alt=""
