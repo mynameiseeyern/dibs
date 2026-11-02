@@ -56,3 +56,29 @@ export function overLimit<V extends { member_id: string }>(votes: readonly V[], 
   return drop.reverse();
 }
 
+
+/** Fewer options than this and every one gets a full card. */
+export const LEADERS_FROM = 4;
+
+export type LeaderSplit = {
+  /** How many options from the top get a big card (the rest are compact rows). */
+  big: number;
+  /** The label over the big cards, or null when every option is a big card. */
+  eyebrow: "First up" | "Out in front" | "Out in front · tied" | null;
+  /** When it's a tie: the vote count the leaders share, so a third (or more) tied option says "also tied". */
+  tiedAt: number | null;
+};
+
+/**
+ * Which options get the big cards. `votes` is each option's saved count, leaders first.
+ * No votes yet: the first two added. One leader: just that one. A tie: two, and any more tied
+ * options lead the list. Three or fewer options: all of them.
+ */
+export function splitLeaders(votes: readonly number[]): LeaderSplit {
+  if (votes.length < LEADERS_FROM) return { big: votes.length, eyebrow: null, tiedAt: null };
+  const top = Math.max(...votes);
+  if (top === 0) return { big: 2, eyebrow: "First up", tiedAt: null };
+  const leaders = votes.filter((v) => v === top).length;
+  if (leaders === 1) return { big: 1, eyebrow: "Out in front", tiedAt: null };
+  return { big: 2, eyebrow: "Out in front · tied", tiedAt: top };
+}
