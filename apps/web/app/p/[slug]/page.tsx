@@ -38,6 +38,7 @@ import { RemovePlusOne } from "./RemovePlusOne";
 import { WhenWorks } from "./WhenWorks";
 import { MAX_TIMES, rankTimes } from "@dibs/shared/when";
 import { VoteList } from "./Vote";
+import { maxVotes } from "@dibs/shared/votes";
 import { siteUrl } from "@/lib/site";
 import { planPreview } from "@/lib/plan-preview";
 import * as Button from "@/components/ui/button";
@@ -584,6 +585,7 @@ export default async function PlanPage({ params, searchParams }: Props) {
                   decide={isHost ? setPlace.bind(null, slug) : undefined}
                   closes={formatWhen(plan.vote_deadline)}
                   lock={isHost ? lockPlan.bind(null, slug) : undefined}
+                  maxPicks={maxVotes(plan)}
                 />
               </section>
             )}

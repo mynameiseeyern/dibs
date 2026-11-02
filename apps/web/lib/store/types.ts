@@ -103,7 +103,7 @@ export interface Store {
   /** Plans this device has joined as a guest. */
   listPlansForGuest(guestId: string): Promise<{ plan: Plan; member: PlanMember }[]>;
 
-  updatePlan(planId: string, patch: Partial<Pick<Plan, "status" | "venue_name" | "venue_place_id" | "venue_address" | "no_bills" | "starts_at" | "vote_deadline" | "version" | "updated_note" | "title" | "area" | "dibby_volume" | "vibe" | "capacity" | "plus_ones" | "organiser_id" | "category" | "description" | "extras_off">>): Promise<Plan>;
+  updatePlan(planId: string, patch: Partial<Pick<Plan, "status" | "venue_name" | "venue_place_id" | "venue_address" | "no_bills" | "starts_at" | "vote_deadline" | "version" | "updated_note" | "title" | "area" | "dibby_volume" | "vibe" | "capacity" | "plus_ones" | "organiser_id" | "category" | "description" | "extras_off" | "max_votes">>): Promise<Plan>;
 
   listMembers(planId: string): Promise<PlanMember[]>;
   addMember(m: NewMember): Promise<PlanMember>;
@@ -116,8 +116,12 @@ export interface Store {
   listVotes(planId: string): Promise<Vote[]>;
   /** Takes back someone's vote on a plan (they're no longer going). */
   removeVote(planId: string, memberId: string): Promise<void>;
-  /** One vote per person per plan; voting again moves it. */
+  /** With one pick each (the plan's max_votes), voting again moves it; with more, it adds one. Callers check the limit. */
   castVote(planId: string, optionId: string, memberId: string): Promise<void>;
+  /** Unticks one of someone's picks. */
+  uncastVote(planId: string, optionId: string, memberId: string): Promise<void>;
+  /** Down to `keep` picks each: everyone keeps their latest and the rest go. */
+  trimVotes(planId: string, keep: number): Promise<void>;
 
   listMessages(planId: string, limit?: number): Promise<Message[]>;
   addMessage(m: { planId: string; memberId: string | null; kind: Message["kind"]; body: string; mentionsDibby?: boolean; auto?: boolean; template?: unknown }): Promise<Message>;

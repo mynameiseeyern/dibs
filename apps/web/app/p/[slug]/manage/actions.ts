@@ -2,6 +2,7 @@
 
 import { MAX_SPOTS, MIN_SPOTS } from "@dibs/shared/plans";
 import { fillFromWaitlist } from "@/lib/plan-ops";
+import { MULTI_VOTES, maxVotes } from "@dibs/shared/votes";
 import { memberRejoinUrl } from "@/lib/rejoin";
 
 import { revalidatePath } from "next/cache";
@@ -168,6 +169,29 @@ export async function setPlusOnes(slug: string, on: boolean): Promise<Result> {
   if (!isView(view)) return view;
   if (on === view.plan.plus_ones) return {};
   await announce(slug, view, { plus_ones: on }, on ? "Plus-ones welcome." : "No new plus-ones. Anyone already bringing someone still can.");
+  return {};
+}
+
+/**
+ * Up to three picks each (on, the default for new plans) or one each (off). Only while it's a
+ * vote. Going back to one, anyone who picked more keeps their latest pick.
+ */
+export async function setMultiVote(slug: string, on: boolean): Promise<Result> {
+  const view = await editable(slug);
+  if (!isView(view)) return view;
+  if (view.plan.status !== "voting") return { error: "The vote's already closed." };
+  const max = on ? MULTI_VOTES : 1;
+  if (max === maxVotes(view.plan)) return {};
+  if (!on) await store.trimVotes(view.plan.id, 1);
+  await store.updatePlan(view.plan.id, { max_votes: max });
+  // Like switching an extra: a line in the chat, no fresh WhatsApp card.
+  if ((await store.listMembers(view.plan.id)).length > 1) {
+    const note = on ? `everyone can pick up to ${MULTI_VOTES} places` : "it's one pick each now. Anyone who picked more keeps their latest";
+    await store.addMessage({ planId: view.plan.id, memberId: null, kind: "system", body: `${view.me!.display_name.split(" ")[0]} changed the vote: ${note}.` });
+  }
+  revalidatePath(`/p/${slug}`);
+  revalidatePath(`/p/${slug}/chat`);
+  revalidatePath(`/p/${slug}/manage`);
   return {};
 }
 
