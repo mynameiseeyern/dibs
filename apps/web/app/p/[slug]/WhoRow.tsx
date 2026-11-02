@@ -73,7 +73,13 @@ export function WhoRow({ faces, summary, children }: { faces: WhoFace[]; summary
       </button>
 
       <Modal.Root open={open} onOpenChange={setOpen}>
-        <Modal.Content>
+        {/* Focus the sheet, not its first button: otherwise the first host menu opens looking selected. */}
+        <Modal.Content
+          onOpenAutoFocus={(e) => {
+            e.preventDefault();
+            (e.currentTarget as HTMLElement).focus({ preventScroll: true });
+          }}
+        >
           <Modal.Header title="Who’s going" description={summary} />
           <div className="who-row__sheet">{children}</div>
         </Modal.Content>
