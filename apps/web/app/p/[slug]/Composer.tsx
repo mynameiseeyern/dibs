@@ -2,12 +2,11 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { locate, type Coords } from "@/lib/locate";
-import { DibbyMark } from "@/components/Logo";
+import { Dibby } from "@/components/Dibby";
 import type { FormState } from "./actions";
 import * as Button from "@/components/ui/button";
 import * as Hint from "@/components/ui/hint";
 import * as Input from "@/components/ui/input";
-import * as Avatar from "@/components/ui/avatar";
 import { toast } from "@/components/ui/toast";
 
 export function Composer({ action }: { action: (s: FormState, f: FormData) => Promise<FormState> }) {
@@ -46,9 +45,7 @@ export function Composer({ action }: { action: (s: FormState, f: FormData) => Pr
     >
       {pending && askedDibby && (
         <div className="db-msg db-msg--ai" aria-live="polite">
-          <Avatar.Root size="32" className="bg-transparent" aria-hidden="true">
-            <DibbyMark size={32} />
-          </Avatar.Root>
+          <Dibby mood="thinking" size="xs" className="composer__thinking" />
           <div className="db-msg__bubble typing">
             Dibby&rsquo;s on it<span className="dots" aria-hidden="true"><i /><i /><i /></span>
           </div>

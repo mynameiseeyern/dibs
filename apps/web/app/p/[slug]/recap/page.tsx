@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { Dibby } from "@/components/Dibby";
 import { extraOn, monogram } from "@dibs/shared/plans";
 import { Monogram } from "@/components/Monogram";
 import { store } from "@/lib/store";
@@ -7,7 +8,6 @@ import { loadPlan } from "@/lib/viewer";
 import { saveRecap } from "./actions";
 import { RecapForm } from "./RecapForm";
 import * as Button from "@/components/ui/button";
-import * as Alert from "@/components/ui/alert";
 import { planPreview } from "@/lib/plan-preview";
 import { loadRoll } from "@/lib/photos";
 import { CameraCard } from "../CameraCard";
@@ -44,10 +44,11 @@ export default async function Recap({ params }: { params: Promise<{ slug: string
     return (
       <main className="page">
         {back}
-        <Alert.Root status="information" role="status">
-          <Alert.Icon as="i" className="ri-lock-2-fill" aria-hidden="true" />
-          <div><strong>The recap is just for people who came</strong>Catch you at the next one.</div>
-        </Alert.Root>
+        <section className="empty" role="status">
+          <Dibby mood="sad" size="md" />
+          <h1 className="title-h3">The recap is just for people who came</h1>
+          <p className="muted">Catch you at the next one.</p>
+        </section>
       </main>
     );
   }

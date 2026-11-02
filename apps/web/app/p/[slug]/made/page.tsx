@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Dibby } from "@/components/Dibby";
 import { notFound, redirect } from "next/navigation";
 import { shareText } from "@dibs/shared/plans";
 import { Wordmark } from "@/components/Logo";
@@ -47,9 +48,7 @@ export default async function Made({ params, searchParams }: { params: Promise<{
       </header>
 
       <section className="made__hero" aria-labelledby="made-h">
-        <span className="made__badge" aria-hidden="true">
-          <i className="ri-check-line db-icon" />
-        </span>
+        <Dibby mood="cheer" size="lg" />
         <h1 id="made-h" className="title-h3">
           It&rsquo;s on.
         </h1>
