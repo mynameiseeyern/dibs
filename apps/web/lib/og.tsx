@@ -12,8 +12,8 @@ export const OG = {
   lime: "#C8F03C",
   ink: "#141216",
   white: "#FFFFFF",
-  /** The two side friends in the mark: solid so they hold at small sizes (ARV-39). */
-  side: "#DDD4FF",
+  /** Dibby's eyes and smile. */
+  face: "#1E1A22",
   sub: "#5C5866",
   size: { width: 1200, height: 630 },
 } as const;
@@ -35,15 +35,18 @@ export async function ogFonts() {
   ];
 }
 
-/** The "hands up" mark: three friends, one popping up to call dibs. `tile` is the violet square. */
+/**
+ * Dibby's face, flat: the small-size version of the app icon (the 3D render is mush under 48px,
+ * and next/og can't load it anyway). `tile` is the violet square behind it.
+ */
 export function OgMark({ size, tile = OG.violet, rounded = true }: { size: number; tile?: string; rounded?: boolean }) {
   return (
     <svg width={size} height={size} viewBox="0 0 200 200">
       <rect width="200" height="200" rx={rounded ? 48 : 0} fill={tile} />
-      <circle cx="62" cy="118" r="22" fill={OG.side} />
-      <circle cx="138" cy="118" r="22" fill={OG.side} />
-      <circle cx="100" cy="82" r="26" fill={OG.lime} />
-      <rect x="92" y="114" width="16" height="36" rx="8" fill={OG.lime} />
+      <circle cx="100" cy="104" r="58" fill={OG.lime} />
+      <ellipse cx="78" cy="100" rx="7.5" ry="9" fill={OG.face} />
+      <ellipse cx="122" cy="100" rx="7.5" ry="9" fill={OG.face} />
+      <path d="M89 121Q100 130 111 121" fill="none" stroke={OG.face} strokeWidth="6" strokeLinecap="round" />
     </svg>
   );
 }

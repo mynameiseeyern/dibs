@@ -36,7 +36,7 @@ Open `packages/ui/design-system/index.html` in a browser to see every component 
 - Which Dibby: in running copy, "Dibby" always means the helper, and it gets its face where it's named in the UI (`<DibbyName />`, or `DibbyMark` in the chat). The app isn't called Dibby in running copy: say "the app", "here", or just the action ("it's split for you"). The name means the app only on brand surfaces: the logo, About, emails, legal pages, "Get the Dibby app".
 - Internal names keep the old name on purpose: `@dibs/*` packages, `.db-` classes, `variant="dibs"` (the call-dibs button), `dibs:` storage keys, `dibs-*.svg` logo files. Don't rename them: storage keys would reset people's state.
 - Copy: Australian spelling, sentence case, sounds like a mate in the group chat. Never pushy about money.
-- Logos are in `packages/ui/assets/logos/`. `dibs-ai-member.svg` (the raised lime friend from the logo, with a face, on violet) is Dibby's face in the chat; the app logo is the "hands up" mark with solid side friends. Exports (App Store, favicons, social avatar, wordmarks) are in `logos/export/`.
+- Logos are in `packages/ui/assets/logos/` (read its README). The logo is Dibby waving, a 3D render (`dibby-icon-1024.png`); under 48px use the flat face (`dibby-face.svg`). Dibby's chat avatar is the face cropped from the icon. Exports and the sizes the app serves are made by `logos/export.py`.
 
 ## Email
 
