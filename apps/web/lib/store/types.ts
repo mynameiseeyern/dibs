@@ -92,6 +92,10 @@ export interface Store {
    */
   getSubscription(list: string, who: { userId: string } | { token: string }): Promise<Subscription | null>;
   subscribe(list: string, s: { email: string; userId: string | null; source: "onboarding" | "account" | "resubscribe" | "home-card" | "app-page" }): Promise<Subscription>;
+  /** Their calendar subscription token, made on first ask. `reset` swaps it, so the old link stops working. */
+  calendarFeedToken(userId: string, opts?: { reset?: boolean }): Promise<string>;
+  /** Whose calendar link this is, or null. */
+  userForCalendarToken(token: string): Promise<string | null>;
   /** They answered the beta updates question (yes or no), so the card stops showing. */
   answerBetaPrompt(userId: string): Promise<void>;
   unsubscribe(list: string, who: { userId: string } | { token: string }): Promise<Subscription | null>;

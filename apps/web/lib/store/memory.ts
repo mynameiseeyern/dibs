@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { FORMER_MEMBER, makeSlug, pickColour } from "@dibs/shared/plans";
 import type { LoggedEvent } from "@dibs/shared/metrics";
 import { MULTI_VOTES, maxVotes, overLimit } from "@dibs/shared/votes";
@@ -7,6 +7,8 @@ import type { Bill, BillShare, Guest, Message, NewMember, NewPlan, Plan, PlanMem
 // In-memory store for local runs without Supabase. Lost on restart.
 interface Db {
   profiles: Map<string, Profile>;
+  /** Calendar subscription tokens by user id. */
+  calendarFeeds: Map<string, string>;
   guests: Map<string, Guest & { tokenHash: string; email?: string; email_requested_at?: number }>;
   plans: Map<string, Plan>;
   members: Map<string, PlanMember>;
@@ -28,6 +30,7 @@ interface Db {
 const g = globalThis as unknown as { __dibsDb?: Db };
 const db: Db = (g.__dibsDb ??= {
   profiles: new Map(),
+  calendarFeeds: new Map(),
   guests: new Map(),
   plans: new Map(),
   members: new Map(),
@@ -49,6 +52,7 @@ db.events ??= [];
 db.times ??= [];
 db.photos ??= [];
 db.timeVotes ??= [];
+db.calendarFeeds ??= new Map();
 db.nudges ??= [];
 db.reactions ??= [];
 
@@ -69,6 +73,17 @@ export const memoryStore: Store = {
   async setSavedCategories(userId, labels) {
     const p = db.profiles.get(userId);
     if (p) p.plan_categories = labels;
+  },
+  async calendarFeedToken(userId, opts) {
+    const had = db.calendarFeeds.get(userId);
+    if (had && !opts?.reset) return had;
+    const token = randomBytes(24).toString("base64url");
+    db.calendarFeeds.set(userId, token);
+    return token;
+  },
+  async userForCalendarToken(token) {
+    for (const [userId, t] of db.calendarFeeds) if (t === token) return userId;
+    return null;
   },
   async answerBetaPrompt(userId) {
     const p = db.profiles.get(userId);
@@ -348,6 +363,7 @@ export const memoryStore: Store = {
     for (const m of db.members.values()) if (m.user_id === userId) Object.assign(m, { user_id: null, display_name: FORMER_MEMBER });
     for (const p of db.plans.values()) if (p.organiser_id === userId) p.organiser_id = null;
     db.profiles.delete(userId);
+    db.calendarFeeds.delete(userId);
     db.lists = db.lists.filter((l) => l.userId !== userId);
     for (const e of db.events) if (e.userId === userId) e.userId = null;
   },
