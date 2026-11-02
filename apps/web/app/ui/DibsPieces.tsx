@@ -73,8 +73,8 @@ const MESSAGES = [
 ];
 
 const whenRows = (mine: boolean) => [
-  { id: "t1", label: "Fri, 30 Oct · 7:00 pm", short: "Fri 7pm", free: mine ? [EE, SAM] : [SAM], mine },
-  { id: "t2", label: "Sat, 31 Oct · 12:00 pm", short: "Sat 12pm", free: [], mine: false },
+  { id: "t1", label: "Fri 6 Nov", short: "Fri 6 Nov", free: mine ? [EE, SAM] : [SAM], mine, wholeDay: true },
+  { id: "t2", label: "Sat 7 Nov", short: "Sat 7 Nov", free: [], mine: false, wholeDay: true },
 ];
 
 function State({ label, children }: { label: string; children: React.ReactNode }) {
@@ -151,11 +151,11 @@ export function DibsPieces() {
         </State>
       </Piece>
 
-      <Piece title="When works?">
+      <Piece title="Which day works?">
         <State label="Empty (host)">
           <WhenWorks rows={[]} bestId={null} outOf={2} me={EE} readOnly={null} isHost max={4} actions={{ markFree: ok, add: ok }} />
         </State>
-        <State label="Ticked (active), with a best time">
+        <State label="Ticked (active), with a best day">
           <WhenWorks rows={whenRows(true)} bestId="t1" outOf={2} me={EE} readOnly={null} isHost={false} max={4} actions={{ markFree: ok }} />
         </State>
         <State label="Read only (maybe)">

@@ -21,7 +21,7 @@ import { closeIfDue } from "@/lib/plan-ops";
 import { nudgeIfDue } from "@/lib/nudges";
 import { owedToYou, youOwe } from "@/lib/copy";
 import { store } from "@/lib/store";
-import { countdown, formatShort, formatWhen } from "@/lib/time";
+import { countdown, formatDay, formatShort, formatWhen, isoToLocal } from "@/lib/time";
 import { loadPlan } from "@/lib/viewer";
 import { removeMyPhoto, setPlusOne, removePlusOne, addTime, goWithTime, markFree, removeTime, appInterest, trackShare, addOption, askDibbyMore, joinPlan, lockPlan, removeMe, removeOption, setRsvp, vote } from "./actions";
 import { hostRejoinLink, setHost, setPlace } from "./manage/actions";
@@ -36,7 +36,7 @@ import { loadRoll } from "@/lib/photos";
 import { CircleAction } from "@/components/CircleAction";
 import { RemovePlusOne } from "./RemovePlusOne";
 import { WhenWorks } from "./WhenWorks";
-import { MAX_TIMES, rankTimes } from "@dibs/shared/when";
+import { MAX_TIMES, isWholeDay, rankTimes } from "@dibs/shared/when";
 import { VoteList } from "./Vote";
 import { picksAllowed } from "@dibs/shared/votes";
 import { siteUrl } from "@/lib/site";
@@ -117,10 +117,12 @@ export default async function PlanPage({ params, searchParams }: Props) {
   const counted = new Set(members.filter((m) => planAccess(m).level === "full").map((m) => m.id));
   const ranked = rankTimes(times, timeVotes, counted);
   const byId = new Map(members.map((m) => [m.id, m]));
+  // Days on the poll are whole days; an older poll's day-and-time keeps its time.
   const whenRows = ranked.rows.map((r) => ({
     id: r.time.id,
-    label: formatWhen(r.time.starts_at) ?? "",
-    short: formatShort(r.time.starts_at) ?? "",
+    label: (isWholeDay(isoToLocal(r.time.starts_at)) ? formatDay(r.time.starts_at) : formatWhen(r.time.starts_at)) ?? "",
+    short: (isWholeDay(isoToLocal(r.time.starts_at)) ? formatDay(r.time.starts_at) : formatShort(r.time.starts_at)) ?? "",
+    wholeDay: isWholeDay(isoToLocal(r.time.starts_at)),
     free: r.free.flatMap((id) => (byId.get(id) ? [byId.get(id)!] : [])),
     mine: Boolean(me && r.free.includes(me.id)),
   }));
@@ -555,6 +557,7 @@ export default async function PlanPage({ params, searchParams }: Props) {
                 readOnly={readOnly}
                 isHost={isHost}
                 max={MAX_TIMES}
+                planTime={plan.starts_at ? isoToLocal(plan.starts_at).slice(11, 16) : null}
                 startOpen={askWhen}
                 actions={{
                   markFree: markFree.bind(null, slug),

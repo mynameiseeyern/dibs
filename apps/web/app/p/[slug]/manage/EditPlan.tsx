@@ -23,7 +23,7 @@ export interface EditPlanProps {
   /** After wrap-up: just the extras. */
   extrasOnly?: boolean;
   status: "voting" | "locked";
-  /** "Ask the crew when works" on the plan page, while the plan hasn't started. */
+  /** "Ask the crew which day works" on the plan page, while the plan hasn't started. */
   askWhenHref?: string;
   title: string;
   category: string | null;
@@ -164,7 +164,7 @@ export function EditPlan(p: EditPlanProps) {
             <Button.Root asChild variant="neutral" mode="ghost" size="small">
               <a href={p.askWhenHref}>
                 <i className="ri-calendar-schedule-line db-icon" aria-hidden="true" />
-                Not sure? Ask the crew when works
+                Not sure which day? Ask the crew
               </a>
             </Button.Root>
           ) : null
