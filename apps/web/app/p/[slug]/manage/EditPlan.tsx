@@ -340,7 +340,7 @@ function MultiVoteRow({ on, save }: { on: boolean; save: (on: boolean) => Promis
         <span className="label-md block">Up to {MULTI_VOTES} picks each</span>
         <span className="paragraph-xs muted block">
           {shown
-            ? `Everyone can vote for up to ${MULTI_VOTES} places. Most votes still wins.`
+            ? `Everyone can vote for up to ${MULTI_VOTES} places, always one fewer than there are, so nobody ticks the lot. Most votes wins.`
             : "Off: one pick each. Switching off keeps everyone's latest pick."}
         </span>
       </span>
