@@ -35,6 +35,7 @@ import { PhotoRoll } from "./PhotoRoll";
 import { loadRoll } from "@/lib/photos";
 import { CircleAction } from "@/components/CircleAction";
 import { RemovePlusOne } from "./RemovePlusOne";
+import { WhoRow, type WhoFace } from "./WhoRow";
 import { WhenWorks } from "./WhenWorks";
 import { MAX_TIMES, isWholeDay, rankTimes } from "@dibs/shared/when";
 import { VoteList } from "./Vote";
@@ -526,13 +527,16 @@ export default async function PlanPage({ params, searchParams }: Props) {
           <>
             {/* 3. Who's going: faces and counts; tap for everyone. Locked in: everyone, laid out flat. */}
             {onePage ? (
-              <section className="who-flat" aria-labelledby="who-h">
-                <div className="section__head">
-                  <h2 id="who-h" className="title-h5">Who&rsquo;s going</h2>
-                  <span className="paragraph-sm muted who-flat__count">{whoSummary}</span>
-                </div>
+              <WhoRow
+                summary={whoSummary}
+                faces={ORDER.filter((g) => g !== "out").flatMap((g) =>
+                  members
+                    .filter((m) => groupOf(m) === g)
+                    .map((m) => ({ id: m.id, display_name: m.display_name, colour: m.colour, status: g as WhoFace["status"], you: m.id === me?.id, host: m.role === "organiser" }))
+                )}
+              >
                 {peopleList}
-              </section>
+              </WhoRow>
             ) : (
               <details className="db-card who" open={wrapped ? true : undefined}>
                 <summary className="who__summary">

@@ -10,9 +10,19 @@ export function makeSlug(length = 8, random: () => number = Math.random): string
   return s;
 }
 
-/** First letters of first and last name, e.g. "Sam Lee" -> "SL". */
+/** A name with brackets, emoji and other punctuation taken out, e.g. "(Robert) Yung Chi Tsim" -> "Robert Yung Chi Tsim". */
+function lettersOnly(name: string): string {
+  return name.replace(/[^\p{L}\p{N}\s'-]/gu, " ").trim();
+}
+
+/** What to call someone in a tight spot: their first name, e.g. "(Robert) Yung Chi Tsim" -> "Robert". */
+export function firstName(name: string): string {
+  return lettersOnly(name).split(/\s+/)[0] || name.trim();
+}
+
+/** First letters of first and last name, e.g. "Sam Lee" -> "SL". Brackets and emoji are skipped. */
 export function monogram(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const parts = lettersOnly(name).split(/\s+/).filter(Boolean);
   const first = parts[0]?.[0] ?? "?";
   const last = parts.length > 1 ? parts[parts.length - 1]?.[0] ?? "" : "";
   return (first + last).toUpperCase();
