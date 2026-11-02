@@ -18,6 +18,7 @@ import * as Modal from "@/components/ui/modal";
 import * as Dropdown from "@/components/ui/dropdown";
 import { toast } from "@/components/ui/toast";
 import { send } from "@/lib/send";
+import { voteStep } from "@dibs/shared/votes";
 
 export interface VoteRow extends PlanOption {
   votes: number;
@@ -64,21 +65,27 @@ export function VoteList({
   lock?: () => Promise<void>;
   /** When the vote closes on its own ("Fri 30 Oct · 6:00 pm"), for the host's bar. */
   closes?: string | null;
-  /** Places each person can pick: 1 moves your vote, more lets you tick (and untick) up to that many. */
+  /** Picks each person can use now (picksAllowed): 1 moves your vote, more lets you tick (and untick) up to that many. */
   maxPicks?: number;
 }) {
   const [adding, startAdding] = useTransition();
   // The tap shows straight away: counts and bars update here, the server saves it behind, and the
-  // next refresh replaces this with the real numbers. With one pick it moves your vote; with more
-  // it ticks or unticks that one.
-  const [shownRows, moveVote] = useOptimistic(rows, (current: VoteRow[], optionId: string) =>
-    current.map((r) => {
-      if (r.id === optionId) return r.mine ? (maxPicks > 1 ? { ...r, mine: false, votes: Math.max(0, r.votes - 1) } : r) : { ...r, mine: true, votes: r.votes + 1 };
-      if (r.mine && maxPicks <= 1) return { ...r, mine: false, votes: Math.max(0, r.votes - 1) };
+  // next refresh replaces this with the real numbers. voteStep (shared with the server) says what a
+  // tap does: move your one pick, add one, untick one, or nothing.
+  const [shownRows, moveVote] = useOptimistic(rows, (current: VoteRow[], optionId: string) => {
+    const step = voteStep(current.filter((r) => r.mine).map((r) => r.id), optionId, maxPicks);
+    return current.map((r) => {
+      if (r.id === optionId) {
+        if (step.kind === "remove") return { ...r, mine: false, votes: Math.max(0, r.votes - 1) };
+        if (step.kind === "add" || step.kind === "move") return { ...r, mine: true, votes: r.votes + 1 };
+        return r;
+      }
+      if (step.kind === "move" && r.mine) return { ...r, mine: false, votes: Math.max(0, r.votes - 1) };
       return r;
-    })
-  );
-  const picked = shownRows.filter((r) => r.mine).length;
+    });
+  });
+  const mineIds = shownRows.filter((r) => r.mine).map((r) => r.id);
+  const picked = mineIds.length;
   const [voting, startVote] = useTransition();
   // Leaders first once anyone's voted (ties keep the order they were added), and a long list
   // folds past the top few so the page stays short. Your own pick is never hidden.
@@ -138,9 +145,15 @@ export function VoteList({
         </div>
       )}
       {rows.length === 0 && <p className="paragraph-sm muted">No options yet. Add a place, or ask Dibby.</p>}
-      {open && canVote && !readOnly && maxPicks > 1 && rows.length > 1 && (
+      {open && canVote && !readOnly && (maxPicks > 1 || picked > 1) && rows.length > 1 && (
         <p className="paragraph-xs muted" aria-live="polite">
-          {picked === 0 ? `Pick up to ${maxPicks}.` : picked >= maxPicks ? `That's your ${maxPicks} picks. Tap one to untick it.` : `${maxPicks - picked} more ${maxPicks - picked === 1 ? "pick" : "picks"} if you want.`}
+          {picked > maxPicks
+            ? `${maxPicks === 1 ? "One pick" : `${maxPicks} picks`} each now there are fewer places. Untick one to change yours.`
+            : picked === 0
+              ? `Pick up to ${maxPicks}.`
+              : picked === maxPicks
+                ? `That's your ${maxPicks} picks. Tap one to untick it.`
+                : `${maxPicks - picked} more ${maxPicks - picked === 1 ? "pick" : "picks"} if you want.`}
         </p>
       )}
       {open && decide && rows.length === 0 && (
@@ -199,17 +212,18 @@ export function VoteList({
                   iconOnly
                   className="rounded-full"
                   aria-pressed={r.mine}
-                  aria-label={r.mine ? (maxPicks > 1 ? `Untick ${r.label}` : `Your pick: ${r.label}`) : `Vote for ${r.label}`}
+                  aria-label={r.mine ? (picked > 1 || maxPicks > 1 ? `Untick ${r.label}` : `Your pick: ${r.label}`) : `Vote for ${r.label}`}
                   disabled={!canVote || (voting && maxPicks <= 1 && !r.mine)}
                   onClick={() => {
                     if (readOnly) return void toast.info(readOnly);
-                    if (r.mine && maxPicks <= 1) return;
+                    const step = voteStep(mineIds, r.id, maxPicks);
+                    if (step.kind === "none") return;
                     // All picks used: say so here rather than send a vote the server will turn down.
-                    if (!r.mine && picked >= maxPicks && maxPicks > 1) return void toast.info(`That's your ${maxPicks} picks. Untick one to swap it.`);
+                    if (step.kind === "full") return void toast.info(`That's your ${step.max} picks. Untick one to swap it.`);
                     startVote(async () => {
                       moveVote(r.id);
-                      // A toggle isn't safe to send twice, so no retry when it's ticking more than one.
-                      const res = await send(() => vote(r.id), { what: "your vote", retry: maxPicks <= 1 });
+                      // Moving your one pick is safe to resend; a tick or untick isn't.
+                      const res = await send(() => vote(r.id), { what: "your vote", retry: step.kind === "move" });
                       if (res && res.error) toast.error(res.error);
                     });
                   }}

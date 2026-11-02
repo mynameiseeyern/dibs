@@ -7,21 +7,35 @@ export const MULTI_VOTES = 3;
 /** The most picks one person has on this plan's vote. */
 export const maxVotes = (plan: { max_votes?: number | null }): number => Math.min(MULTI_VOTES, Math.max(1, plan.max_votes ?? 1));
 
+/**
+ * Picks someone can actually use right now: the plan's setting (never more than three), and
+ * always one fewer than there are places, so nobody can tick the lot and every vote says
+ * something. Two places: one pick. Three: two. Four or more: three.
+ */
+export function picksAllowed(plan: { max_votes?: number | null }, optionCount: number): number {
+  return Math.max(1, Math.min(maxVotes(plan), optionCount - 1));
+}
+
 export type VoteStep =
-  /** Pick it (with one pick each, this moves your vote here). */
+  /** Pick it as well. */
   | { kind: "add" }
-  /** Untick it: you'd already picked it, and you have more than one pick. */
+  /** One pick: your vote moves here (any other picks go). */
+  | { kind: "move" }
+  /** Untick it. */
   | { kind: "remove" }
   /** Already your one pick: nothing to do. */
   | { kind: "none" }
   /** Every pick's used: untick one first. */
   | { kind: "full"; max: number };
 
-/** What a tap on an option does, given the options this person has already picked. */
+/**
+ * What a tap on an option does, given the options this person has already picked and the picks
+ * allowed now (picksAllowed). Someone left holding more than that (a place came off the vote)
+ * keeps them, and can untick, but can't add until they're under.
+ */
 export function voteStep(mine: readonly string[], optionId: string, max: number): VoteStep {
-  const picked = mine.includes(optionId);
-  if (max <= 1) return picked ? { kind: "none" } : { kind: "add" };
-  if (picked) return { kind: "remove" };
+  if (mine.includes(optionId)) return max <= 1 && mine.length <= 1 ? { kind: "none" } : { kind: "remove" };
+  if (max <= 1) return { kind: "move" };
   if (mine.length >= max) return { kind: "full", max };
   return { kind: "add" };
 }

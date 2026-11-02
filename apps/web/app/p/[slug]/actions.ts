@@ -13,7 +13,7 @@ import { nudgeOnBail } from "@/lib/nudges";
 import { loadPlan } from "@/lib/viewer";
 import { formatShort, formatWhen, localToIso } from "@/lib/time";
 import { MAX_TIMES } from "@dibs/shared/when";
-import { maxVotes, voteStep } from "@dibs/shared/votes";
+import { picksAllowed, voteStep } from "@dibs/shared/votes";
 import { DIBBY_HEADS_UP, planLinkLine } from "@/lib/thread-links";
 import { getPlace } from "@/lib/places";
 import { readNear } from "@/lib/near";
@@ -292,8 +292,9 @@ export async function toggleReaction(slug: string, messageId: string, emoji: str
 // ---------- Voting ----------
 
 /**
- * A tap on an option. With one pick each it moves your vote there. With more (up to three, the
- * default), it picks or unticks, and once you've used them all it asks you to untick one first.
+ * A tap on an option. With one pick it moves your vote there. With more it picks or unticks, and
+ * once you've used them all it asks you to untick one first. Picks are up to three (the default),
+ * and always one fewer than there are places (picksAllowed), so nobody can tick the lot.
  */
 export async function vote(slug: string, optionId: string): Promise<{ error?: string }> {
   const view = await loadPlan(slug);
@@ -303,11 +304,15 @@ export async function vote(slug: string, optionId: string): Promise<{ error?: st
   const [options, votes] = await Promise.all([store.listOptions(view.plan.id), store.listVotes(view.plan.id)]);
   if (!options.some((o) => o.id === optionId)) return {};
   const mine = votes.filter((v) => v.member_id === view.me!.id).map((v) => v.option_id);
-  const step = voteStep(mine, optionId, maxVotes(view.plan));
+  const step = voteStep(mine, optionId, picksAllowed(view.plan, options.length));
   if (step.kind === "full") return { error: `That's your ${step.max} picks. Untick one to swap it.` };
   if (step.kind === "none") return {};
   if (step.kind === "remove") await store.uncastVote(view.plan.id, optionId, view.me.id);
-  else await store.castVote(view.plan.id, optionId, view.me.id);
+  else {
+    // A three-pick plan down to one pick (two places) still adds in the database, so clear the rest first.
+    if (step.kind === "move" && mine.length) await store.removeVote(view.plan.id, view.me.id);
+    await store.castVote(view.plan.id, optionId, view.me.id);
+  }
   revalidatePlan(slug);
   return {};
 }

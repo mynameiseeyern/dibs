@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MULTI_VOTES, maxVotes, overLimit, voteStep } from "./votes";
+import { MULTI_VOTES, maxVotes, overLimit, picksAllowed, voteStep } from "./votes";
 
 describe("picks per person", () => {
   it("is one for plans from before multiple picks", () => {
@@ -15,7 +15,8 @@ describe("picks per person", () => {
 
 describe("a tap on an option", () => {
   it("moves your one pick, and does nothing on the one you've got", () => {
-    expect(voteStep(["a"], "b", 1)).toEqual({ kind: "add" });
+    expect(voteStep(["a"], "b", 1)).toEqual({ kind: "move" });
+    expect(voteStep([], "a", 1)).toEqual({ kind: "move" });
     expect(voteStep(["a"], "a", 1)).toEqual({ kind: "none" });
   });
   it("adds or unticks with up to three", () => {
@@ -26,6 +27,25 @@ describe("a tap on an option", () => {
   it("stops at three until you untick one", () => {
     expect(voteStep(["a", "b", "c"], "d", 3)).toEqual({ kind: "full", max: 3 });
     expect(voteStep(["a", "b", "c"], "b", 3)).toEqual({ kind: "remove" });
+  });
+});
+
+describe("picks you can use", () => {
+  it("is always one fewer than there are places, and never more than three", () => {
+    const multi = { max_votes: 3 };
+    expect(picksAllowed(multi, 0)).toBe(1);
+    expect(picksAllowed(multi, 2)).toBe(1);
+    expect(picksAllowed(multi, 3)).toBe(2);
+    expect(picksAllowed(multi, 4)).toBe(3);
+    expect(picksAllowed(multi, 8)).toBe(3);
+  });
+  it("stays at one when the organiser switched it off", () => {
+    expect(picksAllowed({ max_votes: 1 }, 8)).toBe(1);
+  });
+  it("lets someone over the cap untick, but not add", () => {
+    // Had two picks of three places; one came off, so it's one pick now.
+    expect(voteStep(["a", "b"], "a", 1)).toEqual({ kind: "remove" });
+    expect(voteStep(["a", "b"], "c", 2)).toEqual({ kind: "full", max: 2 });
   });
 });
 
