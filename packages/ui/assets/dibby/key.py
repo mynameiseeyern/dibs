@@ -9,8 +9,24 @@ name, src, outdir = sys.argv[1:4]; loop = "--loop" in sys.argv
 fps = subprocess.run(["ffprobe","-v","error","-select_streams","v","-show_entries","stream=r_frame_rate","-of","csv=p=0",src],capture_output=True,text=True).stdout.strip().split("/")[0]
 V = np.array([109, 74, 255], float); L = np.array([200, 240, 60], float)
 tmp = tempfile.mkdtemp(dir="/home/claude/launch/dibby")
-subprocess.run(["ffmpeg","-loglevel","error","-y","-i",src,"-vf","scale=480:480:flags=lanczos",f"{tmp}/f%04d.png"],check=True)
-files = sorted(f for f in os.listdir(tmp) if f.endswith(".png"))
+# Pass 1: where Dibby goes over the whole clip, from a quick 360px pass.
+subprocess.run(["ffmpeg","-loglevel","error","-y","-i",src,"-vf","scale=360:360",f"{tmp}/q%04d.png"],check=True)
+lo = np.array([360, 360]); hi = np.array([0, 0])
+for f in sorted(x for x in os.listdir(tmp) if x.startswith("q")):
+    q = np.array(Image.open(f"{tmp}/{f}").convert("RGB")).astype(float)
+    m = (((q - V) @ (L - V)) / ((L - V) @ (L - V))) > 0.35
+    ys, xs = np.nonzero(m)
+    if len(xs): lo = np.minimum(lo, [xs.min(), ys.min()]); hi = np.maximum(hi, [xs.max(), ys.max()])
+    os.remove(f"{tmp}/{f}")
+W = int(subprocess.run(["ffprobe","-v","error","-select_streams","v","-show_entries","stream=width","-of","csv=p=0",src],capture_output=True,text=True).stdout.strip())
+k = W / 360
+cx, cy = (lo + hi) / 2 * k
+side = max(hi - lo) * k * 1.12                       # a little room around the furthest reach
+side = min(side, W); x0 = int(np.clip(cx - side / 2, 0, W - side)); y0 = int(np.clip(cy - side / 2, 0, W - side)); side = int(side)
+print(name, "crop", side, "px square at", x0, y0, "of", W)
+# Pass 2: the tight square, at 720.
+subprocess.run(["ffmpeg","-loglevel","error","-y","-i",src,"-vf",f"crop={side}:{side}:{x0}:{y0},scale=720:720:flags=lanczos",f"{tmp}/f%04d.png"],check=True)
+files = sorted(f for f in os.listdir(tmp) if f.startswith("f") and f.endswith(".png"))
 frames = []
 for f in files:
     a = np.array(Image.open(f"{tmp}/{f}").convert("RGB")).astype(float)

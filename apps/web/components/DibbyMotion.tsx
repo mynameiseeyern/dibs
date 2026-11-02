@@ -11,7 +11,7 @@ type VideoWithFrames = HTMLVideoElement & {
  * Plays one of Dibby's clips with transparency, smoothly, on phones.
  *
  * Animated WebP stutters on iOS, and Safari has no alpha video, so each clip is a small H.264 at
- * 30 fps with the colour on the top half and the alpha matte on the bottom half
+ * up to 30 fps, cropped tight around Dibby, with the colour on the top half and the alpha matte on the bottom half
  * (public/dibby/motion/<clip>.mp4). The phone decodes it in hardware and a tiny shader puts the
  * halves back together on a canvas, once per decoded frame.
  *
@@ -97,7 +97,7 @@ export function DibbyMotion({ clip, loop, px, still, srcSet, webp, className, a1
     <span className={`${className} dibby-motion`} style={{ width: px, height: px }} {...a11y}>
       <img className="dibby-motion__still" src={still} srcSet={srcSet} sizes={`${px}px`} width={px} height={px} alt="" aria-hidden="true" draggable={false} hidden={state === "playing"} />
       <video ref={videoRef} className="dibby-motion__video" src={`/dibby/motion/${clip}.mp4`} muted playsInline loop={loop} preload="auto" aria-hidden="true" disablePictureInPicture disableRemotePlayback />
-      <canvas ref={canvasRef} className="dibby-motion__canvas" width={480} height={480} aria-hidden="true" />
+      <canvas ref={canvasRef} className="dibby-motion__canvas" width={720} height={720} aria-hidden="true" />
     </span>
   );
 }
