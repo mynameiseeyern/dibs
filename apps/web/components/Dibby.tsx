@@ -24,9 +24,10 @@ export function Dibby({ mood, size = "md", label, className }: { mood: DibbyMood
   const a11y = label ? { alt: label, role: "img" as const } : { alt: "", "aria-hidden": true as const };
   const motion = mood in MOTION ? MOTION[mood as keyof typeof MOTION] : null;
   const stillName = motion ? `${motion.clip}-rest` : mood;
-  // Phones are 3x: a 160px Dibby needs a 480px file, so the smallest size served is 480.
+  // Phones are 3x: a 160px Dibby needs a 480px file, so the smallest size served is 480. Every file
+  // is cropped so Dibby fills it; the rest frames of clips top out at 720, the clips' own size.
   const still = `/dibby/stills/${stillName}@480.png`;
-  const srcSet = `${still} 480w, /dibby/stills/${stillName}@720.png 720w`;
+  const srcSet = `${still} 480w, /dibby/stills/${stillName}@720.png 720w${motion ? "" : `, /dibby/stills/${stillName}@1080.png 1080w`}`;
 
   if (!motion) {
     return <img className={cls} src={still} srcSet={srcSet} sizes={`${px}px`} width={px} height={px} draggable={false} {...a11y} />;
