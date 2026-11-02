@@ -11,8 +11,8 @@ import { REACTIONS, type Reaction } from "@/lib/store/types";
 import { closeVote, fillFromWaitlist } from "@/lib/plan-ops";
 import { nudgeOnBail } from "@/lib/nudges";
 import { loadPlan } from "@/lib/viewer";
-import { formatShort, formatWhen, localToIso } from "@/lib/time";
-import { MAX_TIMES } from "@dibs/shared/when";
+import { formatWhen, isoToLocal, localToIso } from "@/lib/time";
+import { MAX_TIMES, sydneyDate, startOnDay } from "@dibs/shared/when";
 import { picksAllowed, voteStep } from "@dibs/shared/votes";
 import { DIBBY_HEADS_UP, planLinkLine } from "@/lib/thread-links";
 import { getPlace } from "@/lib/places";
@@ -426,20 +426,21 @@ export async function markFree(slug: string, timeId: string): Promise<Result> {
   return {};
 }
 
-/** The host puts a time to the crew (up to four, in the future). */
-export async function addTime(slug: string, local: string): Promise<Result> {
+/** The host puts a day to the crew (up to four, today or later). Kept as midnight Sydney time. */
+export async function addTime(slug: string, day: string): Promise<Result> {
   const view = await loadPlan(slug);
-  if (!view?.isHost || !pollOpen(view.plan.status)) return { error: "Only hosts can add times." };
-  const startsAt = localToIso(String(local ?? "").trim().slice(0, 16));
-  if (!startsAt) return { error: "Pick a day and a time." };
-  if (Date.parse(startsAt) <= Date.now()) return { error: "That time's already been. Pick one coming up." };
+  if (!view?.isHost || !pollOpen(view.plan.status)) return { error: "Only hosts can add days." };
+  const ymd = String(day ?? "").trim().slice(0, 10);
+  const startsAt = /^\d{4}-\d{2}-\d{2}$/.test(ymd) ? localToIso(`${ymd}T00:00`) : null;
+  if (!startsAt) return { error: "Pick a day." };
+  if (ymd < sydneyDate(new Date())) return { error: "That day's already been. Pick one coming up." };
   const times = await store.listTimes(view.plan.id);
-  if (times.some((t) => Date.parse(t.starts_at) === Date.parse(startsAt))) return { error: "That time's already up." };
+  if (times.some((t) => isoToLocal(t.starts_at).slice(0, 10) === ymd)) return { error: "That day's already up." };
   if (times.length >= MAX_TIMES) return { error: `${MAX_TIMES} is plenty. Take one off to add another.` };
   await store.addTime(view.plan.id, startsAt);
   // One heads-up in the chat when the question first goes out.
   if (times.length === 0) {
-    await store.addMessage({ planId: view.plan.id, memberId: null, kind: "system", body: `${view.me!.display_name.split(" ")[0]} wants to know when works. Tick the times you're free.` });
+    await store.addMessage({ planId: view.plan.id, memberId: null, kind: "system", body: `${view.me!.display_name.split(" ")[0]} wants to know which day works. Tick the days you're free.` });
   }
   revalidatePlan(slug);
   return {};
@@ -453,16 +454,24 @@ export async function removeTime(slug: string, timeId: string): Promise<Result> 
   return {};
 }
 
-/** The host goes with a time: it becomes the plan's start, and the question's done. */
-export async function goWithTime(slug: string, timeId: string): Promise<Result & { label?: string }> {
+/**
+ * The host goes with a day: with the time they pick (or the plan's own time) it becomes the
+ * plan's start, and the question's done. Never makes up a time: no time, no start.
+ */
+export async function goWithTime(slug: string, timeId: string, time?: string | null): Promise<Result & { label?: string }> {
   const view = await loadPlan(slug);
-  if (!view?.isHost || !pollOpen(view.plan.status)) return { error: "Only hosts can set the time." };
-  const time = (await store.listTimes(view.plan.id)).find((t) => t.id === timeId);
-  if (!time) return { error: "That time's gone. Pick another." };
-  const label = formatWhen(time.starts_at) ?? "";
-  await store.updatePlan(view.plan.id, { starts_at: time.starts_at, version: view.plan.version + 1, updated_note: `It's ${label}.` });
+  if (!view?.isHost || !pollOpen(view.plan.status)) return { error: "Only hosts can set the day." };
+  const option = (await store.listTimes(view.plan.id)).find((t) => t.id === timeId);
+  if (!option) return { error: "That day's gone. Pick another." };
+  const planTime = view.plan.starts_at ? isoToLocal(view.plan.starts_at).slice(11, 16) : null;
+  const local = startOnDay(isoToLocal(option.starts_at), time ? String(time).slice(0, 5) : null, planTime);
+  const startsAt = local ? localToIso(local) : null;
+  if (!startsAt) return { error: "Pick a time too." };
+  if (Date.parse(startsAt) <= Date.now()) return { error: "That time's already been. Pick a later one." };
+  const label = formatWhen(startsAt) ?? "";
+  await store.updatePlan(view.plan.id, { starts_at: startsAt, version: view.plan.version + 1, updated_note: `It's ${label}.` });
   await store.clearTimes(view.plan.id);
-  await store.addMessage({ planId: view.plan.id, memberId: null, kind: "system", body: `${view.me!.display_name.split(" ")[0]} set the time: ${formatShort(time.starts_at)}.` });
+  await store.addMessage({ planId: view.plan.id, memberId: null, kind: "system", body: `${view.me!.display_name.split(" ")[0]} picked the day: ${label}.` });
   revalidatePlan(slug);
   revalidatePath(`/p/${slug}/manage`);
   return { label };
