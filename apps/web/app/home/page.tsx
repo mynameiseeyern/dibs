@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import { formatAud } from "@dibs/shared/bills";
 import { countIn, wrapState } from "@dibs/shared/plans";
 import type { Plan, PlanMember } from "@dibs/shared/types";
-import { CrewWave, Wordmark } from "@/components/Logo";
+import { Wordmark } from "@/components/Logo";
+import { Dibby } from "@/components/Dibby";
 import { MonogramStack } from "@/components/Monogram";
 import { AccountButton } from "@/components/AccountButton";
 import { store } from "@/lib/store";
@@ -134,7 +135,7 @@ export default async function Home() {
           </section>
         ) : (
           <section className="empty">
-            <CrewWave />
+            <Dibby mood="look" size="md" />
             <h1 className="title-h3">Nothing on. Suss.</h1>
             <p className="muted">Start something and drop it in the group chat.</p>
           </section>

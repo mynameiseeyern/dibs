@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { Dibby } from "@/components/Dibby";
 import { extraOn } from "@dibs/shared/plans";
 import { formatAud, netDebts } from "@dibs/shared/bills";
 import type { Bill, BillShare, PlanMember } from "@dibs/shared/types";
@@ -63,10 +64,11 @@ export default async function Bills({ params, searchParams }: Props) {
     return (
       <main className="page">
         {back}
-        <Alert.Root status="information" role="status">
-          <Alert.Icon as="i" className="ri-lock-2-fill" aria-hidden="true" />
-          <div><strong>Bills are just for people who came</strong>If you were there, ask {members.find((m) => m.role === "organiser")?.display_name.split(" ")[0] ?? "the organiser"} to tick you in.</div>
-        </Alert.Root>
+        <section className="empty" role="status">
+          <Dibby mood="sad" size="md" />
+          <h1 className="title-h3">Bills are just for people who came</h1>
+          <p className="muted">If you were there, ask {members.find((m) => m.role === "organiser")?.display_name.split(" ")[0] ?? "the organiser"} to tick you in.</p>
+        </section>
       </main>
     );
   }
@@ -330,6 +332,7 @@ export default async function Bills({ params, searchParams }: Props) {
 
         {bills.length === 0 && (
           <section className="empty">
+            <Dibby mood="wait" size="sm" />
             <p className="muted">No bills yet. Whoever paid adds it, and everyone sees what they owe.</p>
           </section>
         )}
