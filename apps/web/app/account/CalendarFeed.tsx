@@ -46,7 +46,7 @@ export function CalendarFeed({ url, reset }: { url: string; reset: () => Promise
         Copy link for another calendar
       </Button.Root>
       <p className="paragraph-xs muted">
-        Calendars check for changes about once an hour, Google less often. Keep the link to yourself: anyone with it can see your plans.{" "}
+        Calendars check for changes about once an hour, Google less often. Want it quicker on an iPhone or Mac? Set your calendar to refresh every 15 minutes. Keep the link to yourself: anyone with it can see your plans.{" "}
         <button type="button" className="underline" onClick={() => setConfirming(true)}>
           Reset link
         </button>
