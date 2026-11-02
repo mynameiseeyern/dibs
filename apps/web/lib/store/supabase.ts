@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { FORMER_MEMBER, makeSlug, pickColour } from "@dibs/shared/plans";
@@ -57,6 +58,19 @@ export const supabaseStore: Store = {
   },
   async setSavedCategories(userId, labels) {
     must(await admin().from("profiles").update({ plan_categories: labels }).eq("user_id", userId));
+  },
+  async calendarFeedToken(userId, opts) {
+    if (!opts?.reset) {
+      const had = must(await admin().from("calendar_feeds").select("token").eq("user_id", userId).maybeSingle()) as { token: string } | null;
+      if (had) return had.token;
+    }
+    const token = randomBytes(24).toString("base64url");
+    must(await admin().from("calendar_feeds").upsert({ user_id: userId, token, created_at: new Date().toISOString() }));
+    return token;
+  },
+  async userForCalendarToken(token) {
+    const row = must(await admin().from("calendar_feeds").select("user_id").eq("token", token).maybeSingle()) as { user_id: string } | null;
+    return row?.user_id ?? null;
   },
   async answerBetaPrompt(userId) {
     must(await admin().from("profiles").update({ beta_prompt_answered_at: new Date().toISOString() }).eq("user_id", userId).is("beta_prompt_answered_at", null));

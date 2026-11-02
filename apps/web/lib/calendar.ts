@@ -28,19 +28,13 @@ export const canAddToCalendar = (plan: Plan) =>
 const place = (plan: Plan) => (plan.venue_name && plan.venue_address ? `${plan.venue_name}, ${plan.venue_address}` : plan.venue_name ?? plan.area ?? "");
 
 /**
- * A one-event calendar file. The UID stays the same for a plan and SEQUENCE follows
- * the plan's version, so re-adding after the plan moves updates the event instead of
- * adding a second one.
+ * One plan as calendar lines. The UID stays the same for a plan and SEQUENCE follows the plan's
+ * version, so re-adding after the plan moves updates the event instead of adding a second one.
  */
-export function planIcs(plan: Plan, url: string): string {
+function planEvent(plan: Plan, url: string, status?: "confirmed" | "tentative"): string[] {
   const start = new Date(plan.starts_at!);
   const end = new Date(start.getTime() + DURATION_MS);
-  const lines = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//dibby//plans//EN",
-    "CALSCALE:GREGORIAN",
-    "METHOD:PUBLISH",
+  return [
     "BEGIN:VEVENT",
     `UID:${plan.id}@dibby.social`,
     `SEQUENCE:${plan.version ?? 1}`,
@@ -51,11 +45,39 @@ export function planIcs(plan: Plan, url: string): string {
     ...(place(plan) ? [`LOCATION:${escape(place(plan))}`] : []),
     `DESCRIPTION:${escape(`Who's coming and what's changed: ${url}`)}`,
     `URL:${url}`,
+    ...(status ? [`STATUS:${status === "tentative" ? "TENTATIVE" : "CONFIRMED"}`] : []),
     "END:VEVENT",
-    "END:VCALENDAR",
   ];
-  return lines.map(fold).join("\r\n") + "\r\n";
 }
+
+const HEADER = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//dibby//plans//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH"];
+const finish = (lines: string[]) => lines.map(fold).join("\r\n") + "\r\n";
+
+/** A one-event calendar file, for "Add to calendar" on a plan. */
+export function planIcs(plan: Plan, url: string): string {
+  return finish([...HEADER, ...planEvent(plan, url), "END:VCALENDAR"]);
+}
+
+/**
+ * Someone's calendar subscription: every plan they're in (feedStatus), as one calendar the
+ * calendar app re-reads about hourly. A plan that drops off (called off, can't go) disappears
+ * from their calendar on the next refresh.
+ */
+export function feedIcs(events: { plan: Plan; url: string; status: "confirmed" | "tentative" }[]): string {
+  return finish([
+    ...HEADER,
+    "X-WR-CALNAME:Dibby plans",
+    "X-WR-CALDESC:Plans you're in. Updates on its own.",
+    "X-WR-TIMEZONE:Australia/Sydney",
+    "REFRESH-INTERVAL;VALUE=DURATION:PT1H",
+    "X-PUBLISHED-TTL:PT1H",
+    ...events.flatMap((e) => planEvent(e.plan, e.url, e.status)),
+    "END:VCALENDAR",
+  ]);
+}
+
+/** The subscription link's path, from a token. */
+export const feedPath = (token: string) => `/cal/${token}.ics`;
 
 /** Google Calendar's own "add event" page, for people on desktop or without Apple Calendar. */
 export function googleCalendarLink(plan: Plan, url: string): string {

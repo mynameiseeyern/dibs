@@ -11,7 +11,8 @@
     "./metrics": "./src/metrics.ts",
     "./photos": "./src/photos.ts",
     "./api": "./src/api.ts",
-    "./votes": "./src/votes.ts"
+    "./votes": "./src/votes.ts",
+    "./calendar": "./src/calendar.ts"
   },
   "scripts": {
     "test": "vitest run",
