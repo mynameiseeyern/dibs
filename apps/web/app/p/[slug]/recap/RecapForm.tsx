@@ -16,10 +16,13 @@ export function RecapForm({
   action,
   people,
   initial,
+  noun,
 }: {
   action: (s: FormState, f: FormData) => Promise<FormState>;
   people: Person[];
   initial: { stars: number | null; best: string | null; mvp: string | null };
+  /** "the arvo", "the hang": what this plan is called in recap copy. */
+  noun: string;
 }) {
   const [state, formAction, pending] = useActionState(action, undefined);
   const [stars, setStars] = useState(initial.stars ?? 0);
@@ -28,7 +31,7 @@ export function RecapForm({
     <form action={formAction} className="db-card section">
       <h2 className="title-h4">How was it?</h2>
 
-      <fieldset className="stars" aria-label="Rate the night out of 5">
+      <fieldset className="stars" aria-label={`Rate ${noun} out of 5`}>
         {[1, 2, 3, 4, 5].map((n) => (
           <label key={n} className="stars__star">
             <input type="radio" name="stars" value={n} checked={stars === n} onChange={() => setStars(n)} aria-label={`${n} star${n > 1 ? "s" : ""}`} />

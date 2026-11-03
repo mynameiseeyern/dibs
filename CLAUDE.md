@@ -37,7 +37,7 @@ Open `packages/ui/design-system/index.html` in a browser to see every component 
 - Which Dibby: in running copy, "Dibby" always means the helper, and it gets its face where it's named in the UI (`<DibbyName />`, or `DibbyMark` in the chat). The app isn't called Dibby in running copy: say "the app", "here", or just the action ("it's split for you"). The name means the app only on brand surfaces: the logo, About, emails, legal pages, "Get the Dibby app".
 - Internal names keep the old name on purpose: `@dibs/*` packages, `.db-` classes, `variant="dibs"` (the call-dibs button), `dibs:` storage keys, `dibs-*.svg` logo files. Don't rename them: storage keys would reset people's state.
 - Copy: Australian spelling, sentence case, sounds like a mate in the group chat. Never pushy about money.
-- Logos are in `packages/ui/assets/logos/`. `dibs-ai-member.svg` (the raised lime friend from the logo, with a face, on violet) is Dibby's face in the chat; the app logo is the "hands up" mark with solid side friends. Exports (App Store, favicons, social avatar, wordmarks) are in `logos/export/`.
+- Logos are in `packages/ui/assets/logos/` (read its README). The logo is Dibby waving, a 3D render (`dibby-icon-1024.png`); under 48px use the flat face (`dibby-face.svg`). Dibby's chat avatar is the face cropped from the icon. Exports and the sizes the app serves are made by `logos/export.py`.
 
 ## Email
 
@@ -61,6 +61,7 @@ Open `packages/ui/design-system/index.html` in a browser to see every component 
 - Every place on a plan (vote options, a set place) comes from the place picker (`components/PlacePicker.tsx`): either a real, open business from the map, which the server checks with `getPlace` before saving, or a place typed in (someone's place, a spot in a park) as a name plus an optional address (`cleanCustomPlace`).
 - Place details (photos, stars, reviews, hours) come from Google's Places UI Kit elements (`components/maps/PlaceCard.tsx`, `PlaceDetailsSheet.tsx`). Google renders and attributes them; we only ever store the place ID (Places terms). Cards load when they scroll into view, since each load is billed. Dibby's messages carry the place IDs it added (`places` in `template`, `lib/place-ids.ts`) so the chat shows them as tiles.
 - Load Google Maps through `components/maps/GoogleMaps.tsx`, never `APIProvider` directly: the script must load once with one set of options.
+- Calendar subscription (`/cal/<token>.ics`, `app/cal/[file]/route.ts`): accounts only, one private token each in `calendar_feeds`, reset from `/account`. It lists plans you're in once they're locked with a time (`feedStatus` in `packages/shared/src/calendar.ts`); called off, can't go or waitlisted drops off. The token is the only key, so never log it or put it in analytics.
 - A typed-in place's name is public like any plan detail (page, WhatsApp preview, Dibby). Its address is only shown to people in the plan: plan card, vote options, calendar files. The picker says so on each field and flags a name that looks like an address (`looksLikeAddress`); it never blocks.
 
 ## Layout

@@ -1,4 +1,5 @@
 "use client";
+import { Dibby } from "@/components/Dibby";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AdvancedMarker, ColorScheme, ControlPosition, Map, MapControl, useMap } from "@vis.gl/react-google-maps";
@@ -191,7 +192,9 @@ export function PlacePicker({
             {status === "loading" && <Hint.Root>Looking…</Hint.Root>}
             {status === "off" && <Hint.Root hasError>Place search isn&rsquo;t set up yet. Ask whoever runs Dibby to add the Google key.</Hint.Root>}
             {status === "error" && <Hint.Root hasError>Couldn&rsquo;t search just then. Try again in a sec.</Hint.Root>}
-            {status === "idle" && q.trim().length >= 2 && places.length === 0 && <Hint.Root>Nothing open by that name. Try something broader.</Hint.Root>}
+            {status === "idle" && q.trim().length >= 2 && places.length === 0 && (
+              <div className="place-none"><Dibby mood="shrug" size="sm" /><Hint.Root>Nothing open by that name. Try something broader.</Hint.Root></div>
+            )}
             {q.trim().length < 2 && <Hint.Root>Search for a business, or type a place in below.</Hint.Root>}
           </div>
 

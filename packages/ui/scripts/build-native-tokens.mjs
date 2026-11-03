@@ -64,6 +64,9 @@ for (const tok of t.shadow.tokens) {
 // Custom fonts on Android can't pick a weight, so each style names its exact face.
 const faces = {
   display: { 700: "BricolageGrotesque_700Bold", 800: "BricolageGrotesque_800ExtraBold" },
+  // The big titles' condensed look (font-width-title-lg, 84%). React Native can't set variable-font
+  // axes, so this is a static cut: apps/mobile/assets/fonts/BricolageGrotesque-Title.ttf.
+  title: "BricolageGrotesqueTitle",
   sans: { 400: "Figtree_400Regular", 500: "Figtree_500Medium", 600: "Figtree_600SemiBold", 700: "Figtree_700Bold" },
   mono: { 400: "DMMono-Regular", 500: "DMMono-Medium" },
 };
@@ -71,7 +74,7 @@ const px = (v) => parseFloat(v);
 const typeStyles = {};
 for (const g of t.type.groups) {
   for (const s of g.styles) {
-    const face = faces[g.family]?.[s.fontWeight];
+    const face = s.fontWidth === "font-width-title-lg" ? faces.title : faces[g.family]?.[s.fontWeight];
     if (!face) throw new Error(`No ${g.family} face for weight ${s.fontWeight} (${s.name})`);
     const size = px(s.fontSize);
     typeStyles[`.text-${s.name}`] = {
@@ -85,6 +88,7 @@ for (const g of t.type.groups) {
 }
 const fontFamily = {
   display: [faces.display[800]],
+  title: [faces.title],
   "display-bold": [faces.display[700]],
   sans: [faces.sans[400]],
   "sans-medium": [faces.sans[500]],

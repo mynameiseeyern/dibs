@@ -7,6 +7,8 @@ export function useDibbyFonts() {
   return useFonts({
     BricolageGrotesque_700Bold,
     BricolageGrotesque_800ExtraBold,
+    // The condensed cut for title-display to title-h3 (see assets/fonts/README.md).
+    BricolageGrotesqueTitle: require("../assets/fonts/BricolageGrotesque-Title.ttf"),
     Figtree_400Regular,
     Figtree_500Medium,
     Figtree_600SemiBold,

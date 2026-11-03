@@ -41,6 +41,8 @@ export interface Plan {
   description: string | null;
   /** Extras the organiser switched off ("chat", "photos", "bills", "recap"). Empty: all on. */
   extras_off: string[];
+  /** Places each person can pick on the vote: 3 for new plans, 1 if the organiser switched it off. Missing on old rows: 1. */
+  max_votes?: number;
   created_at: string;
 }
 

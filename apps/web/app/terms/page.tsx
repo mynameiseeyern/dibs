@@ -29,7 +29,7 @@ export default function Terms() {
       <h2>The AI and places</h2>
       <p>
         The AI in your chat can get things wrong, so check a place&rsquo;s details before you go. Place details come from Google Maps and may be
-        out of date. Dibby isn&rsquo;t responsible for venues, bookings or what happens on the night.
+        out of date. Dibby isn&rsquo;t responsible for venues, bookings or what happens on the day.
       </p>
 
       <h2>Be decent</h2>

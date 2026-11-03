@@ -12,6 +12,10 @@ import { ThemePicker } from "./ThemePicker";
 import { SiteFooter } from "@/components/SiteFooter";
 import { KeepPlansForm } from "./KeepPlansForm";
 import { BetaUpdatesToggle } from "./BetaUpdatesToggle";
+import { CalendarFeed } from "./CalendarFeed";
+import { resetCalendarLink } from "./calendar-actions";
+import { feedPath } from "@/lib/calendar";
+import { siteUrl } from "@/lib/site";
 import * as Button from "@/components/ui/button";
 
 export const metadata = { title: "You" };
@@ -22,6 +26,9 @@ export default async function Account() {
   const { organiser, guest, name } = here;
   // Fails soft so the page still works if the mailing_list migration hasn't run yet.
   const betaUpdates = organiser ? await store.getSubscription(BETA_LIST, { userId: organiser.id }).catch(() => null) : null;
+  // Accounts only: the link is made the first time they open this page. Fails soft if the
+  // calendar_feeds migration hasn't run yet.
+  const calendarToken = organiser ? await store.calendarFeedToken(organiser.id).catch(() => null) : null;
 
   // Lifetime roulette record: every spun bill on every plan you're on, counted for your member id there.
   const memberships = [...(organiser ? await store.listPlansForUser(organiser.id) : []), ...(guest ? await store.listPlansForGuest(guest.id) : [])];
@@ -92,6 +99,13 @@ export default async function Account() {
         <section id="email" className="db-card section" aria-labelledby="email-h">
           <h2 id="email-h" className="title-h5">Emails from Dibby</h2>
           <BetaUpdatesToggle initial={betaUpdates?.subscribed ?? false} email={organiser.email} />
+        </section>
+      )}
+
+      {organiser && calendarToken && (
+        <section id="calendar" className="db-card section" aria-labelledby="calendar-h">
+          <h2 id="calendar-h" className="title-h5">Your calendar</h2>
+          <CalendarFeed url={`${siteUrl()}${feedPath(calendarToken)}`} reset={resetCalendarLink} />
         </section>
       )}
 

@@ -13,6 +13,7 @@ import { toast } from "@/components/ui/toast";
 import { PlaceSection } from "./PlaceSection";
 import { CategoryPick } from "@/app/new/CategoryPick";
 import { DESCRIPTION_MAX, MAX_SPOTS, MIN_SPOTS, PLAN_EXTRAS, type PlanExtra } from "@dibs/shared/plans";
+import { MULTI_VOTES } from "@dibs/shared/votes";
 import * as Textarea from "@/components/ui/textarea";
 import * as Label from "@/components/ui/label";
 
@@ -22,7 +23,7 @@ export interface EditPlanProps {
   /** After wrap-up: just the extras. */
   extrasOnly?: boolean;
   status: "voting" | "locked";
-  /** "Ask the crew when works" on the plan page, while the plan hasn't started. */
+  /** "Ask the crew which day works" on the plan page, while the plan hasn't started. */
   askWhenHref?: string;
   title: string;
   category: string | null;
@@ -45,6 +46,8 @@ export interface EditPlanProps {
   capacity: number | null;
   going: number;
   plusOnes: boolean;
+  /** Up to three picks each on the vote (the default), or off: one each. */
+  multiVote: boolean;
   vibe: Vibe;
   volume: DibbyVolume;
   /** Locked but not started yet: a way to wrap it up early (it happened sooner, or got sorted elsewhere). */
@@ -58,6 +61,7 @@ export interface EditPlanProps {
     setVoteDeadline: (v: string) => Promise<Result>;
     setCapacity: (n: number | null) => Promise<Result>;
     setPlusOnes: (on: boolean) => Promise<Result>;
+    setMultiVote: (on: boolean) => Promise<Result>;
     setExtra: (extra: PlanExtra, on: boolean) => Promise<Result>;
     setPlace: (pick: string | CustomPlace) => Promise<Result>;
     openVote: () => Promise<Result>;
@@ -108,6 +112,7 @@ export function EditPlan(p: EditPlanProps) {
         <Row label="When" value={p.whenLabel ?? "To be decided"} onOpen={() => setSheet("when")} />
         <Row label="Where" value={whereValue} onOpen={() => setSheet("where")} />
         {voting && <Row label="Vote closes" value={p.deadlineLabel ?? "When you lock it in"} onOpen={() => setSheet("deadline")} />}
+        {voting && <MultiVoteRow on={p.multiVote} save={p.actions.setMultiVote} />}
       </Group>
 
       <Group label="Who's coming">
@@ -159,7 +164,7 @@ export function EditPlan(p: EditPlanProps) {
             <Button.Root asChild variant="neutral" mode="ghost" size="small">
               <a href={p.askWhenHref}>
                 <i className="ri-calendar-schedule-line db-icon" aria-hidden="true" />
-                Not sure? Ask the crew when works
+                Not sure which day? Ask the crew
               </a>
             </Button.Root>
           ) : null
@@ -313,6 +318,36 @@ function PlusOnesRow({ on, save }: { on: boolean; save: (on: boolean) => Promise
         checked={shown}
         disabled={pending}
         aria-label="Plus-ones welcome"
+        onCheckedChange={(v: boolean) =>
+          start(async () => {
+            setShown(v);
+            const r = await save(v);
+            if (r.error) toast.error(r.error);
+          })
+        }
+      />
+    </label>
+  );
+}
+
+/** Picks per person flips straight from the list, like plus-ones. */
+function MultiVoteRow({ on, save }: { on: boolean; save: (on: boolean) => Promise<Result> }) {
+  const [pending, start] = useTransition();
+  const [shown, setShown] = useOptimistic(on);
+  return (
+    <label className="edit-plan__row edit-plan__row--extra">
+      <span className="edit-plan__extra">
+        <span className="label-md block">Up to {MULTI_VOTES} picks each</span>
+        <span className="paragraph-xs muted block">
+          {shown
+            ? `Everyone can vote for up to ${MULTI_VOTES} places, always one fewer than there are, so nobody ticks the lot. Most votes wins.`
+            : "Off: one pick each. Switching off keeps everyone's latest pick."}
+        </span>
+      </span>
+      <Switch.Root
+        checked={shown}
+        disabled={pending}
+        aria-label={`Up to ${MULTI_VOTES} picks each`}
         onCheckedChange={(v: boolean) =>
           start(async () => {
             setShown(v);

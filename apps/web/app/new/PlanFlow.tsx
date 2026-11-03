@@ -17,6 +17,7 @@ import { useCyclingPlaceholder } from "./DibbyBubble";
 import type { Organising } from "./Organiser";
 import { BigTime } from "./BigTime";
 import "./plan-flow.css";
+import { TIME_PRESETS } from "@dibs/shared/daypart";
 
 type Step = "intro" | "what" | "when" | "where" | "dibby" | "who";
 type Where = "place" | "vote" | "dibby";
@@ -31,15 +32,8 @@ const IDEAS: { label: string; category?: string }[] = [
   { label: "Birthday", category: "Social" },
 ];
 
-/** Quick times. Each is a fixed fact, like any time someone picks. */
-const TIMES = [
-  { label: "Brunch", at: "10:00" },
-  { label: "Lunch", at: "12:30" },
-  { label: "Arvo", at: "15:00" },
-  { label: "Drinks", at: "18:00" },
-  { label: "Dinner", at: "19:00" },
-  { label: "Late", at: "21:00" },
-];
+/** Quick times: parts of the day, not meals. Each is a fixed fact, like any time someone picks. */
+const TIMES = TIME_PRESETS;
 
 /** Which screen a field lives on, so a problem from the server takes you back to it. */
 const FIELD_STEP: Record<string, Step> = {
@@ -256,7 +250,7 @@ export function PlanFlow({ organising, intro, searchPass }: { organising: Organi
           </header>
           <div className="pf-intro__body">
             <div className="pf-hello">
-              <img className="pf-hello__dibby" src="/crew/lime.png" alt="Dibby saying hi" width={148} height={148} />
+              <img className="pf-hello__dibby" src="/dibby/stills/wave@480.png" srcSet="/dibby/stills/wave@480.png 480w, /dibby/stills/wave@720.png 720w" sizes="148px" alt="Dibby saying hi" width={148} height={148} />
               <p className="pf-hello__hi">Hey, I&rsquo;m Dibby!</p>
             </div>
             <h1 id="pf-intro-h" className="title-h2">

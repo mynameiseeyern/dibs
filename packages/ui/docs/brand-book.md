@@ -25,6 +25,10 @@ Dibby is the friend-group app where a crew talks, decides, turns up and squares 
 
 **Type.** Three faces, each with one job.
 - Headings `title-*` in Bricolage Grotesque, the wordmark’s face: heavy, a bit quirky.
+  - Push it past the default cut. Bricolage is the variable font, so big headings get its display optical size (sharper ink traps) on their own.
+  - Titles are slightly condensed: `font-stretch: var(--font-width-title-lg)` (84%) for `title-display` to `title-h3`, `--font-width-title-md` (86%) for `title-h4` and `--font-width-title-sm` (90%) for `title-h5` and `title-h6`. The `title-*` and `text-title-*` classes set this for you; hand-written CSS using `font:` must set `font-stretch` after it, since the shorthand resets it.
+  - Keep the tracking gentle (−1% at most). Tighter and the heavy letters touch.
+  - The wordmark keeps the normal width. In the native app use `font.title` for titles and `font.display` only for the wordmark.
 - Everything else in Figtree (`label-*`, `paragraph-*`, `subheading-*`), with DM Sans as the fallback.
 - Money and codes in DM Mono (`number-*`, `code`) so digits line up.
 - Body is `paragraph-md` (16px/26px), and reading text on phones is never smaller. Buttons and labels use `label-md`.
@@ -64,9 +68,11 @@ Dibby is the friend-group app where a crew talks, decides, turns up and squares 
 
 ## Logo
 
-- Use the V3 “hands up” mark from `assets/Logos/`: three friends, one popping up to call dibs.
-- `dibs-app-icon.svg` is the app icon on violet. `dibs-mark-on-dark.svg` goes only on `bg-strong-950`. `dibs-ai-member.svg` (the lime smiley) is Dibby’s face in the chat and member lists, never the app logo. (The file names keep the old name.)
-- The wordmark is live text: **dibby** in Bricolage Grotesque 800, lowercase.
+- The logo is Dibby waving: a 3D render of the lime friend on violet, `assets/logos/dibby-icon-1024.png`. Rounded with `radius-icon` wherever a platform doesn't round it for us.
+- Under 48px (favicons, the OG mark, inline names) use the flat face, `dibby-face.svg`, never the render.
+- Dibby's avatar in the chat and member lists is the face cropped from the icon, in a circle (`DibbyMark`). The app icon and the helper are the same character on purpose: one Dibby.
+- The wordmark is **dibby** in Bricolage Grotesque 800, lowercase. `dibby-wordmark-light` and `-dark` are the lockups outlined, for anywhere live text can't go.
+- Dibby's poses and animations for empty, loading, error and celebration states live in `assets/dibby/` and go in through `<Dibby mood="…" />`.
 
 ## Using the components
 

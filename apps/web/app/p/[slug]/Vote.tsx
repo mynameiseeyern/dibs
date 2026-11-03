@@ -18,6 +18,7 @@ import * as Modal from "@/components/ui/modal";
 import * as Dropdown from "@/components/ui/dropdown";
 import { toast } from "@/components/ui/toast";
 import { send } from "@/lib/send";
+import { splitLeaders, voteStep } from "@dibs/shared/votes";
 
 export interface VoteRow extends PlanOption {
   votes: number;
@@ -39,11 +40,13 @@ export function VoteList({
   decide,
   lock,
   closes = null,
+  maxPicks = 1,
 }: {
   rows: VoteRow[];
   canVote: boolean;
   open: boolean;
-  vote: (optionId: string) => Promise<void>;
+  /** Pick an option, or untick it when you have more than one pick. */
+  vote: (optionId: string) => Promise<{ error?: string } | void>;
   add: (s: FormState, f: FormData) => Promise<FormState>;
   /** Take an option off the vote. Rows this person may remove become swipeable. */
   remove?: (optionId: string) => Promise<{ error?: string; label?: string }>;
@@ -62,25 +65,38 @@ export function VoteList({
   lock?: () => Promise<void>;
   /** When the vote closes on its own ("Fri 30 Oct · 6:00 pm"), for the host's bar. */
   closes?: string | null;
+  /** Picks each person can use now (picksAllowed): 1 moves your vote, more lets you tick (and untick) up to that many. */
+  maxPicks?: number;
 }) {
   const [adding, startAdding] = useTransition();
-  // The tap moves your vote straight away: counts and bars update here, the server saves it behind,
-  // and the next refresh replaces this with the real numbers (one vote per plan, so it moves, not adds).
-  const [shownRows, moveVote] = useOptimistic(rows, (current: VoteRow[], optionId: string) =>
-    current.map((r) => {
-      if (r.id === optionId) return r.mine ? r : { ...r, mine: true, votes: r.votes + 1 };
-      if (r.mine) return { ...r, mine: false, votes: Math.max(0, r.votes - 1) };
+  // The tap shows straight away: counts and bars update here, the server saves it behind, and the
+  // next refresh replaces this with the real numbers. voteStep (shared with the server) says what a
+  // tap does: move your one pick, add one, untick one, or nothing.
+  const [shownRows, moveVote] = useOptimistic(rows, (current: VoteRow[], optionId: string) => {
+    const step = voteStep(current.filter((r) => r.mine).map((r) => r.id), optionId, maxPicks);
+    return current.map((r) => {
+      if (r.id === optionId) {
+        if (step.kind === "remove") return { ...r, mine: false, votes: Math.max(0, r.votes - 1) };
+        if (step.kind === "add" || step.kind === "move") return { ...r, mine: true, votes: r.votes + 1 };
+        return r;
+      }
+      if (step.kind === "move" && r.mine) return { ...r, mine: false, votes: Math.max(0, r.votes - 1) };
       return r;
-    })
-  );
+    });
+  });
+  const mineIds = shownRows.filter((r) => r.mine).map((r) => r.id);
+  const picked = mineIds.length;
   const [voting, startVote] = useTransition();
-  // Leaders first once anyone's voted (ties keep the order they were added), and a long list
-  // folds past the top few so the page stays short. Your own pick is never hidden.
-  const ranked = shownRows.some((r) => r.votes > 0) ? [...shownRows].sort((a, b) => b.votes - a.votes) : shownRows;
-  const [showAll, setShowAll] = useState(false);
-  const mineHidden = ranked.findIndex((r) => r.mine) >= FOLD_AT;
-  const folded = ranked.length > FOLD_AT + 1 && !showAll && !mineHidden;
-  const visible = folded ? ranked.slice(0, FOLD_AT) : ranked;
+  // Leaders first once anyone's voted (ties keep the order they were added). The order comes from
+  // the saved votes, not this tap, so nothing jumps out from under your thumb; it moves on refresh.
+  const order = rows.some((r) => r.votes > 0) ? [...rows].sort((a, b) => b.votes - a.votes) : rows;
+  const byId = new Map(shownRows.map((r) => [r.id, r]));
+  const ranked = order.map((r) => byId.get(r.id) ?? r);
+  const split = splitLeaders(order.map((r) => r.votes));
+  const big = ranked.slice(0, split.big);
+  const rest = ranked.slice(split.big);
+  const savedVotes = new Map(order.map((r) => [r.id, r.votes]));
+  const alsoTied = (r: VoteRow) => split.tiedAt !== null && savedVotes.get(r.id) === split.tiedAt;
   const total = shownRows.reduce((n, r) => n + r.votes, 0);
   const top = Math.max(0, ...shownRows.map((r) => r.votes));
   const [picking, setPicking] = useState(false);
@@ -112,6 +128,106 @@ export function VoteList({
     else toast.success(`Took ${res.label ?? confirming.label} off the vote`);
   };
 
+  // The vote toggle: tick (or untick) a place, moving your one pick when you only get one.
+  const voteButton = (r: VoteRow) =>
+    open && (
+      <Button.Root
+        type="button"
+        variant={r.mine ? "primary" : "neutral"}
+        mode={r.mine ? "filled" : "stroke"}
+        iconOnly
+        className="rounded-full"
+        aria-pressed={r.mine}
+        aria-label={r.mine ? (picked > 1 || maxPicks > 1 ? `Untick ${r.label}` : `Your pick: ${r.label}`) : `Vote for ${r.label}`}
+        disabled={!canVote || (voting && maxPicks <= 1 && !r.mine)}
+        onClick={() => {
+          if (readOnly) return void toast.info(readOnly);
+          const step = voteStep(mineIds, r.id, maxPicks);
+          if (step.kind === "none") return;
+          // All picks used: say so here rather than send a vote the server will turn down.
+          if (step.kind === "full") return void toast.info(`That's your ${step.max} picks. Untick one to swap it.`);
+          startVote(async () => {
+            moveVote(r.id);
+            // Moving your one pick is safe to resend; a tick or untick isn't.
+            const res = await send(() => vote(r.id), { what: "your vote", retry: step.kind === "move" });
+            if (res && res.error) toast.error(res.error);
+          });
+        }}
+      >
+        <Button.Icon as="i" className="ri-check-line" />
+      </Button.Root>
+    );
+
+  // ⋯ for details and removing. Removing lives here, not on every card, and only for whoever may.
+  const moreMenu = (r: VoteRow) => (
+    <Dropdown.Root>
+      <Dropdown.Trigger asChild>
+        <Button.Root type="button" variant="neutral" mode="ghost" iconOnly aria-label={`More for ${r.label}`}>
+          <Button.Icon as="i" className="ri-more-fill" />
+        </Button.Root>
+      </Dropdown.Trigger>
+      <Dropdown.Content align="end" className="w-60">
+        <Dropdown.Item onSelect={() => setViewing(r)}>
+          <i className="ri-information-line db-icon" aria-hidden="true" />
+          See details
+        </Dropdown.Item>
+        {canRemove(r) && (
+          <Dropdown.Item className="text-error-base" onSelect={() => setConfirming(r)}>
+            <i className="ri-delete-bin-line db-icon" aria-hidden="true" />
+            Take it off the vote
+          </Dropdown.Item>
+        )}
+      </Dropdown.Content>
+    </Dropdown.Root>
+  );
+
+  // A leader's card: the place (Google's photos, stars and reviews, or a typed-in name and address),
+  // then the tally once anyone's voted, the menu and the vote toggle. Side by side, the photo sits on top.
+  const bigCard = (r: VoteRow, layout: "row" | "tile") => {
+    const share = total ? Math.round((r.votes / total) * 100) : 0;
+    const winning = top > 0 && r.votes === top;
+    return (
+      <article key={r.id} data-fresh-id={r.id} className={`vote-card vote-card--${layout}`} data-mine={r.mine || undefined} data-winning={winning || undefined} aria-label={r.label}>
+        <PlaceCard placeId={r.place_id} name={r.label} address={r.note} layout={layout} />
+        <div className="vote-card__actions">
+          {total > 0 ? (
+            <div className="vote-card__tally">
+              <span className="vote-card__bar" aria-hidden="true">
+                <span style={{ width: `${share}%` }} />
+              </span>
+              <span className="paragraph-xs muted">
+                {r.votes} {r.votes === 1 ? "vote" : "votes"}
+                {winning && layout === "row" ? " · in front" : ""}
+              </span>
+            </div>
+          ) : (
+            <span className="vote-card__tally" />
+          )}
+          {moreMenu(r)}
+          {voteButton(r)}
+        </div>
+      </article>
+    );
+  };
+
+  // Add a place (or ask Dibby): the last row of the list, or a button under the cards.
+  const addButton = (as: "row" | "block") =>
+    canVote && open && rows.length < 8 ? (
+      <Button.Root
+        type="button"
+        variant="neutral"
+        mode={as === "row" ? "ghost" : "stroke"}
+        className={as === "row" ? "vote-row__add" : undefined}
+        disabled={adding || dibbyBusy}
+        onClick={() => (readOnly ? toast.info(readOnly) : askDibby ? setChoosingAdd(true) : setPicking(true))}
+      >
+        <Button.Icon as="i" className="ri-add-line" />
+        {adding ? "Adding…" : dibbyBusy ? "Dibby's on it…" : "Add a place"}
+      </Button.Root>
+    ) : null;
+
+  const paired = split.big === 2 && split.eyebrow !== null;
+
   return (
     <GoogleMaps>
     <Fresh>
@@ -132,100 +248,55 @@ export function VoteList({
         </div>
       )}
       {rows.length === 0 && <p className="paragraph-sm muted">No options yet. Add a place, or ask Dibby.</p>}
+      {open && canVote && !readOnly && (maxPicks > 1 || picked > 1) && rows.length > 1 && (
+        <p className="paragraph-xs muted" aria-live="polite">
+          {picked > maxPicks
+            ? `${maxPicks === 1 ? "One pick" : `${maxPicks} picks`} each now there are fewer places. Untick one to change yours.`
+            : picked === 0
+              ? `Pick up to ${maxPicks}.`
+              : picked === maxPicks
+                ? `That's your ${maxPicks} picks. Tap one to untick it.`
+                : `${maxPicks - picked} more ${maxPicks - picked === 1 ? "pick" : "picks"} if you want.`}
+        </p>
+      )}
       {open && decide && rows.length === 0 && (
         <Button.Root type="button" mode="ghost" size="small" onClick={() => setDeciding(true)}>
           <i className="ri-map-pin-2-line db-icon" aria-hidden="true" />
           Already decided? Pick the place
         </Button.Root>
       )}
-      {visible.map((r) => {
-        const share = total ? Math.round((r.votes / total) * 100) : 0;
-        const winning = top > 0 && r.votes === top;
-        // The place (Google's photos, stars and reviews, or a typed-in name and address), then one
-        // row: the tally once anyone's voted, the vote toggle, and a ⋯ menu for details and removing.
-        // Removing lives in the menu, not on every card, and only for whoever may.
-        return (
-          <article key={r.id} data-fresh-id={r.id} className="vote-card" data-mine={r.mine || undefined} data-winning={winning || undefined} aria-label={r.label}>
-            <PlaceCard placeId={r.place_id} name={r.label} address={r.note} />
-            <div className="vote-card__actions">
-              {total > 0 ? (
-                <div className="vote-card__tally">
-                  <span className="vote-card__bar" aria-hidden="true">
-                    <span style={{ width: `${share}%` }} />
-                  </span>
-                  <span className="paragraph-xs muted">
-                    {r.votes} {r.votes === 1 ? "vote" : "votes"}
-                    {winning ? " · in front" : ""}
-                  </span>
-                </div>
-              ) : (
-                <span className="vote-card__tally" />
-              )}
-              <Dropdown.Root>
-                <Dropdown.Trigger asChild>
-                  <Button.Root type="button" variant="neutral" mode="ghost" iconOnly aria-label={`More for ${r.label}`}>
-                    <Button.Icon as="i" className="ri-more-fill" />
-                  </Button.Root>
-                </Dropdown.Trigger>
-                <Dropdown.Content align="end" className="w-60">
-                  <Dropdown.Item onSelect={() => setViewing(r)}>
-                    <i className="ri-information-line db-icon" aria-hidden="true" />
-                    See details
-                  </Dropdown.Item>
-                  {canRemove(r) && (
-                    <Dropdown.Item className="text-error-base" onSelect={() => setConfirming(r)}>
-                      <i className="ri-delete-bin-line db-icon" aria-hidden="true" />
-                      Take it off the vote
-                    </Dropdown.Item>
-                  )}
-                </Dropdown.Content>
-              </Dropdown.Root>
-              {open && (
-                <Button.Root
-                  type="button"
-                  variant={r.mine ? "primary" : "neutral"}
-                  mode={r.mine ? "filled" : "stroke"}
-                  iconOnly
-                  className="rounded-full"
-                  aria-pressed={r.mine}
-                  aria-label={r.mine ? `Your pick: ${r.label}` : `Vote for ${r.label}`}
-                  disabled={!canVote || (voting && !r.mine)}
-                  onClick={() => {
-                    if (readOnly) return void toast.info(readOnly);
-                    if (r.mine) return;
-                    startVote(async () => {
-                      moveVote(r.id);
-                      await send(() => vote(r.id), { what: "your vote" });
-                    });
-                  }}
-                >
-                  <Button.Icon as="i" className="ri-check-line" />
-                </Button.Root>
-              )}
-            </div>
-          </article>
-        );
-      })}
+      {split.eyebrow && <p className="vote-eyebrow">{split.eyebrow}</p>}
+      <div className={paired ? "vote-pair" : "vote-stack"}>{big.map((r) => bigCard(r, paired ? "tile" : "row"))}</div>
 
-      {folded && (
-        <Button.Root type="button" variant="neutral" mode="ghost" size="small" onClick={() => setShowAll(true)}>
-          <i className="ri-arrow-down-s-line db-icon" aria-hidden="true" />
-          Show {ranked.length - FOLD_AT} more
-        </Button.Root>
+      {/* Everyone else: one compact row each. Tap for Google's photos, stars and hours. */}
+      {rest.length > 0 && (
+        <>
+          <p className="vote-eyebrow">Also in the running</p>
+          <div className="db-card vote-rest">
+            {rest.map((r) => (
+              <div key={r.id} data-fresh-id={r.id} className="vote-row" data-mine={r.mine || undefined}>
+                <button type="button" className="vote-row__main" aria-label={`Photos and details for ${r.label}`} onClick={() => setViewing(r)}>
+                  <span className="vote-row__icon" aria-hidden="true">
+                    <i className={`${r.place_id ? "ri-store-2-line" : "ri-home-smile-line"} db-icon`} />
+                  </span>
+                  <span className="vote-row__text">
+                    <span className="label-md vote-row__name">{r.label}</span>
+                    <span className="paragraph-xs muted">
+                      {r.votes === 0 ? "No votes yet" : `${r.votes} ${r.votes === 1 ? "vote" : "votes"}`}
+                      {alsoTied(r) ? " · also tied" : ""}
+                    </span>
+                    <span className="paragraph-xs vote-row__more">Photos and details</span>
+                  </span>
+                </button>
+                {canRemove(r) && moreMenu(r)}
+                {voteButton(r)}
+              </div>
+            ))}
+            {addButton("row")}
+          </div>
+        </>
       )}
-
-      {canVote && open && rows.length < 8 && (
-        <Button.Root
-          type="button"
-          variant="neutral"
-          mode="stroke"
-          disabled={adding || dibbyBusy}
-          onClick={() => (readOnly ? toast.info(readOnly) : askDibby ? setChoosingAdd(true) : setPicking(true))}
-        >
-          <Button.Icon as="i" className="ri-add-line" />
-          {adding ? "Adding…" : dibbyBusy ? "Dibby's on it…" : "Add an option"}
-        </Button.Root>
-      )}
+      {rest.length === 0 && addButton("block")}
 
       <Modal.Root open={choosingAdd} onOpenChange={setChoosingAdd}>
         <Modal.Content>
@@ -388,5 +459,3 @@ export function VoteList({
   );
 }
 
-// Cards are taller than the old rows, so fold after three.
-const FOLD_AT = 3;

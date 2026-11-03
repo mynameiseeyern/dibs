@@ -33,8 +33,25 @@ export function resolveStart(fromText: string | null, picks: WhenPicks, now = ne
   return null;
 }
 
-/** At most this many times on a "When works?" poll. */
+/** At most this many days on a "Which day works?" poll. */
 export const MAX_TIMES = 4;
+
+/**
+ * "Which day works?" puts days to the crew, not times. A day is kept as midnight Sydney time;
+ * older polls held a day and a time, and those keep their own time.
+ */
+export const isWholeDay = (localStart: string) => localStart.slice(11, 16) === "00:00";
+
+/**
+ * The start when the host goes with a day, as "YYYY-MM-DDTHH:mm" Sydney time, or null if
+ * there's no time to go with it yet. A time the host picks wins, then the plan's own time.
+ * Never made up.
+ */
+export function startOnDay(option: string, picked: string | null, planTime: string | null): string | null {
+  if (!isWholeDay(option)) return option;
+  const time = [picked, planTime].find((t) => t && /^\d{2}:\d{2}$/.test(t)) ?? null;
+  return time ? `${option.slice(0, 10)}T${time}` : null;
+}
 
 export interface RankedTime<T extends { id: string; starts_at: string }> {
   time: T;

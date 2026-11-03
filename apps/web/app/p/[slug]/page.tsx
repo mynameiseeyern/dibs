@@ -21,7 +21,7 @@ import { closeIfDue } from "@/lib/plan-ops";
 import { nudgeIfDue } from "@/lib/nudges";
 import { owedToYou, youOwe } from "@/lib/copy";
 import { store } from "@/lib/store";
-import { countdown, formatShort, formatWhen } from "@/lib/time";
+import { countdown, formatDay, formatShort, formatWhen, isoToLocal } from "@/lib/time";
 import { loadPlan } from "@/lib/viewer";
 import { removeMyPhoto, setPlusOne, removePlusOne, addTime, goWithTime, markFree, removeTime, appInterest, trackShare, addOption, askDibbyMore, joinPlan, lockPlan, removeMe, removeOption, setRsvp, vote } from "./actions";
 import { hostRejoinLink, setHost, setPlace } from "./manage/actions";
@@ -35,14 +35,17 @@ import { PhotoRoll } from "./PhotoRoll";
 import { loadRoll } from "@/lib/photos";
 import { CircleAction } from "@/components/CircleAction";
 import { RemovePlusOne } from "./RemovePlusOne";
+import { WhoRow, type WhoFace } from "./WhoRow";
 import { WhenWorks } from "./WhenWorks";
-import { MAX_TIMES, rankTimes } from "@dibs/shared/when";
+import { MAX_TIMES, isWholeDay, rankTimes } from "@dibs/shared/when";
 import { VoteList } from "./Vote";
+import { picksAllowed } from "@dibs/shared/votes";
 import { siteUrl } from "@/lib/site";
 import { planPreview } from "@/lib/plan-preview";
 import * as Button from "@/components/ui/button";
 import * as Badge from "@/components/ui/badge";
 import * as Alert from "@/components/ui/alert";
+import { theRecapNoun } from "@dibs/shared/daypart";
 
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ when?: string; kept?: string }> };
 
@@ -116,10 +119,12 @@ export default async function PlanPage({ params, searchParams }: Props) {
   const counted = new Set(members.filter((m) => planAccess(m).level === "full").map((m) => m.id));
   const ranked = rankTimes(times, timeVotes, counted);
   const byId = new Map(members.map((m) => [m.id, m]));
+  // Days on the poll are whole days; an older poll's day-and-time keeps its time.
   const whenRows = ranked.rows.map((r) => ({
     id: r.time.id,
-    label: formatWhen(r.time.starts_at) ?? "",
-    short: formatShort(r.time.starts_at) ?? "",
+    label: (isWholeDay(isoToLocal(r.time.starts_at)) ? formatDay(r.time.starts_at) : formatWhen(r.time.starts_at)) ?? "",
+    short: (isWholeDay(isoToLocal(r.time.starts_at)) ? formatDay(r.time.starts_at) : formatShort(r.time.starts_at)) ?? "",
+    wholeDay: isWholeDay(isoToLocal(r.time.starts_at)),
     free: r.free.flatMap((id) => (byId.get(id) ? [byId.get(id)!] : [])),
     mine: Boolean(me && r.free.includes(me.id)),
   }));
@@ -448,7 +453,7 @@ export default async function PlanPage({ params, searchParams }: Props) {
 
         {/* After the night: the money and the recap, for people who came. */}
         {wrapped && me?.attended && (billsOn || recapOn) && (
-          <section className="wrap-links" aria-label="After the night">
+          <section className="wrap-links" aria-label="Afterwards">
             {billsOn && !allSquare && !(plan.no_bills && bills.length === 0) && (
               <a className="db-card db-card--violet section link-card" href={`/p/${slug}/bills`}>
                 <strong className="title-h4">Square up</strong>
@@ -467,7 +472,7 @@ export default async function PlanPage({ params, searchParams }: Props) {
             <a className={`db-card section link-card recap-teaser${!iAnswered ? " recap-teaser--ask" : ""}`} href={`/p/${slug}/recap`}>
               <span className="subheading-sm eyebrow">The recap</span>
               {recap.length === 0 ? (
-                <strong className="title-h4">How was it? Rate the night.</strong>
+                <strong className="title-h4">How was it? Rate {theRecapNoun(plan.starts_at)}.</strong>
               ) : (
                 <>
                   <div className="recap-teaser__stats">
@@ -523,13 +528,16 @@ export default async function PlanPage({ params, searchParams }: Props) {
           <>
             {/* 3. Who's going: faces and counts; tap for everyone. Locked in: everyone, laid out flat. */}
             {onePage ? (
-              <section className="who-flat" aria-labelledby="who-h">
-                <div className="section__head">
-                  <h2 id="who-h" className="title-h5">Who&rsquo;s going</h2>
-                  <span className="paragraph-sm muted who-flat__count">{whoSummary}</span>
-                </div>
+              <WhoRow
+                summary={whoSummary}
+                faces={ORDER.filter((g) => g !== "out").flatMap((g) =>
+                  members
+                    .filter((m) => groupOf(m) === g)
+                    .map((m) => ({ id: m.id, display_name: m.display_name, colour: m.colour, status: g as WhoFace["status"], you: m.id === me?.id, host: m.role === "organiser" }))
+                )}
+              >
                 {peopleList}
-              </section>
+              </WhoRow>
             ) : (
               <details className="db-card who" open={wrapped ? true : undefined}>
                 <summary className="who__summary">
@@ -554,6 +562,7 @@ export default async function PlanPage({ params, searchParams }: Props) {
                 readOnly={readOnly}
                 isHost={isHost}
                 max={MAX_TIMES}
+                planTime={plan.starts_at ? isoToLocal(plan.starts_at).slice(11, 16) : null}
                 startOpen={askWhen}
                 actions={{
                   markFree: markFree.bind(null, slug),
@@ -584,6 +593,7 @@ export default async function PlanPage({ params, searchParams }: Props) {
                   decide={isHost ? setPlace.bind(null, slug) : undefined}
                   closes={formatWhen(plan.vote_deadline)}
                   lock={isHost ? lockPlan.bind(null, slug) : undefined}
+                  maxPicks={picksAllowed(plan, options.length)}
                 />
               </section>
             )}

@@ -1,7 +1,9 @@
+import { randomBytes } from "node:crypto";
 import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { FORMER_MEMBER, makeSlug, pickColour } from "@dibs/shared/plans";
 import type { LoggedEvent } from "@dibs/shared/metrics";
+import { MULTI_VOTES, overLimit } from "@dibs/shared/votes";
 import type { Bill, BillShare, Message, NewMember, NewPlan, Plan, PlanMember, PlanOption, PlanPhoto, PlanTime, Store, Subscription, TimeVote, Vote, RecapAnswer, Reaction } from "./types";
 
 const PHOTO_BUCKET = "plan-photos";
@@ -56,6 +58,19 @@ export const supabaseStore: Store = {
   },
   async setSavedCategories(userId, labels) {
     must(await admin().from("profiles").update({ plan_categories: labels }).eq("user_id", userId));
+  },
+  async calendarFeedToken(userId, opts) {
+    if (!opts?.reset) {
+      const had = must(await admin().from("calendar_feeds").select("token").eq("user_id", userId).maybeSingle()) as { token: string } | null;
+      if (had) return had.token;
+    }
+    const token = randomBytes(24).toString("base64url");
+    must(await admin().from("calendar_feeds").upsert({ user_id: userId, token, created_at: new Date().toISOString() }));
+    return token;
+  },
+  async userForCalendarToken(token) {
+    const row = must(await admin().from("calendar_feeds").select("user_id").eq("token", token).maybeSingle()) as { user_id: string } | null;
+    return row?.user_id ?? null;
   },
   async answerBetaPrompt(userId) {
     must(await admin().from("profiles").update({ beta_prompt_answered_at: new Date().toISOString() }).eq("user_id", userId).is("beta_prompt_answered_at", null));
@@ -163,6 +178,7 @@ export const supabaseStore: Store = {
           starts_at: p.startsAt,
           vibe: p.vibe,
           plus_ones: p.plusOnes,
+          max_votes: MULTI_VOTES,
           status: p.venue ? "locked" : "voting",
           venue_place_id: p.venue?.placeId ?? null,
           venue_name: p.venue?.name ?? null,
@@ -241,8 +257,18 @@ export const supabaseStore: Store = {
     if (ids.length) must(await admin().from("votes").delete().eq("member_id", memberId).in("option_id", ids));
   },
   async castVote(_planId, optionId, memberId) {
-    // The one_vote_per_plan trigger removes their earlier vote on this plan.
+    // With one pick each, the one_vote_per_plan trigger removes their earlier vote on this plan.
+    // With more, it adds one, and refuses past the plan's max_votes (the action checks first).
     must(await admin().from("votes").upsert({ option_id: optionId, member_id: memberId }));
+  },
+  async uncastVote(_planId, optionId, memberId) {
+    must(await admin().from("votes").delete().eq("option_id", optionId).eq("member_id", memberId));
+  },
+  async trimVotes(planId, keep) {
+    const rows = must(
+      await admin().from("votes").select("option_id, member_id, created_at, options!inner(plan_id)").eq("options.plan_id", planId).order("created_at")
+    ) as { option_id: string; member_id: string }[];
+    for (const v of overLimit(rows, keep)) must(await admin().from("votes").delete().eq("option_id", v.option_id).eq("member_id", v.member_id));
   },
 
   async listMessages(planId, limit = 100) {

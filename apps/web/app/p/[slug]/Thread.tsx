@@ -1,6 +1,7 @@
 import type { Message, PlanMember, Vibe } from "@dibs/shared/types";
 import { REACTIONS, type Reaction } from "@/lib/store/types";
 import { DibbyMark } from "@/components/Logo";
+import { Dibby } from "@/components/Dibby";
 import { Monogram } from "@/components/Monogram";
 import { TZ } from "@/lib/time";
 import { Composer, ReadOnlyComposer } from "./Composer";
@@ -59,7 +60,7 @@ export function Thread({
           </p>
         )}
         {messages.length === 0 ? (
-          <p className="paragraph-sm muted thread__empty">Nothing yet. {canPost ? "Try “@dibby find us somewhere cheap”." : ""}</p>
+          <p className="paragraph-sm muted thread__empty"><Dibby mood="look" size="sm" className="thread__empty-dibby" />Nothing yet. {canPost ? "Try “@dibby find us somewhere cheap”." : ""}</p>
         ) : (
           <div className="db-chat" role="log" aria-live="polite">
             <Fresh>

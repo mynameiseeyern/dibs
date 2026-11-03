@@ -101,34 +101,34 @@
   --color-black-alpha-16: color-mix(in srgb, var(--static-black) 16%, transparent);
   --color-black-alpha-24: color-mix(in srgb, var(--static-black) 24%, transparent);
   --font-*: initial;
-  --font-display: "Bricolage Grotesque", Figtree, system-ui, sans-serif;
+  --font-display: "Bricolage Grotesque Variable", "Bricolage Grotesque", Figtree, system-ui, sans-serif;
   --font-sans: Figtree, "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
   --text-*: initial;
   --text-title-display: 56px;
   --text-title-display--line-height: 60px;
   --text-title-display--font-weight: 800;
-  --text-title-display--letter-spacing: -0.025em;
+  --text-title-display--letter-spacing: -0.015em;
   --text-title-h1: 44px;
   --text-title-h1--line-height: 48px;
   --text-title-h1--font-weight: 800;
-  --text-title-h1--letter-spacing: -0.02em;
+  --text-title-h1--letter-spacing: -0.01em;
   --text-title-h2: 36px;
   --text-title-h2--line-height: 42px;
   --text-title-h2--font-weight: 800;
-  --text-title-h2--letter-spacing: -0.015em;
+  --text-title-h2--letter-spacing: -0.01em;
   --text-title-h3: 30px;
   --text-title-h3--line-height: 36px;
   --text-title-h3--font-weight: 700;
-  --text-title-h3--letter-spacing: -0.01em;
+  --text-title-h3--letter-spacing: -0.005em;
   --text-title-h4: 24px;
   --text-title-h4--line-height: 30px;
   --text-title-h4--font-weight: 700;
-  --text-title-h4--letter-spacing: -0.01em;
+  --text-title-h4--letter-spacing: -0.005em;
   --text-title-h5: 20px;
   --text-title-h5--line-height: 26px;
   --text-title-h5--font-weight: 700;
-  --text-title-h5--letter-spacing: -0.005em;
+  --text-title-h5--letter-spacing: 0em;
   --text-title-h6: 18px;
   --text-title-h6--line-height: 24px;
   --text-title-h6--font-weight: 700;
@@ -220,6 +220,14 @@
   --ease-spring: var(--ease-spring);
   --ease-exit: var(--ease-exit);
 }
+
+.text-title-display { font-stretch: var(--font-width-title-lg); }
+.text-title-h1 { font-stretch: var(--font-width-title-lg); }
+.text-title-h2 { font-stretch: var(--font-width-title-lg); }
+.text-title-h3 { font-stretch: var(--font-width-title-lg); }
+.text-title-h4 { font-stretch: var(--font-width-title-md); }
+.text-title-h5 { font-stretch: var(--font-width-title-sm); }
+.text-title-h6 { font-stretch: var(--font-width-title-sm); }
 
 /* dark: follows the same rule as tokens.css: system dark unless data-theme="light", or data-theme="dark". */
 @custom-variant dark {

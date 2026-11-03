@@ -34,6 +34,12 @@ export function formatWhen(iso: string | null): string | null {
   return `${day} · ${time}`;
 }
 
+/** "Sat 7 Nov", the day only. */
+export function formatDay(iso: string | null): string | null {
+  if (!iso) return null;
+  return new Intl.DateTimeFormat("en-AU", { timeZone: TZ, weekday: "short", day: "numeric", month: "short" }).format(new Date(iso));
+}
+
 /** "Thu 7pm" style deadline for share messages. */
 export function formatShort(iso: string | null): string | null {
   if (!iso) return null;

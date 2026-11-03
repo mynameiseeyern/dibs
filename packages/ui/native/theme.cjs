@@ -105,6 +105,9 @@ module.exports = {
     "display": [
       "BricolageGrotesque_800ExtraBold"
     ],
+    "title": [
+      "BricolageGrotesqueTitle"
+    ],
     "display-bold": [
       "BricolageGrotesque_700Bold"
     ],
@@ -336,40 +339,40 @@ module.exports = {
   },
   "typeStyles": {
     ".text-title-display": {
-      "fontFamily": "BricolageGrotesque_800ExtraBold",
+      "fontFamily": "BricolageGrotesqueTitle",
       "fontSize": "56px",
       "lineHeight": "60px",
-      "letterSpacing": "-1.4px"
+      "letterSpacing": "-0.84px"
     },
     ".text-title-h1": {
-      "fontFamily": "BricolageGrotesque_800ExtraBold",
+      "fontFamily": "BricolageGrotesqueTitle",
       "fontSize": "44px",
       "lineHeight": "48px",
-      "letterSpacing": "-0.88px"
+      "letterSpacing": "-0.44px"
     },
     ".text-title-h2": {
-      "fontFamily": "BricolageGrotesque_800ExtraBold",
+      "fontFamily": "BricolageGrotesqueTitle",
       "fontSize": "36px",
       "lineHeight": "42px",
-      "letterSpacing": "-0.54px"
+      "letterSpacing": "-0.36px"
     },
     ".text-title-h3": {
-      "fontFamily": "BricolageGrotesque_700Bold",
+      "fontFamily": "BricolageGrotesqueTitle",
       "fontSize": "30px",
       "lineHeight": "36px",
-      "letterSpacing": "-0.3px"
+      "letterSpacing": "-0.15px"
     },
     ".text-title-h4": {
       "fontFamily": "BricolageGrotesque_700Bold",
       "fontSize": "24px",
       "lineHeight": "30px",
-      "letterSpacing": "-0.24px"
+      "letterSpacing": "-0.12px"
     },
     ".text-title-h5": {
       "fontFamily": "BricolageGrotesque_700Bold",
       "fontSize": "20px",
       "lineHeight": "26px",
-      "letterSpacing": "-0.1px"
+      "letterSpacing": "0px"
     },
     ".text-title-h6": {
       "fontFamily": "BricolageGrotesque_700Bold",

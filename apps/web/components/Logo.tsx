@@ -1,30 +1,35 @@
-// The V3 "hands up" mark: three friends, one popping up to call dibs.
+/**
+ * The app icon: Dibby waving, a 3D render. The master is packages/ui/assets/logos/dibby-icon-1024.png;
+ * the sizes under public/dibby are made by logos/export.py. Rounded like a home-screen icon.
+ */
 export function LogoMark({ size = 32, title }: { size?: number; title?: string }) {
+  // Phones are 3x, so a 32px mark needs a 96px file: never serve less than 3x.
   return (
-    <svg width={size} height={size} viewBox="0 0 200 200" role={title ? "img" : undefined} aria-label={title} aria-hidden={title ? undefined : true}>
-      <rect width="200" height="200" rx="48" fill="#6D4AFF" />
-      <g transform="translate(30 30)">
-        {/* Solid side friends (ARV-39), so the mark still reads at favicon size. */}
-        <circle cx="32" cy="88" r="22" fill="#DDD4FF" />
-        <circle cx="108" cy="88" r="22" fill="#DDD4FF" />
-        <circle cx="70" cy="52" r="26" fill="#C8F03C" />
-        <rect x="62" y="84" width="16" height="36" rx="8" fill="#C8F03C" />
-      </g>
-    </svg>
+    <img
+      src={size > 64 ? "/dibby/icon-512.png" : "/dibby/icon-192.png"}
+      width={size}
+      height={size}
+      alt={title ?? ""}
+      aria-hidden={title ? undefined : true}
+      className="logo-mark"
+      style={{ width: size, height: size, borderRadius: size * 0.24 }}
+      draggable={false}
+    />
   );
 }
 
-/** Dibby's avatar: the raised lime friend from the logo, with a face, on violet. Only for Dibby. */
+/** Dibby's avatar in the chat and member lists: the face from the icon, in a circle. Only for Dibby. */
 export function DibbyMark({ size = 32 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 200 200" aria-hidden="true">
-      <circle cx="100" cy="100" r="100" fill="#6D4AFF" />
-      <circle cx="100" cy="80" r="40" fill="#C8F03C" />
-      <rect x="86" y="116" width="28" height="46" rx="14" fill="#C8F03C" />
-      <circle cx="86" cy="76" r="6" fill="#6D4AFF" />
-      <circle cx="114" cy="76" r="6" fill="#6D4AFF" />
-      <path d="M84 92Q100 104 116 92" stroke="#6D4AFF" strokeWidth="7" strokeLinecap="round" fill="none" />
-    </svg>
+    <img
+      src="/dibby/face-256.png"
+      width={size}
+      height={size}
+      alt=""
+      aria-hidden="true"
+      style={{ width: size, height: size, borderRadius: "50%" }}
+      draggable={false}
+    />
   );
 }
 
@@ -37,7 +42,7 @@ export function Wordmark({ href = "/" }: { href?: string }) {
   );
 }
 
-/** Empty-state crew: three friends, the middle one waving. */
+/** Empty-state crew: three friends, the middle one waving. Being replaced by <Dibby mood="…" />. */
 export function CrewWave() {
   return (
     <svg viewBox="0 0 140 120" aria-hidden="true">
@@ -51,8 +56,8 @@ export function CrewWave() {
 }
 
 /**
- * "Dibby" meaning the helper: the name with Dibby's face, so it reads as someone in the group,
- * not the app. The app itself is the wordmark, and isn't called "Dibby" in running copy.
+ * "Dibby" meaning the helper: the name with Dibby's face, so it reads as someone in the group.
+ * The app's own surfaces (logo, emails, About) use the icon; running copy doesn't call the app Dibby.
  */
 export function DibbyName() {
   return (
