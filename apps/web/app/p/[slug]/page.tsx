@@ -295,7 +295,7 @@ export default async function PlanPage({ params, searchParams }: Props) {
 
   return (
     <>
-      <LiveRefresh version={liveVersion(plan, members.map(({ chat_seen_at, ...m }) => m), options, votes, messages)} />
+      <LiveRefresh planId={plan.id} version={liveVersion(plan, members.map(({ chat_seen_at, ...m }) => m), options, votes, messages)} />
       <main className="page plan-page">
         <header className="topbar">
           <Wordmark href={view.here.name ? "/home" : "/"} />
