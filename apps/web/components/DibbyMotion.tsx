@@ -38,9 +38,9 @@ export function DibbyMotion({ clip, loop, px, still, srcSet, webp, className, a1
     if (!gl) { setState("fallback"); return; }
 
     const vs = "attribute vec2 p;varying vec2 t;void main(){t=vec2(p.x*.5+.5,.5-p.y*.5);gl_Position=vec4(p,0.,1.);}";
-    // Colour from the top half, alpha from the bottom half, premultiplied. The smoothstep clears the
-    // last few levels of video noise in the matte so the background is truly empty.
-    const fs = "precision mediump float;uniform sampler2D s;varying vec2 t;void main(){vec3 c=texture2D(s,vec2(t.x,t.y*.5)).rgb;float a=smoothstep(.04,.96,texture2D(s,vec2(t.x,.5+t.y*.5)).r);gl_FragColor=vec4(c*a,a);}";
+    // Colour from the top half, alpha from the bottom half, premultiplied. The matte's
+    // anti-aliased edge is kept as is; only the bottom 2% (video noise) is cleared.
+    const fs = "precision mediump float;uniform sampler2D s;varying vec2 t;void main(){vec3 c=texture2D(s,vec2(t.x,t.y*.5)).rgb;float a=clamp((texture2D(s,vec2(t.x,.5+t.y*.5)).r-.02)/.96,0.,1.);gl_FragColor=vec4(c*a,a);}";
     const sh = (type: number, src: string) => { const h = gl.createShader(type)!; gl.shaderSource(h, src); gl.compileShader(h); return h; };
     const prog = gl.createProgram()!;
     gl.attachShader(prog, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(prog); gl.useProgram(prog);
