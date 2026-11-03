@@ -10,6 +10,7 @@ import { DibbyMark } from "@/components/Logo";
 import { PlaceCard } from "@/components/maps/PlaceCard";
 import { PlaceDetailsSheet } from "@/components/maps/PlaceDetailsSheet";
 import { GoogleMaps } from "@/components/maps/GoogleMaps";
+import { RestRowLead } from "./RestRowLead";
 import { DibbyWorking } from "@/components/DibbyWorking";
 import { locate } from "@/lib/locate";
 import * as Input from "@/components/ui/input";
@@ -271,22 +272,19 @@ export function VoteList({
       {/* Everyone else: one compact row each. Tap for Google's photos, stars and hours. */}
       {rest.length > 0 && (
         <>
-          <p className="vote-eyebrow">Also in the running</p>
+          <p className="vote-eyebrow vote-eyebrow--split">
+            Also in the running
+            {rest.some((r) => r.place_id) && <span className="vote-eyebrow__source">Photos from Google Maps</span>}
+          </p>
           <div className="db-card vote-rest">
             {rest.map((r) => (
               <div key={r.id} data-fresh-id={r.id} className="vote-row" data-mine={r.mine || undefined}>
                 <button type="button" className="vote-row__main" aria-label={`Photos and details for ${r.label}`} onClick={() => setViewing(r)}>
-                  <span className="vote-row__icon" aria-hidden="true">
-                    <i className={`${r.place_id ? "ri-store-2-line" : "ri-home-smile-line"} db-icon`} />
-                  </span>
-                  <span className="vote-row__text">
-                    <span className="label-md vote-row__name">{r.label}</span>
-                    <span className="paragraph-xs muted">
-                      {r.votes === 0 ? "No votes yet" : `${r.votes} ${r.votes === 1 ? "vote" : "votes"}`}
-                      {alsoTied(r) ? " · also tied" : ""}
-                    </span>
-                    <span className="paragraph-xs vote-row__more">Photos and details</span>
-                  </span>
+                  <RestRowLead
+                    placeId={r.place_id}
+                    label={r.label}
+                    meta={`${r.votes === 0 ? "No votes yet" : `${r.votes} ${r.votes === 1 ? "vote" : "votes"}`}${alsoTied(r) ? " · also tied" : ""}`}
+                  />
                 </button>
                 {canRemove(r) && moreMenu(r)}
                 {voteButton(r)}
