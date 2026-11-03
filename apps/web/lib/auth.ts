@@ -34,8 +34,11 @@ export async function currentOrganiser(): Promise<Organiser | null> {
     const id = (await cookies()).get(DEMO_COOKIE)?.value;
     return id ? { id, email: null } : null;
   }
-  const { data } = await (await supabaseAuth()).auth.getUser();
-  return data.user ? { id: data.user.id, email: data.user.email ?? null } : null;
+  // Verified from the session token (locally, with asymmetric signing keys) rather
+  // than a round trip to Supabase Auth on every render.
+  const { data } = await (await supabaseAuth()).auth.getClaims();
+  const claims = data?.claims;
+  return claims?.sub ? { id: claims.sub, email: typeof claims.email === "string" && claims.email ? claims.email : null } : null;
 }
 
 /** Demo mode only: sign in without email. */

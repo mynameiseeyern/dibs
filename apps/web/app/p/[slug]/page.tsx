@@ -16,6 +16,7 @@ import { Once } from "@/components/moments/Once";
 import { planStatus } from "@/lib/status";
 import { Monogram, MonogramStack } from "@/components/Monogram";
 import { LiveRefresh } from "@/components/LiveRefresh";
+import { liveVersion } from "@/lib/live-version";
 import { mapsLink } from "@/lib/places";
 import { closeIfDue } from "@/lib/plan-ops";
 import { nudgeIfDue } from "@/lib/nudges";
@@ -294,7 +295,7 @@ export default async function PlanPage({ params, searchParams }: Props) {
 
   return (
     <>
-      <LiveRefresh />
+      <LiveRefresh version={liveVersion(plan, members.map(({ chat_seen_at, ...m }) => m), options, votes, messages)} />
       <main className="page plan-page">
         <header className="topbar">
           <Wordmark href={view.here.name ? "/home" : "/"} />
