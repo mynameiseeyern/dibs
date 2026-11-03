@@ -8,6 +8,7 @@ import { redirect } from "next/navigation";
 import { BillError, formatAud, netDebts, rouletteAllowed, spinRoulette, splitBill } from "@dibs/shared/bills";
 import { store } from "@/lib/store";
 import { loadPlan } from "@/lib/viewer";
+import { theRecapNoun } from "@dibs/shared/daypart";
 
 export type FormState = { error?: string } | undefined;
 
@@ -41,7 +42,7 @@ export async function wrapUp(slug: string, form: FormData): Promise<void> {
     const shots = extraOn(view.plan, "photos") ? (await store.listPhotos(view.plan.id)).length : 0;
     if (shots > 0) {
       const where = extraOn(view.plan, "recap") ? "in the recap" : "on the plan";
-      await store.addMessage({ planId: view.plan.id, memberId: null, kind: "dibby", body: `The pics are in: ${shots} from the night. Have a look ${where}.` });
+      await store.addMessage({ planId: view.plan.id, memberId: null, kind: "dibby", body: `The pics are in: ${shots} from ${theRecapNoun(view.plan.starts_at)}. Have a look ${where}.` });
     }
   } else if (noBills !== view.plan.no_bills) {
     await store.updatePlan(view.plan.id, { no_bills: noBills });
