@@ -25,7 +25,10 @@ export const space = pick(tokens.spacing.tokens);
 export const radius = pick(tokens.radius.tokens.filter((t) => t.value.endsWith("px")));
 
 export const font = {
+  /** The wordmark and anything that should keep Bricolage's normal width. */
   display: "BricolageGrotesque_800ExtraBold",
+  /** Titles: Bricolage ExtraBold at its display optical size and 84% width, matching the web title-* styles. */
+  title: "BricolageGrotesqueTitle",
   sans: "Figtree_400Regular",
   sansMedium: "Figtree_500Medium",
   sansBold: "Figtree_600SemiBold",

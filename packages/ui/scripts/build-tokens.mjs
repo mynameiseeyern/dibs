@@ -22,7 +22,7 @@ for (const tok of t.shadow.tokens) {
   light.push(`  --${tok.name}: ${tok.value.light};`);
   dark.push(`  --${tok.name}: ${tok.value.dark};`);
 }
-for (const group of ["spacing", "radius", "size", "motion"]) {
+for (const group of ["spacing", "radius", "size", "motion", "fontWidth"]) {
   for (const tok of t[group].tokens) flat.push(`  --${tok.name}: ${tok.value};`);
 }
 for (const [k, v] of Object.entries(t.type.families)) flat.push(`  --font-${k}: ${v};`);
@@ -34,13 +34,14 @@ for (const g of t.type.groups) {
     typeClasses.push(
       `.${s.name} { font-family: ${fam}; font-size: ${s.fontSize}; line-height: ${s.lineHeight}; font-weight: ${s.fontWeight};${
         s.letterSpacing ? ` letter-spacing: ${s.letterSpacing};` : ""
-      }${s.textTransform ? ` text-transform: ${s.textTransform};` : ""} }`
+      }${s.fontWidth ? ` font-stretch: var(--${s.fontWidth});` : ""}${s.textTransform ? ` text-transform: ${s.textTransform};` : ""} }`
     );
   }
 }
 
 const css = `/* Generated from tokens.json by scripts/build-tokens.mjs. Do not edit by hand. */
-/* Fonts (Bricolage Grotesque, Figtree, DM Mono) are bundled by the app via @fontsource. */
+/* Fonts (Bricolage Grotesque, Figtree, DM Mono) are bundled by the app via @fontsource. Bricolage is the variable
+   font, so optical size follows font-size on its own and title styles set their width with font-stretch. */
 
 :root {
 ${flat.join("\n")}
@@ -119,12 +120,20 @@ for (const [name, v] of Object.entries({
 theme.push("  --ease-*: initial;");
 for (const tok of t.motion.tokens.filter((x) => x.name.startsWith("ease-"))) theme.push(`  --${tok.name}: var(--${tok.name});`);
 
+// Tailwind's text-* utilities can't carry font-stretch, so title widths are plain rules beside the theme.
+const widthRules = t.type.groups
+  .flatMap((g) => g.styles)
+  .filter((s) => s.fontWidth)
+  .map((s) => `.text-${s.name} { font-stretch: var(--${s.fontWidth}); }`);
+
 const themeCss = `/* Generated from tokens.json by scripts/build-tokens.mjs. Do not edit by hand. */
 /* Tailwind v4 theme for the AlignUI components in apps/web/components/ui. Import after "tailwindcss". */
 
 @theme inline {
 ${theme.join("\n")}
 }
+
+${widthRules.join("\n")}
 
 /* dark: follows the same rule as tokens.css: system dark unless data-theme="light", or data-theme="dark". */
 @custom-variant dark {

@@ -121,17 +121,17 @@ tokens = {
     "fonts": [
       {"family": "DM Mono", "file": "fonts/DMMono-Regular.ttf", "weight": "400", "style": "normal"},
       {"family": "DM Mono", "file": "fonts/DMMono-Medium.ttf", "weight": "500", "style": "normal"}],
-    "families": {"display": "\"Bricolage Grotesque\", Figtree, system-ui, sans-serif", "sans": "Figtree, \"DM Sans\", system-ui, -apple-system, \"Segoe UI\", sans-serif",
+    "families": {"display": "\"Bricolage Grotesque Variable\", \"Bricolage Grotesque\", Figtree, system-ui, sans-serif", "sans": "Figtree, \"DM Sans\", system-ui, -apple-system, \"Segoe UI\", sans-serif",
                  "mono": "\"DM Mono\", ui-monospace, \"SF Mono\", Menlo, monospace"},
     "groups": [
       {"name": "Title", "family": "display", "styles": [
-        {"name": "title-display", "fontSize": "56px", "lineHeight": "60px", "fontWeight": 800, "letterSpacing": "-0.025em", "sample": "suggest it, square up", "usage": "Marketing heroes on screens ≥ 768px. On phones use title-h2."},
-        {"name": "title-h1", "fontSize": "44px", "lineHeight": "48px", "fontWeight": 800, "letterSpacing": "-0.02em", "sample": "Friday dinner?", "usage": "Page hero on tablet/desktop. On phones step down to title-h3. Always sentence case or lowercase, never Title Case."},
-        {"name": "title-h2", "fontSize": "36px", "lineHeight": "42px", "fontWeight": 800, "letterSpacing": "-0.015em", "sample": "Who’s in?", "usage": "Section heroes; the largest title on phones."},
-        {"name": "title-h3", "fontSize": "30px", "lineHeight": "36px", "fontWeight": 700, "letterSpacing": "-0.01em", "sample": "Thai’s winning", "usage": "Page title on phones."},
-        {"name": "title-h4", "fontSize": "24px", "lineHeight": "30px", "fontWeight": 700, "letterSpacing": "-0.01em", "sample": "Up next", "usage": "Card and sheet titles."},
-        {"name": "title-h5", "fontSize": "20px", "lineHeight": "26px", "fontWeight": 700, "letterSpacing": "-0.005em", "sample": "Who’s coming", "usage": "Section headers inside cards, modal titles on phones."},
-        {"name": "title-h6", "fontSize": "18px", "lineHeight": "24px", "fontWeight": 700, "letterSpacing": "0em", "sample": "Your groups", "usage": "List group headers."}]},
+        {"name": "title-display", "fontSize": "56px", "lineHeight": "60px", "fontWeight": 800, "letterSpacing": "-0.015em", "opticalSize": 96, "fontWidth": "font-width-title-lg", "sample": "suggest it, square up", "usage": "Marketing heroes on screens ≥ 768px. On phones use title-h2."},
+        {"name": "title-h1", "fontSize": "44px", "lineHeight": "48px", "fontWeight": 800, "letterSpacing": "-0.01em", "opticalSize": 96, "fontWidth": "font-width-title-lg", "sample": "Friday dinner?", "usage": "Page hero on tablet/desktop. On phones step down to title-h3. Always sentence case or lowercase, never Title Case."},
+        {"name": "title-h2", "fontSize": "36px", "lineHeight": "42px", "fontWeight": 800, "letterSpacing": "-0.01em", "opticalSize": 96, "fontWidth": "font-width-title-lg", "sample": "Who’s in?", "usage": "Section heroes; the largest title on phones."},
+        {"name": "title-h3", "fontSize": "30px", "lineHeight": "36px", "fontWeight": 700, "letterSpacing": "-0.005em", "opticalSize": 72, "fontWidth": "font-width-title-lg", "sample": "Thai’s winning", "usage": "Page title on phones."},
+        {"name": "title-h4", "fontSize": "24px", "lineHeight": "30px", "fontWeight": 700, "letterSpacing": "-0.005em", "opticalSize": 72, "fontWidth": "font-width-title-md", "sample": "Up next", "usage": "Card and sheet titles."},
+        {"name": "title-h5", "fontSize": "20px", "lineHeight": "26px", "fontWeight": 700, "letterSpacing": "0em", "opticalSize": 32, "fontWidth": "font-width-title-sm", "sample": "Who’s coming", "usage": "Section headers inside cards, modal titles on phones."},
+        {"name": "title-h6", "fontSize": "18px", "lineHeight": "24px", "fontWeight": 700, "letterSpacing": "0em", "opticalSize": 24, "fontWidth": "font-width-title-sm", "sample": "Your groups", "usage": "List group headers."}]},
       {"name": "Label", "family": "sans", "styles": [
         {"name": "label-lg", "fontSize": "18px", "lineHeight": "24px", "fontWeight": 600, "letterSpacing": "-0.01em", "sample": "Lock it in", "usage": "Large buttons, prominent row titles."},
         {"name": "label-md", "fontSize": "16px", "lineHeight": "22px", "fontWeight": 600, "letterSpacing": "-0.005em", "sample": "I’m in", "usage": "Default buttons, form labels, list row titles. The workhorse."},
@@ -172,6 +172,10 @@ tokens = {
     {"name": "size-control-lg", "value": "52px", "usage": "Large buttons: the one main action at the bottom of a phone screen."},
     {"name": "size-control-md", "value": "44px", "usage": "Default buttons and inputs."},
     {"name": "size-control-sm", "value": "36px", "usage": "Compact buttons inside cards on desktop; pad the hit area to size-tap on touch."}]},
+  "fontWidth": {"note": "Bricolage Grotesque's width axis for title styles, applied as font-stretch. Fonts without a width axis (Figtree, DM Mono) ignore it.", "tokens": [
+    {"name": "font-width-title-lg", "value": "84%", "usage": "title-display to title-h3: the condensed display look."},
+    {"name": "font-width-title-md", "value": "86%", "usage": "title-h4: card and sheet titles."},
+    {"name": "font-width-title-sm", "value": "90%", "usage": "title-h5 and title-h6: small headers stay closer to normal width so they read easily."}]},
   "motion": {"note": "Animate only to show cause and effect or to reward a moment. Nothing loops in the background. Under prefers-reduced-motion, 3D moments become a still and a fade.", "tokens": [
     {"name": "motion-fast", "value": "150ms", "usage": "Hover, press, toggles."},
     {"name": "motion-base", "value": "250ms", "usage": "Most transitions: cards appearing, values changing, tabs."},
