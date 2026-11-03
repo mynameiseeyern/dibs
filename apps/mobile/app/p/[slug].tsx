@@ -45,7 +45,7 @@ export default function PlanScreen() {
       <ScrollView contentContainerStyle={{ padding: space["space-4"], gap: space["space-4"] }}>
         <View style={{ backgroundColor: colour["bg-white-0"], borderRadius: radius["radius-lg"], padding: space["space-4"], gap: space["space-2"] }}>
           {plan.category ? <Text style={{ fontFamily: font.sansMedium, fontSize: 13, color: colour["primary-base"] }}>{plan.category}</Text> : null}
-          <Text style={{ fontFamily: font.display, fontSize: 32, lineHeight: 36, color: colour["text-strong-950"] }}>{plan.title}</Text>
+          <Text style={{ fontFamily: font.title, fontSize: 32, lineHeight: 36, color: colour["text-strong-950"] }}>{plan.title}</Text>
           {facts ? body(facts, "strong") : null}
           {body(plan.status === "cancelled" ? "Called off." : spots)}
           {plan.description ? body(plan.description) : null}

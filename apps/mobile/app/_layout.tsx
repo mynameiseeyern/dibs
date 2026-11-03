@@ -10,7 +10,14 @@ SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const { mode, colour } = useTheme();
-  const [loaded] = useFonts({ BricolageGrotesque_800ExtraBold, Figtree_400Regular, Figtree_500Medium, Figtree_600SemiBold });
+  const [loaded] = useFonts({
+    BricolageGrotesque_800ExtraBold,
+    // React Native can't set variable-font axes, so the condensed title cut is a static file (see assets/fonts/README.md).
+    BricolageGrotesqueTitle: require("../assets/fonts/BricolageGrotesque-Title.ttf"),
+    Figtree_400Regular,
+    Figtree_500Medium,
+    Figtree_600SemiBold,
+  });
 
   useEffect(() => {
     if (loaded) SplashScreen.hideAsync();

@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 // Fonts are bundled (no Google request at build or run time).
-import "@fontsource/bricolage-grotesque/latin-700.css";
-import "@fontsource/bricolage-grotesque/latin-800.css";
+// Bricolage is the variable font with its weight, width and optical-size axes (title styles set the width).
+import "@fontsource-variable/bricolage-grotesque/standard.css";
 import "@fontsource/figtree/latin-400.css";
 import "@fontsource/figtree/latin-500.css";
 import "@fontsource/figtree/latin-600.css";

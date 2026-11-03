@@ -25,6 +25,10 @@ Dibby is the friend-group app where a crew talks, decides, turns up and squares 
 
 **Type.** Three faces, each with one job.
 - Headings `title-*` in Bricolage Grotesque, the wordmark’s face: heavy, a bit quirky.
+  - Push it past the default cut. Bricolage is the variable font, so big headings get its display optical size (sharper ink traps) on their own.
+  - Titles are slightly condensed: `font-stretch: var(--font-width-title-lg)` (84%) for `title-display` to `title-h3`, `--font-width-title-md` (86%) for `title-h4` and `--font-width-title-sm` (90%) for `title-h5` and `title-h6`. The `title-*` and `text-title-*` classes set this for you; hand-written CSS using `font:` must set `font-stretch` after it, since the shorthand resets it.
+  - Keep the tracking gentle (−1% at most). Tighter and the heavy letters touch.
+  - The wordmark keeps the normal width. In the native app use `font.title` for titles and `font.display` only for the wordmark.
 - Everything else in Figtree (`label-*`, `paragraph-*`, `subheading-*`), with DM Sans as the fallback.
 - Money and codes in DM Mono (`number-*`, `code`) so digits line up.
 - Body is `paragraph-md` (16px/26px), and reading text on phones is never smaller. Buttons and labels use `label-md`.

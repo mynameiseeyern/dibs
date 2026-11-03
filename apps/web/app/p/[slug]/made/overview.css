@@ -17,7 +17,7 @@
 .ov-row__val--add { color: var(--primary-dark); }
 .ov-row__pen { flex: none; font-size: 18px; color: var(--text-sub-600); }
 .ov-row--title { padding-top: var(--space-4); padding-bottom: var(--space-4); }
-.ov-row--title .ov-row__val { font: 700 30px/36px var(--font-display); letter-spacing: -0.01em; }
+.ov-row--title .ov-row__val { font: 700 30px/36px var(--font-display); font-stretch: var(--font-width-title-lg); letter-spacing: -0.005em; }
 .ov-more { align-self: flex-start; margin-left: calc(var(--space-5) * -1); }
 
 /* Keep this plan: asked once it exists, like Shop's "Connect email" card. */
