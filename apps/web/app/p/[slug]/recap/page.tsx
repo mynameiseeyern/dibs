@@ -7,6 +7,7 @@ import { formatWhen } from "@/lib/time";
 import { loadPlan } from "@/lib/viewer";
 import { saveRecap } from "./actions";
 import { RecapForm } from "./RecapForm";
+import { theRecapNoun } from "@dibs/shared/daypart";
 import * as Button from "@/components/ui/button";
 import { planPreview } from "@/lib/plan-preview";
 import { loadRoll } from "@/lib/photos";
@@ -88,6 +89,7 @@ export default async function Recap({ params }: { params: Promise<{ slug: string
         action={saveRecap.bind(null, slug)}
         people={came.filter((m) => m.id !== me.id).map((m) => ({ id: m.id, first: m.display_name.split(" ")[0] ?? m.display_name, initials: monogram(m.display_name), colour: m.colour }))}
         initial={{ stars: mine?.stars ?? null, best: mine?.best_moment ?? null, mvp: mine?.mvp_member_id ?? null }}
+        noun={theRecapNoun(plan.starts_at)}
       />
 
       {answers.length > 0 && (

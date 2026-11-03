@@ -8,6 +8,7 @@
     "./types": "./src/types.ts",
     "./plans": "./src/plans.ts",
     "./when": "./src/when.ts",
+    "./daypart": "./src/daypart.ts",
     "./metrics": "./src/metrics.ts",
     "./photos": "./src/photos.ts",
     "./api": "./src/api.ts",

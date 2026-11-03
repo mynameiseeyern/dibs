@@ -22,7 +22,7 @@ export default function Privacy() {
         </li>
         <li>
           <strong>Your PayID and the name on it,</strong> if you add them, so people who owe you can pay you. Only people with a share on a bill you
-          paid, who were confirmed as there on the night, can see it.
+          paid, who were confirmed as there on the day, can see it.
         </li>
         <li>
           <strong>What you do on a plan:</strong> your RSVP, votes, the times you&rsquo;re free, places you add, chat messages, reactions, bills and

@@ -45,6 +45,7 @@ import { planPreview } from "@/lib/plan-preview";
 import * as Button from "@/components/ui/button";
 import * as Badge from "@/components/ui/badge";
 import * as Alert from "@/components/ui/alert";
+import { theRecapNoun } from "@dibs/shared/daypart";
 
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ when?: string; kept?: string }> };
 
@@ -452,7 +453,7 @@ export default async function PlanPage({ params, searchParams }: Props) {
 
         {/* After the night: the money and the recap, for people who came. */}
         {wrapped && me?.attended && (billsOn || recapOn) && (
-          <section className="wrap-links" aria-label="After the night">
+          <section className="wrap-links" aria-label="Afterwards">
             {billsOn && !allSquare && !(plan.no_bills && bills.length === 0) && (
               <a className="db-card db-card--violet section link-card" href={`/p/${slug}/bills`}>
                 <strong className="title-h4">Square up</strong>
@@ -471,7 +472,7 @@ export default async function PlanPage({ params, searchParams }: Props) {
             <a className={`db-card section link-card recap-teaser${!iAnswered ? " recap-teaser--ask" : ""}`} href={`/p/${slug}/recap`}>
               <span className="subheading-sm eyebrow">The recap</span>
               {recap.length === 0 ? (
-                <strong className="title-h4">How was it? Rate the night.</strong>
+                <strong className="title-h4">How was it? Rate {theRecapNoun(plan.starts_at)}.</strong>
               ) : (
                 <>
                   <div className="recap-teaser__stats">

@@ -93,7 +93,7 @@ const DRAFT_TOOL: Tool = {
       starts_at_local: {
         type: ["string", "null"],
         description:
-          "Start in Sydney local time as YYYY-MM-DDTHH:mm. Only when the organiser named a day: look the date up in the calendar ('Friday' is the next Friday; 'this weekend' is the coming Saturday). For the time use what they said; if they named a meal but no time use brunch 11:00, lunch 12:30, arvo 15:00, drinks 18:00, dinner 19:00. If they gave no day, null. Never make up a day or a time.",
+          "Start in Sydney local time as YYYY-MM-DDTHH:mm. Only when the organiser named a day: look the date up in the calendar ('Friday' is the next Friday; 'this weekend' is the coming Saturday). For the time use what they said; if they named a part of the day or a meal but no time use super early 06:00, morning or brekkie 09:00, brunch 11:00, midday 12:00, lunch 12:30, arvo 15:00, evening or drinks 18:00, dinner 19:00, night 20:00, late 22:00. If they gave no day, null. Never make up a day or a time.",
       },
       search_query: { type: "string", description: "What to search for venues, e.g. 'cheap dumplings' or 'casual dinner'. Include the cuisine or activity and any budget words." },
       reply: {
