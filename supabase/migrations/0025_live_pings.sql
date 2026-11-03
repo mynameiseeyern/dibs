@@ -34,7 +34,12 @@ begin
   end if;
 
   if pid is not null then
-    perform realtime.send('{}'::jsonb, 'changed', 'plan:' || pid::text, false);
+    -- A failed ping must never block the write that caused it.
+    begin
+      perform realtime.send('{}'::jsonb, 'changed', 'plan:' || pid::text, false);
+    exception when others then
+      raise warning 'ping_plan: %', sqlerrm;
+    end;
   end if;
   return null;
 end;
