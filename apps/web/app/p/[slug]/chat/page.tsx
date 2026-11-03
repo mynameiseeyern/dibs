@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { extraOn, planAccess, READ_ONLY_NOTE } from "@dibs/shared/plans";
 import * as Button from "@/components/ui/button";
 import { LiveRefresh } from "@/components/LiveRefresh";
+import { liveVersion } from "@/lib/live-version";
 import { store } from "@/lib/store";
 import { formatWhen } from "@/lib/time";
 import { loadPlan } from "@/lib/viewer";
@@ -31,7 +32,7 @@ export default async function Chat({ params }: { params: Promise<{ slug: string 
 
   return (
     <>
-      <LiveRefresh />
+      <LiveRefresh version={liveVersion(plan, members.map(({ chat_seen_at, ...m }) => m), messages, reactions)} />
       <MarkSeen latest={messages.at(-1)?.id ?? null} mark={markChatSeen.bind(null, slug)} />
       <main className="page chat-page">
         <header className="topbar">

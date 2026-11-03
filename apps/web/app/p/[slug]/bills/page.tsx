@@ -5,6 +5,7 @@ import { formatAud, netDebts } from "@dibs/shared/bills";
 import type { Bill, BillShare, PlanMember } from "@dibs/shared/types";
 import { CopyButton } from "@/components/CopyButton";
 import { LiveRefresh } from "@/components/LiveRefresh";
+import { liveVersion } from "@/lib/live-version";
 import { Monogram } from "@/components/Monogram";
 import { store } from "@/lib/store";
 import { loadPlan } from "@/lib/viewer";
@@ -154,7 +155,7 @@ export default async function Bills({ params, searchParams }: Props) {
 
   return (
     <>
-      <LiveRefresh />
+      <LiveRefresh version={liveVersion(plan, members.map(({ chat_seen_at, ...m }) => m), bills, shares)} />
       <main className="page">
         {back}
         <div className="section">
