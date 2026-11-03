@@ -256,7 +256,7 @@ export function PlanFlow({ organising, intro, searchPass }: { organising: Organi
           </header>
           <div className="pf-intro__body">
             <div className="pf-hello">
-              <img className="pf-hello__dibby" src="/dibby/stills/wave@320.png" srcSet="/dibby/stills/wave@320.png 320w, /dibby/stills/wave@480.png 480w" sizes="148px" alt="Dibby saying hi" width={148} height={148} />
+              <img className="pf-hello__dibby" src="/dibby/stills/wave@480.png" srcSet="/dibby/stills/wave@480.png 480w, /dibby/stills/wave@720.png 720w" sizes="148px" alt="Dibby saying hi" width={148} height={148} />
               <p className="pf-hello__hi">Hey, I&rsquo;m Dibby!</p>
             </div>
             <h1 id="pf-intro-h" className="title-h2">
