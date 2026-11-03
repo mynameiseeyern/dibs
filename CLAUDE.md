@@ -14,7 +14,7 @@ Build plan: https://claude.ai/artifact/2Lce9vh9ZvGunTKngL6sWX · Linear project 
 - `pnpm dev` — web app on :3000 (in-memory demo store if Supabase env is empty)
 - `pnpm test` — bill maths, plan start times and RSVP access (Vitest, `packages/shared`). Keep them passing.
 - `pnpm build`, `pnpm typecheck`
-- `pnpm tokens` — regenerate `packages/ui/src/tokens.css` and `tailwind-theme.css` from `packages/ui/tokens.json`
+- `pnpm tokens` — regenerate `packages/ui/src/tokens.css`, `tailwind-theme.css` and the native app's theme (`packages/ui/native/`) from `packages/ui/tokens.json`
 
 ## Design system
 
@@ -23,6 +23,7 @@ In this repo: read `packages/ui/docs/brand-book.md` before building UI, and `pac
 Open `packages/ui/design-system/index.html` in a browser to see every component rendered. Token values come from `packages/ui/scripts/gen-tokens.py` (see `packages/ui/README.md`).
 
 - Components are AlignUI (React + Tailwind v4), themed to Dibby: `apps/web/components/ui/*` (`import * as Button from "@/components/ui/button"`). All 51 from the AlignUI starter are there (Button, Input, Select, Datepicker, Popover, Dropdown, Drawer, Modal (the bottom sheet), Toast `toast.success(…)` and the rest), so use one before hand-building a control. See them all at `/ui` in dev and on preview deploys.
+- The native app has the same components, ported to React Native with NativeWind: `apps/mobile/components/ui/*` (same file names and `import * as Button from "@/components/ui/button"` API), and the Dibby-only pieces in `apps/mobile/components/dibby/*`. Same class names as the web (`bg-bg-white-0 text-label-md rounded-lg`), from the theme `pnpm tokens` generates. Strings go inside components or `<Text>`, never bare in a `View`. Icons are `<Icon name="calendar-line" />`. See every one at `/ui` in the dev app. Change a component in both places when it applies to both.
 - Picking a day and time: `components/DateTime.tsx` (`DayStrip`, `DatePopover`, `TimeSelect`, `DateTimeField`). Values are Sydney wall-clock strings.
 - Their Tailwind theme (`packages/ui/src/tailwind-theme.css`) is generated from `tokens.json` by `pnpm tokens`, so `bg-primary-base`, `text-label-sm`, `rounded-lg` etc. are Dibby values. To change a component's look, edit its `tv()` styles in `components/ui`, not the app.
 - Dibby-only pieces with no AlignUI equivalent stay as `.db-` classes in `packages/ui/src/components.css`: card, plan card, vote option, bill split, chat bubble, stack/row, icon. The other `.db-` classes there are superseded by the components above.
