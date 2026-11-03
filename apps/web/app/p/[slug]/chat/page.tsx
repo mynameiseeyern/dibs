@@ -32,7 +32,7 @@ export default async function Chat({ params }: { params: Promise<{ slug: string 
 
   return (
     <>
-      <LiveRefresh version={liveVersion(plan, members.map(({ chat_seen_at, ...m }) => m), messages, reactions)} />
+      <LiveRefresh planId={plan.id} version={liveVersion(plan, members.map(({ chat_seen_at, ...m }) => m), messages, reactions)} />
       <MarkSeen latest={messages.at(-1)?.id ?? null} mark={markChatSeen.bind(null, slug)} />
       <main className="page chat-page">
         <header className="topbar">

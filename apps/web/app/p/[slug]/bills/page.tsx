@@ -155,7 +155,7 @@ export default async function Bills({ params, searchParams }: Props) {
 
   return (
     <>
-      <LiveRefresh version={liveVersion(plan, members.map(({ chat_seen_at, ...m }) => m), bills, shares)} />
+      <LiveRefresh planId={plan.id} version={liveVersion(plan, members.map(({ chat_seen_at, ...m }) => m), bills, shares)} />
       <main className="page">
         {back}
         <div className="section">
