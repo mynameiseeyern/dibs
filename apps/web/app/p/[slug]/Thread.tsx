@@ -15,6 +15,8 @@ import * as Badge from "@/components/ui/badge";
 import * as Avatar from "@/components/ui/avatar";
 import { PlaceTiles } from "@/components/maps/PlaceTiles";
 import { placesOf } from "@/lib/place-ids";
+import { areaChoices, askOf, memoOf } from "@/lib/area";
+import { WhereChips } from "./WhereChips";
 
 const time = (iso: string) => new Intl.DateTimeFormat("en-AU", { timeZone: TZ, weekday: "short", hour: "numeric", minute: "2-digit" }).format(new Date(iso));
 
@@ -49,6 +51,9 @@ export function Thread({
 }) {
   const byId = new Map(members.map((m) => [m.id, m]));
   let lastStamp = 0;
+  // Only Dibby's latest message gets the area chips, so old ones don't pile up in the chat.
+  const lastDibby = [...messages].reverse().find((m) => m.kind === "dibby");
+  const areasUsed = areaChoices([...messages].reverse().map((m) => (m.kind === "dibby" ? memoOf(m.template)?.area : null)), null);
   return (
     <section className="section" aria-labelledby="thread-h">
       <h2 id="thread-h" className="sr-only">Plan chat</h2>
@@ -92,6 +97,7 @@ export function Thread({
                         <PlaceTiles
                           places={placesOf(m.template).map((id) => ({ placeId: id, name: placeNames?.[id] ?? "A place Dibby found", onVote: Boolean(placeNames?.[id]) }))}
                         />
+                        {canPost && !readOnly && m.id === lastDibby?.id && <Where template={m.template} areas={areasUsed} post={post} />}
                         <Reactions messageId={m.id} all={reactions} meId={meId} react={react} />
                       </div>
                     </div>
@@ -128,6 +134,15 @@ export function Thread({
       </div>
     </section>
   );
+}
+
+/** Under Dibby's latest message: its "where abouts?" chips, or where it just looked. */
+function Where({ template, areas, post }: { template: unknown; areas: string[]; post: (s: FormState, f: FormData) => Promise<FormState> }) {
+  const ask = askOf(template);
+  if (ask) return <WhereChips mode="ask" query={ask.query} areas={ask.areas.length ? ask.areas : areas} post={post} />;
+  const memo = memoOf(template);
+  if (!memo) return null;
+  return <WhereChips mode="brief" query={memo.query} lookedIn={memo.area} areas={areas} post={post} />;
 }
 
 /** Dibby's message, with a button when it points to another plan. */

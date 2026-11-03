@@ -18,6 +18,7 @@ import { DIBBY_HEADS_UP, planLinkLine } from "@/lib/thread-links";
 import { getPlace } from "@/lib/places";
 import { readNear } from "@/lib/near";
 import { withPlaces } from "@/lib/place-ids";
+import { areaChoices, withAsk } from "@/lib/area";
 import { track } from "@/lib/events";
 import { report } from "@/lib/report";
 
@@ -232,8 +233,9 @@ async function runDibby(planId: string, slug: string, ask: string, asker: PlanMe
       body = `${out.reply}\n${planLinkLine(created.slug)}`;
     }
     // Remember where Dibby looked, so "how about korean?" next time searches the same place.
-    // The places it added show as tiles under its reply.
-    await store.addMessage({ planId, memberId: null, kind: "dibby", body, template: withPlaces(out.searched, added) });
+    // The places it added show as tiles under its reply; if it asked where, the areas show as chips.
+    const where = out.ask ? { ...out.ask, areas: areasSeen(recent, view.plan.area) } : null;
+    await store.addMessage({ planId, memberId: null, kind: "dibby", body, template: withAsk(withPlaces(out.searched, added), where) });
   } catch (e) {
     report("dibby", e);
     await store.addMessage({ planId, memberId: null, kind: "dibby", body: BRB });
@@ -341,7 +343,7 @@ export async function addOption(slug: string, _prev: FormState, form: FormData):
  * Dibby adds up to three more real spots to an open vote. Anyone who can add a place can ask;
  * the ask and Dibby's reply go in the chat like any other @dibby message.
  */
-export async function askDibbyMore(slug: string, form: FormData): Promise<{ error?: string; added?: string[] }> {
+export async function askDibbyMore(slug: string, form: FormData): Promise<{ error?: string; added?: string[]; asked?: boolean }> {
   const view = await loadPlan(slug);
   if (!view?.me) return { error: "Join the plan first." };
   if (view.plan.status !== "voting") return { error: "Voting's closed." };
@@ -367,6 +369,18 @@ export async function askDibbyMore(slug: string, form: FormData): Promise<{ erro
   const room = Math.max(0, 8 - options.length);
   const venues = more.venues.slice(0, room);
   await store.addMessage({ planId: view.plan.id, memberId: view.me.id, kind: "text", body: `@dibby ${ask || "more options?"}`, mentionsDibby: true });
+  if (more.ask) {
+    // Didn't know where to look: ask, with the areas this plan has used as chips.
+    await store.addMessage({
+      planId: view.plan.id,
+      memberId: null,
+      kind: "dibby",
+      body: more.reply,
+      template: withAsk(undefined, { ...more.ask, areas: areasSeen(recent, view.plan.area) }),
+    });
+    revalidatePlan(slug);
+    return { added: [], asked: true };
+  }
   for (const v of venues) await store.addOption({ planId: view.plan.id, label: v.name, placeId: v.placeId, note: v.address });
   const names = venues.map((v) => v.name);
   const body = venues.length
@@ -501,4 +515,10 @@ export async function removeMyPhoto(slug: string, photoId: string): Promise<{ er
   revalidatePlan(slug);
   revalidatePath(`/p/${slug}/recap`);
   return {};
+}
+
+/** Areas to offer when Dibby asks where: ones this plan's chat has looked in, latest first. */
+function areasSeen(recent: { kind: string; template?: unknown }[], planArea: string | null): string[] {
+  const seen = [...recent].reverse().map((m) => (m.kind === "dibby" ? asSearchMemo(m.template)?.area : null));
+  return areaChoices(seen, planArea);
 }

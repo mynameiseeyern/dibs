@@ -58,7 +58,7 @@ export function VoteList({
   /** The plan's area, to start the map search near it. */
   area?: string | null;
   /** Dibby adds up to three more spots. Set when this person can add places and Dibby's on. */
-  askDibby?: (f: FormData) => Promise<{ error?: string; added?: string[] }>;
+  askDibby?: (f: FormData) => Promise<{ error?: string; added?: string[]; asked?: boolean }>;
   /** Host only: skip the vote and lock in a place from the map. */
   decide?: (pick: string | CustomPlace) => Promise<{ error?: string }>;
   /** Host only: close the vote now and go with whatever's in front. */
@@ -371,6 +371,7 @@ export function VoteList({
                   const res = await askDibby!(f);
                   setAsking(false);
                   if (res.error) toast.error(res.error);
+                  else if (res.asked) toast.info("Dibby needs an area. Pick one in the chat");
                   else if (res.added?.length) toast.success(`Dibby added ${res.added.length} more to the vote`);
                   else toast.info("Dibby couldn't find anything new for that");
                   setAsk("");
