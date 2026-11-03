@@ -24,8 +24,9 @@ cx, cy = (lo + hi) / 2 * k
 side = max(hi - lo) * k * 1.12                       # a little room around the furthest reach
 side = min(side, W); x0 = int(np.clip(cx - side / 2, 0, W - side)); y0 = int(np.clip(cy - side / 2, 0, W - side)); side = int(side)
 print(name, "crop", side, "px square at", x0, y0, "of", W)
-# Pass 2: the tight square, at 720.
-subprocess.run(["ffmpeg","-loglevel","error","-y","-i",src,"-vf",f"crop={side}:{side}:{x0}:{y0},scale=720:720:flags=lanczos",f"{tmp}/f%04d.png"],check=True)
+# Pass 2: the tight square at full resolution. Keying here and shrinking afterwards is what gives
+# soft, anti-aliased edges; keying after shrinking leaves stair-steps.
+subprocess.run(["ffmpeg","-loglevel","error","-y","-i",src,"-vf",f"crop={side}:{side}:{x0}:{y0}",f"{tmp}/f%04d.png"],check=True)
 files = sorted(f for f in os.listdir(tmp) if f.startswith("f") and f.endswith(".png"))
 frames = []
 for f in files:
@@ -39,11 +40,14 @@ for f in files:
     holes = ndimage.binary_fill_holes(alpha > 0.5) & ~(alpha > 0.5)
     dark = a.max(2) < 150
     alpha = np.where(holes & dark, 1.0, alpha)
-    alpha = ndimage.gaussian_filter(alpha, 0.5)
+    alpha = ndimage.gaussian_filter(alpha, 0.7)
     solid = alpha > 0.98
     idx = ndimage.distance_transform_edt(~solid, return_distances=False, return_indices=True)
     rgb = a[idx[0], idx[1]]
-    frames.append((rgb.astype("uint8"), (alpha * 255).astype("uint8")))
+    # Shrink to 720 now: the edge pixels average into partial alpha, i.e. anti-aliasing.
+    rgb_s = Image.fromarray(np.clip(rgb, 0, 255).astype("uint8"), "RGB").resize((720, 720), Image.LANCZOS)
+    a_s = Image.fromarray((alpha * 255).astype("uint8"), "L").resize((720, 720), Image.BOX)
+    frames.append((np.array(rgb_s), np.array(a_s)))
 if loop:
     n = 10
     for i in range(n):
