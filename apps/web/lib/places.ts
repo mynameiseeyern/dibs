@@ -1,4 +1,5 @@
 import "server-only";
+import { kmBetween, NEAR_KM } from "./area";
 
 export interface Venue {
   placeId: string | null;
@@ -102,7 +103,9 @@ export async function searchPlaces(query: string, near: { lat: number; lng: numb
     return (data.places ?? [])
       .filter((p) => !p.businessStatus || p.businessStatus === "OPERATIONAL")
       .map(toPlace)
-      .filter((p): p is Place => p !== null);
+      .filter((p): p is Place => p !== null)
+      // The bias is only a hint, so a strong match across town still comes back. Drop those.
+      .filter((p) => !near || kmBetween(near, p) <= NEAR_KM);
   } catch {
     return null;
   }

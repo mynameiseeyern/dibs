@@ -3,6 +3,7 @@ import type { Message, Plan, PlanMember, PlanOption, Vibe } from "@dibs/shared/t
 import { searchPlaces, searchVenues, type Venue } from "./places";
 import { TZ } from "./time";
 import { resolveStart, sydneyDate } from "@dibs/shared/when";
+import { qualifyArea, type WhereAsk } from "./area";
 
 // Dibby: Claude Haiku with tools. Reads only messages that tag @dibby (plus recent context),
 // keeps no memory between plans, never talks about money owed or anything personal.
@@ -65,7 +66,9 @@ Rules:
 - Keep replies to one to three short sentences. Australian spelling.
 - Banter is playful, never personal: you can tease about RSVPs and lateness only.
 - Never mention who owes money, amounts owed, looks, health, or anything sensitive.
+- Say what and where, not what you're doing or who asked. Not "Someone's after more options, so I've gone hunting". Yes "Asian fusion in the CBD, coming up".
 - If you can't find options, say so and ask one question (area or budget). Don't make up venues as if you checked them.
+- Never guess where the crew is. If you don't know where to look, ask; the app shows area chips under your reply.
 - You can't book, pay, or message anyone outside this plan.
 - If someone asks what they missed or for a catch-up, sum up the recent messages and the plan's state in at most two sentences: decisions, changes, who's in. Never repeat money owed, private details, or anyone's exact words at length.`;
 
@@ -177,7 +180,10 @@ const MORE_TOOL: Tool = {
     properties: {
       search_query: { type: "string", description: "What to search for venues, e.g. 'cheap dumplings' or 'rooftop bar'. Include the cuisine or activity and any budget words." },
       area: { type: ["string", "null"], description: "Only if the ask names a place ('ramen in Tokyo' → 'Tokyo'). Otherwise null and the app keeps looking where it was." },
-      reply: { type: "string", description: "One short line to the group, in the vibe's voice, introducing the new options (don't list them, the app does). Say where you looked." },
+      reply: {
+        type: "string",
+        description: "One short line to the group, in the vibe's voice, naming what and where, e.g. 'Asian fusion in the CBD, coming up'. Don't list the places (the app does) and don't say who asked.",
+      },
     },
     required: ["search_query", "area", "reply"],
   },
@@ -193,16 +199,19 @@ export async function suggestMore(
   area: string | null,
   have: { placeId: string | null; label: string }[],
   near: { lat: number; lng: number } | null = null
-): Promise<{ venues: Venue[]; reply: string; query: string; area: string | null; near: boolean }> {
-  const where = area ? `We're looking in ${area}.` : near ? "We're looking near the asker (the app has their location)." : "";
+): Promise<{ venues: Venue[]; reply: string; query: string; area: string | null; near: boolean; ask: WhereAsk | null }> {
+  const where = area ? `We're looking in ${area}.` : near ? "We're looking near the asker (the app has their location)." : "Nobody has said where yet.";
   const content = `The vote already has: ${have.map((h) => h.label).join(", ") || "nothing yet"}. ${where}\nSomeone asked for more: ${ask.slice(0, 500) || "more like these"}`;
   const res = await claude(`${RULES}\nVoice: ${VOICE[vibe]}`, [{ role: "user", content }], [MORE_TOOL], { type: "tool", name: "find_places" });
   const call = res.content.find((b): b is Extract<Block, { type: "tool_use" }> => b.type === "tool_use");
   if (!call) throw new Error("Dibby didn't search");
   const input = call.input as { search_query: string; area?: string | null; reply: string };
-  const named = (input.area ?? "").trim() || null;
-  const useArea = named ?? area;
+  const named = qualifyArea(input.area);
+  const useArea = named ?? qualifyArea(area);
   const aroundMe = !useArea && Boolean(near);
+  const query = String(input.search_query ?? ask).slice(0, 120);
+  // No place named, none on the plan and no location: ask rather than search all of Australia.
+  if (!useArea && !aroundMe) return { venues: [], reply: WHERE_LINE, query, area: null, near: false, ask: { query, areas: [] } };
   const found = (await searchPlaces(input.search_query, aroundMe ? near : null, useArea)) ?? [];
   const ids = new Set(have.map((h) => h.placeId));
   const names = new Set(have.map((h) => h.label.toLowerCase()));
@@ -210,8 +219,11 @@ export async function suggestMore(
     .filter((p) => !ids.has(p.placeId) && !names.has(p.name.toLowerCase()))
     .slice(0, 3)
     .map((p) => ({ placeId: p.placeId, name: p.name, address: p.address, rating: p.rating, priceLevel: null }));
-  return { venues, reply: String(input.reply ?? "").slice(0, 300), query: String(input.search_query ?? ask).slice(0, 120), area: useArea, near: aroundMe };
+  return { venues, reply: String(input.reply ?? "").slice(0, 300), query, area: useArea, near: aroundMe, ask: null };
 }
+
+/** What Dibby says when it doesn't know where to look. The chips do the rest. */
+export const WHERE_LINE = "Where abouts? Tap one, or tell me a suburb.";
 
 // ---------- Reply when tagged in a plan thread ----------
 
@@ -243,6 +255,8 @@ export interface ThreadResult {
   newPlan: PlanDraft | null;
   /** The last venue search this turn, to remember for the next ask. */
   searched: SearchMemo | null;
+  /** Set when Dibby didn't know where to look and asked: the search to rerun once they pick. */
+  ask: WhereAsk | null;
 }
 
 const THREAD_TOOLS: Tool[] = [
@@ -287,8 +301,9 @@ export async function replyInThread(ctx: ThreadContext, ask: string): Promise<Th
   // Default is where the asker is; a place someone named (now or earlier in this plan) wins.
   const memo = [...ctx.recent].reverse().map((m) => (m.kind === "dibby" ? asSearchMemo(m.template) : null)).find(Boolean) ?? null;
   const near = ctx.near;
-  const lookingIn = memo?.area ?? (near ? null : plan.area ?? null);
-  const whereDefault = memo?.area ?? (near ? "near the asker (the app has their location)" : plan.area ?? "no particular area");
+  const lookingIn = qualifyArea(memo?.area ?? (near ? null : plan.area ?? null));
+  const whereDefault =
+    lookingIn ?? (near ? "near the asker (the app has their location)" : "nowhere yet: nobody has said where, so if they don't name a place, ask where (one short line) instead of guessing");
   const context = [
     `Plan: ${plan.title}. Status: ${plan.status}. Area: ${plan.area ?? "not set"}. When: ${plan.starts_at ?? "not set"}.`,
     `Venue: ${plan.venue_name ?? "not decided"}. Vote options: ${options.map((o) => `${o.label}${o.note ? `, ${o.note}` : ""} (${o.votes} votes)`).join("; ") || "none yet"}.`,
@@ -307,21 +322,33 @@ export async function replyInThread(ctx: ThreadContext, ask: string): Promise<Th
   const toAdd: Venue[] = [];
   let newPlan: PlanDraft | null = null;
   let searched: SearchMemo | null = null;
+  let asked: WhereAsk | null = null;
 
   for (let step = 0; step < 4; step++) {
     const res = await claude(system, turns, THREAD_TOOLS);
     const calls = res.content.filter((b): b is Extract<Block, { type: "tool_use" }> => b.type === "tool_use");
     if (calls.length === 0) {
       const text = res.content.filter((b): b is Extract<Block, { type: "text" }> => b.type === "text").map((b) => b.text).join(" ").trim();
-      return { reply: text || newPlan?.reply || "On it.", addOptions: toAdd, newPlan, searched };
+      // Only keep the chips if Dibby didn't go on to search somewhere after asking.
+      return { reply: text || newPlan?.reply || (asked ? WHERE_LINE : "On it."), addOptions: toAdd, newPlan, searched, ask: searched ? null : asked };
     }
     turns.push({ role: "assistant", content: res.content });
     const results: Block[] = [];
     for (const c of calls) {
       if (c.name === "search_venues") {
         const q = c.input as { query: string; area: string | null };
-        const area = (q.area ?? "").trim() || lookingIn;
+        const area = qualifyArea(q.area) ?? lookingIn;
         const aroundMe = !area && Boolean(near);
+        if (!area && !aroundMe) {
+          asked = { query: String(q.query ?? "").slice(0, 120), areas: [] };
+          results.push({
+            type: "tool_result",
+            tool_use_id: c.id,
+            content:
+              "Not searched: nobody named a place, the plan has no area and the app doesn't have the asker's location. Don't search again and don't guess a place. Reply in one short line asking where abouts; the app shows area chips under your reply.",
+          });
+          continue;
+        }
         const venues = await searchVenues(q.query, area, 3, aroundMe ? near : null);
         for (const v of venues ?? []) found.set(v.name.toLowerCase(), v);
         searched = { k: "search", query: q.query, area, near: aroundMe };
@@ -354,7 +381,7 @@ export async function replyInThread(ctx: ThreadContext, ask: string): Promise<Th
     }
     turns.push({ role: "user", content: results });
   }
-  return { reply: newPlan?.reply ?? "Done. Have a look at the vote.", addOptions: toAdd, newPlan, searched };
+  return { reply: newPlan?.reply ?? (asked && !searched ? WHERE_LINE : "Done. Have a look at the vote."), addOptions: toAdd, newPlan, searched, ask: searched ? null : asked };
 }
 
 export const mentionsDibby = (text: string) => /(^|\s)@dibby\b/i.test(text);

@@ -710,3 +710,10 @@ gmp-place-details {
 /* The organiser's call on a vote, at the top of it: who's ahead, when it closes, lock it in now. */
 .vote-host { display: flex; align-items: center; gap: var(--space-3); }
 .vote-host__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+
+/* Where Dibby looks: under its latest message (app/p/[slug]/WhereChips.tsx). */
+.where { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-2); min-width: 0; }
+.where__brief { display: flex; flex-wrap: wrap; align-items: center; gap: 4px var(--space-2); margin: 0; color: var(--text-sub-600); }
+.where__brief .db-icon { flex: none; }
+.where__change { font: inherit; font-weight: 600; color: var(--primary-base); background: none; border: 0; padding: var(--space-2) 0; min-height: 44px; cursor: pointer; }
+.where__chips { margin: 0; padding: 2px 0; }
