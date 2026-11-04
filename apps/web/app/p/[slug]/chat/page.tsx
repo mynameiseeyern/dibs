@@ -3,7 +3,7 @@ import { extraOn, planAccess, READ_ONLY_NOTE } from "@dibs/shared/plans";
 import * as Button from "@/components/ui/button";
 import { LiveRefresh } from "@/components/LiveRefresh";
 import { liveVersion } from "@/lib/live-version";
-import { store } from "@/lib/store";
+import { store, usingSupabase } from "@/lib/store";
 import { formatWhen } from "@/lib/time";
 import { loadPlan } from "@/lib/viewer";
 import { countIn } from "@dibs/shared/plans";
@@ -65,6 +65,7 @@ export default async function Chat({ params }: { params: Promise<{ slug: string 
           readOnly={readOnly}
           placeNames={Object.fromEntries(options.filter((o) => o.place_id).map((o) => [o.place_id!, o.label]))}
           post={postMessage.bind(null, slug)}
+          emailGate={me.guest_id && !me.user_id ? { planId: plan.id, demo: !usingSupabase } : undefined}
         />
       </main>
     </>
