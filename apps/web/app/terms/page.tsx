@@ -64,7 +64,8 @@ export default function Terms() {
 
       <h2>Contact</h2>
       <p>
-        Questions or problems: <a href="mailto:hello@dibby.social">hello@dibby.social</a>.
+        Dibby is run by Ee Yern Ng, a sole trader in Sydney (ABN 97 837 335 531). Questions or problems:{" "}
+        <a href="mailto:hello@dibby.social">hello@dibby.social</a>.
       </p>
     </LegalPage>
   );

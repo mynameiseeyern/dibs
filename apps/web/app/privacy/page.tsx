@@ -11,6 +11,10 @@ export default function Privacy() {
         anything here is unclear, email <a href="mailto:hello@dibby.social">hello@dibby.social</a>.
       </p>
 
+      <p>
+        Dibby is run by Ee Yern Ng, a sole trader in Sydney (ABN 97 837 335 531).
+      </p>
+
       <h2>What we keep</h2>
       <ul>
         <li>
