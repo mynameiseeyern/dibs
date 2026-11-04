@@ -5,6 +5,8 @@ import { keepMyPlans } from "../../../actions";
 import * as Button from "@/components/ui/button";
 import * as Input from "@/components/ui/input";
 import { FieldError } from "@/components/Field";
+import { GateSeen } from "@/components/GateSeen";
+import { trackGate } from "../../../gate-actions";
 
 /**
  * Asked once the plan exists, not while making it (like Shop's "Connect email" card): a guest
@@ -22,6 +24,10 @@ export function KeepCard({ planId, demo }: { planId: string; demo: boolean }) {
       setHidden(false);
     }
   }, [key]);
+  // Sent: they did what the card asked.
+  useEffect(() => {
+    if (state?.sent) void trackGate("keep_plan", "converted", planId).catch(() => {});
+  }, [state?.sent, planId]);
   if (hidden) return null;
 
   const dismiss = () => {
@@ -33,6 +39,7 @@ export function KeepCard({ planId, demo }: { planId: string; demo: boolean }) {
 
   return (
     <section className="keep-card" aria-labelledby="keep-h">
+      <GateSeen gate="keep_plan" planId={planId} />
       <div className="keep-card__head">
         <span className="keep-card__ico" aria-hidden="true">
           <i className={state?.sent ? "ri-mail-check-line" : "ri-mail-line"} />

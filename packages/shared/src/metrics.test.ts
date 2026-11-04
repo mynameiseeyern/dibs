@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeMetrics, type LoggedEvent } from "./metrics";
+import { computeGates, computeMetrics, type LoggedEvent } from "./metrics";
 
 const ev = (name: LoggedEvent["name"], at: string, rest: Partial<LoggedEvent> = {}): LoggedEvent => ({ name, at, ...rest });
 
@@ -56,5 +56,25 @@ describe("computeMetrics", () => {
       ev("app_interest", "2026-10-03T00:00:00Z", { planId: "b", guestId: "g1" }),
     ]);
     expect(m.webToApp).toEqual({ num: 1, den: 2, rate: 0.5 });
+  });
+});
+
+describe("computeGates", () => {
+  it("is empty, not zero, with no events", () => {
+    expect(computeGates([]).keep_plan.rate).toBeNull();
+    expect(computeGates([]).chat.rate).toBeNull();
+  });
+
+  it("counts each person once per gate and plan, and only converts people who were shown it", () => {
+    const g = computeGates([
+      ev("gate_shown", "2026-11-01T00:00:00Z", { planId: "a", guestId: "g1", props: { gate: "keep_plan" } }),
+      ev("gate_shown", "2026-11-01T00:01:00Z", { planId: "a", guestId: "g1", props: { gate: "keep_plan" } }),
+      ev("gate_shown", "2026-11-01T00:00:00Z", { planId: "b", guestId: "g2", props: { gate: "keep_plan" } }),
+      ev("gate_converted", "2026-11-01T00:02:00Z", { planId: "a", guestId: "g1", props: { gate: "keep_plan" } }),
+      ev("gate_converted", "2026-11-01T00:02:00Z", { planId: "c", guestId: "g9", props: { gate: "keep_plan" } }),
+      ev("gate_shown", "2026-11-01T00:00:00Z", { planId: "a", guestId: "g3", props: { gate: "chat" } }),
+    ]);
+    expect(g.keep_plan).toEqual({ num: 1, den: 2, rate: 0.5 });
+    expect(g.chat).toEqual({ num: 0, den: 1, rate: 0 });
   });
 });
