@@ -277,6 +277,26 @@ export const memoryStore: Store = {
     db.options.delete(optionId);
     db.votes = db.votes.filter((v) => v.option_id !== optionId);
   },
+  async mergeMember(planId, fromId, intoId, plan) {
+    const into = db.members.get(intoId);
+    const from = db.members.get(fromId);
+    if (!into || !from || into.plan_id !== planId || from.plan_id !== planId) return;
+    Object.assign(into, plan.intoPatch);
+    for (const optionId of plan.addVotes) if (db.options.get(optionId)?.plan_id === planId) db.votes.push({ option_id: optionId, member_id: intoId });
+    for (const timeId of plan.addTimes) db.timeVotes.push({ plan_id: planId, time_id: timeId, member_id: intoId });
+    for (const msg of db.messages) if (msg.plan_id === planId && msg.member_id === fromId) msg.member_id = intoId;
+    const has = (r: Reaction) => db.reactions.some((x) => x.message_id === r.message_id && x.member_id === intoId && x.emoji === r.emoji);
+    db.reactions = db.reactions.filter((r) => r.member_id !== fromId || !has(r));
+    for (const r of db.reactions) if (r.member_id === fromId) r.member_id = intoId;
+    for (const o of db.options.values()) if (o.plan_id === planId && o.added_by === fromId) o.added_by = intoId;
+    for (const x of db.photos) if (x.photo.plan_id === planId && x.photo.member_id === fromId) x.photo = { ...x.photo, member_id: intoId };
+    if (plan.moveRecap) for (const a of db.recap) if (a.plan_id === planId && a.member_id === fromId) a.member_id = intoId;
+    db.recap = db.recap.filter((a) => a.member_id !== fromId);
+    for (const a of db.recap) if (a.plan_id === planId && a.mvp_member_id === fromId) a.mvp_member_id = intoId;
+    db.votes = db.votes.filter((v) => v.member_id !== fromId);
+    db.timeVotes = db.timeVotes.filter((v) => v.member_id !== fromId);
+    db.members.delete(fromId);
+  },
   async listVotes(planId) {
     return db.votes.filter((v) => db.options.get(v.option_id)?.plan_id === planId);
   },

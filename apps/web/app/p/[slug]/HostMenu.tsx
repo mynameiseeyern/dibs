@@ -7,6 +7,9 @@ import { toast } from "@/components/ui/toast";
 
 type To = "cohost" | "guest" | "organiser";
 
+/** Someone on the plan this person could be merged into. */
+export type MergeTarget = { id: string; name: string; detail: string; suggested: boolean };
+
 /**
  * The organiser's menu on someone in the who's going list: make them a co-host, or hand the
  * whole plan over. Handing over is confirmed first, since you can't take it back yourself.
@@ -19,6 +22,8 @@ export function HostMenu({
   setHost,
   rejoin,
   canManage = true,
+  merge,
+  mergeTargets = [],
 }: {
   name: string;
   role: "cohost" | "guest";
@@ -31,10 +36,14 @@ export function HostMenu({
   rejoin?: () => Promise<{ url?: string; error?: string }>;
   /** The organiser: co-host and hand-over options. Co-hosts only get the link. */
   canManage?: boolean;
+  /** For guests: fold this spot into another one that's the same person. */
+  merge?: (intoId: string) => Promise<{ error?: string; name?: string }>;
+  mergeTargets?: MergeTarget[];
 }) {
   const first = name.split(" ")[0];
   const [open, setOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [merging, setMerging] = useState<"pick" | MergeTarget | null>(null);
   const [pending, start] = useTransition();
 
   const run = (to: To, done: string) =>
@@ -46,16 +55,60 @@ export function HostMenu({
       else toast.success(done);
     });
 
+  const mergeInto = (t: MergeTarget) =>
+    start(async () => {
+      const res = await merge!(t.id);
+      setOpen(false);
+      setMerging(null);
+      if (res.error) toast.error(res.error);
+      else toast.success("Merged into one spot", { description: `If ${first} opens the plan in the other browser, send them their link from here.` });
+    });
+
+  const canMerge = Boolean(merge) && mergeTargets.length > 0;
+  const title = merging === "pick" ? `Merge ${first} with…` : merging ? "Merge these two?" : confirming ? `Hand the plan over to ${first}?` : name;
+
   return (
     <>
       <Button.Root type="button" mode="ghost" variant="neutral" iconOnly className="person__menu" aria-label={`Options for ${name}`} onClick={() => setOpen(true)}>
         <i className="ri-more-2-fill db-icon" aria-hidden="true" />
       </Button.Root>
-      <Modal.Root open={open} onOpenChange={(o) => !pending && setOpen(o)}>
+      <Modal.Root
+        open={open}
+        onOpenChange={(o) => {
+          if (pending) return;
+          setOpen(o);
+          if (!o) {
+            setConfirming(false);
+            setMerging(null);
+          }
+        }}
+      >
         <Modal.Content>
-          <Modal.Header title={confirming ? `Hand the plan over to ${first}?` : name} />
+          <Modal.Header title={title} />
           <Modal.Body>
-            {confirming ? (
+            {merging === "pick" ? (
+              <>
+                <p>Same person twice? Pick the spot to keep. {first}&rsquo;s votes, chat and RSVP move onto it, and this spot goes.</p>
+                <ul className="merge-pick">
+                  {mergeTargets.map((t) => (
+                    <li key={t.id}>
+                      <Button.Root variant="neutral" mode="stroke" size="large" block disabled={pending} onClick={() => setMerging(t)}>
+                        <span className="merge-pick__name">
+                          <span className="label-md">{t.name}</span>
+                          <span className="paragraph-xs muted">{t.suggested ? `Same name · ${t.detail}` : t.detail}</span>
+                        </span>
+                        <i className="ri-arrow-right-s-line db-icon" aria-hidden="true" />
+                      </Button.Root>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : merging ? (
+              <p>
+                {name}&rsquo;s spot goes, and their votes and chat move to {merging.name}. If one says going and the other says maybe, going wins.
+                The chat will say you merged them.
+              </p>
+            ) : confirming ? (
               <p>
                 {first} becomes the organiser: they run the vote, wrap-up and bills, and can hand it back. You stay on as a co-host.
               </p>
@@ -66,10 +119,23 @@ export function HostMenu({
             ) : (
               <p>{why}</p>
             )}
-            {rejoin && canManage && !confirming && <p className="paragraph-sm muted">Browser forgot them? Send them their link and they&rsquo;re back on this plan.</p>}
+            {rejoin && canManage && !confirming && !merging && <p className="paragraph-sm muted">Browser forgot them? Send them their link and they&rsquo;re back on this plan.</p>}
           </Modal.Body>
           <Modal.Footer>
-            {confirming ? (
+            {merging === "pick" ? (
+              <Button.Root variant="neutral" mode="lighter" size="large" block disabled={pending} onClick={() => setMerging(null)}>
+                Back
+              </Button.Root>
+            ) : merging ? (
+              <>
+                <Button.Root size="large" block disabled={pending} onClick={() => mergeInto(merging)}>
+                  {pending ? "Merging…" : "Merge them"}
+                </Button.Root>
+                <Button.Root variant="neutral" mode="lighter" size="large" block disabled={pending} onClick={() => setMerging("pick")}>
+                  Back
+                </Button.Root>
+              </>
+            ) : confirming ? (
               <>
                 <Button.Root size="large" block disabled={pending} onClick={() => run("organiser", `${first}'s running it now`)}>
                   {pending ? "Handing over…" : `Hand it to ${first}`}
@@ -97,6 +163,12 @@ export function HostMenu({
                   <Button.Root variant="neutral" mode="lighter" size="large" block disabled={pending} onClick={() => setConfirming(true)}>
                     <i className="ri-vip-crown-line db-icon" aria-hidden="true" />
                     Hand the plan over
+                  </Button.Root>
+                )}
+                {canMerge && (
+                  <Button.Root variant="neutral" mode="lighter" size="large" block disabled={pending} onClick={() => setMerging("pick")}>
+                    <i className="ri-git-merge-line db-icon" aria-hidden="true" />
+                    Merge with someone
                   </Button.Root>
                 )}
                 {rejoin && (

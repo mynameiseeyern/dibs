@@ -1,4 +1,5 @@
 import type { AppEvent, LoggedEvent } from "@dibs/shared/metrics";
+import type { MergePlan } from "@dibs/shared/merge";
 import type { Bill, BillShare, Message, Plan, PlanMember, PlanOption, PlanPhoto, PlanTime, Rsvp, TimeVote, Vibe, Role, Vote } from "@dibs/shared/types";
 
 export interface Profile {
@@ -112,6 +113,13 @@ export interface Store {
   listMembers(planId: string): Promise<PlanMember[]>;
   addMember(m: NewMember): Promise<PlanMember>;
   updateMember(memberId: string, patch: Partial<Pick<PlanMember, "role" | "rsvp" | "plus_one" | "plus_one_name" | "waitlisted" | "waitlisted_at" | "display_name" | "attended" | "dibby_muted" | "chat_seen_at">>): Promise<void>;
+
+  /**
+   * Folds one spot on a plan into another (the same person twice: see packages/shared/src/merge.ts).
+   * Applies the plan, moves their chat, reactions, places added, photos and recap across, then
+   * deletes the extra spot. Callers check mergeBlock first (never someone on a bill).
+   */
+  mergeMember(planId: string, fromId: string, intoId: string, plan: MergePlan): Promise<void>;
 
   listOptions(planId: string): Promise<PlanOption[]>;
   addOption(o: { planId: string; label: string; placeId?: string | null; note?: string | null; addedBy?: string | null }): Promise<PlanOption>;
