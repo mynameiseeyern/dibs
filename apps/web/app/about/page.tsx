@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "About", robots: { index: true, follo
 const STEPS = [
   { img: "/crew/flag.png", title: "Start a plan", body: "Say what, when and where. Not sure where? Tell Dibby what you're after and it finds three real spots to vote on." },
   { img: "/crew/confetti.png", title: "Drop it in the chat", body: "One link in WhatsApp or wherever. Your mates just tap it. No app, no sign-up." },
-  { img: "/crew/trophy.png", title: "See who's in", body: "Your mates tap in or out. Can't pick a spot? Everyone going votes, and the top pick wins." },
+  { img: "/crew/trophy.png", title: "See who's in", body: "Your mates tap in or out. Can't pick a day or a spot? Everyone going votes, and the top pick wins." },
   { img: "/crew/coin.png", title: "Square up after", body: "One person pays, it's split for you, and everyone gets their PayID to pay them back. Or, if you're all in, spin the wheel and one person shouts." },
 ];
 

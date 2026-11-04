@@ -5,13 +5,17 @@ export const metadata: Metadata = { title: "Terms", robots: { index: true, follo
 
 export default function Terms() {
   return (
-    <LegalPage title="Terms" updated="24 October 2026">
+    <LegalPage title="Terms" updated="5 November 2026">
       <p>The short version: Dibby is a free beta for planning things with your mates. Be decent, and know what it does and doesn&rsquo;t do.</p>
 
       <h2>Who can use it</h2>
       <p>
-        Anyone with a plan link can join it as a guest. You&rsquo;re responsible for who you share
+        You need to be 16 or older to use Dibby. Anyone 16+ with a plan link can join it as a guest. You&rsquo;re responsible for who you share
         your plan links with: anyone with the link can see the plan&rsquo;s name, time and place name.
+      </p>
+      <p>
+        Organisers and co-hosts run their plans: they can edit them, close spots, take places off a vote and call plans off. If
+        you use the Dibby app, Apple&rsquo;s or Google&rsquo;s app store terms apply too.
       </p>
 
       <h2>It&rsquo;s a beta</h2>
@@ -39,15 +43,29 @@ export default function Terms() {
         <li>Hosts can take places off a vote and remove plans. We can remove content or accounts that break these terms.</li>
       </ul>
 
+      <h2>Our responsibility</h2>
+      <p>
+        Dibby is free and provided as it is. To the extent the law allows, we aren&rsquo;t liable for losses from using it, like a missed plan, a
+        venue that&rsquo;s closed or a mate who doesn&rsquo;t pay you back. Nothing here takes away your rights under the Australian Consumer
+        Law.
+      </p>
+
       <h2>Your stuff</h2>
       <p>
         What you post stays yours. You let Dibby store it and show it to the people on your plan so the app works. See{" "}
         <a href="/privacy">Privacy</a> for what we keep and how to delete it.
       </p>
 
+      <h2>Leaving, and changes to these terms</h2>
+      <p>
+        You can stop using Dibby or delete your account from <a href="/account">You</a> any time. If we change these terms in a big way,
+        we&rsquo;ll say so in the app or by email first. These terms are governed by the laws of New South Wales, Australia.
+      </p>
+
       <h2>Contact</h2>
       <p>
-        Questions or problems: <a href="mailto:hello@dibby.social">hello@dibby.social</a>.
+        Dibby is run by Ee Yern Ng, a sole trader in Sydney (ABN 97 837 335 531). Questions or problems:{" "}
+        <a href="mailto:hello@dibby.social">hello@dibby.social</a>.
       </p>
     </LegalPage>
   );
