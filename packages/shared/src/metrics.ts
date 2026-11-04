@@ -23,8 +23,19 @@ export const EVENT_NAMES = [
   "bill_shares_set",
   /** One share was confirmed paid. */
   "share_settled",
+  /** A funnel gate was shown, e.g. "Keep this plan". props.gate: a `Gate`. Once per view. */
+  "gate_shown",
+  /** Someone did what a gate asked (sent their email). props.gate as above. */
+  "gate_converted",
 ] as const;
 export type EventName = (typeof EVENT_NAMES)[number];
+
+/**
+ * The asks that move someone up a stage of the funnel: an organiser keeping a plan they made
+ * without an account, and a guest adding an email so they can chat.
+ */
+export const GATES = ["keep_plan", "chat"] as const;
+export type Gate = (typeof GATES)[number];
 
 export interface AppEvent {
   name: EventName;
@@ -106,4 +117,23 @@ export function computeMetrics(events: LoggedEvent[]): Metrics {
     repeatPlans: { perOrganiserMonth, repeatShare: rate(counts.filter((n) => n >= 2).length, counts.length) },
     webToApp: rate(keen.size, joined.size),
   };
+}
+
+/**
+ * For each gate: the people who did what it asked, of the people shown it. A person is their
+ * guest or account ID, counted once per gate and plan however often they saw it.
+ */
+export function computeGates(events: LoggedEvent[]): Record<Gate, Rate> {
+  const key = (e: LoggedEvent) => {
+    const who = e.guestId ?? e.userId;
+    return who ? `${who}:${e.planId ?? ""}` : null;
+  };
+  const out = {} as Record<Gate, Rate>;
+  for (const gate of GATES) {
+    const of = (name: EventName) => new Set(events.filter((e) => e.name === name && e.props?.gate === gate).flatMap((e) => key(e) ?? []));
+    const shown = of("gate_shown");
+    const done = [...of("gate_converted")].filter((k) => shown.has(k));
+    out[gate] = rate(done.length, shown.size);
+  }
+  return out;
 }

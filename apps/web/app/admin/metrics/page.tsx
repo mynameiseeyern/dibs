@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { computeMetrics, EVENT_NAMES, type Rate } from "@dibs/shared/metrics";
+import { computeGates, computeMetrics, EVENT_NAMES, type Gate, type Rate } from "@dibs/shared/metrics";
 import { Wordmark } from "@/components/Logo";
 import * as Button from "@/components/ui/button";
 import { currentOrganiser } from "@/lib/auth";
@@ -20,6 +20,11 @@ async function allowed(): Promise<boolean> {
   return Boolean(me.email && list.includes(me.email.toLowerCase()));
 }
 
+const GATE_LABELS: Record<Gate, { label: string; ask: string }> = {
+  keep_plan: { label: "Keep this plan", ask: "organisers without an account sent their email" },
+  chat: { label: "Email to chat", ask: "guests sent their email to chat" },
+};
+
 const pct = (r: Rate) => (r.rate === null ? "–" : `${Math.round(r.rate * 100)}%`);
 
 /** The pilot's four numbers (ARV-50), from the event log. Not linked from anywhere. */
@@ -30,6 +35,7 @@ export default async function Metrics({ searchParams }: { searchParams: Promise<
   const since = range === "all" ? new Date(0) : new Date(Date.now() - Number(range) * 86_400_000);
   const events = await store.listEvents(since.toISOString());
   const m = computeMetrics(events);
+  const gates = computeGates(events);
   const counts = EVENT_NAMES.map((n) => [n, events.filter((e) => e.name === n).length] as const);
 
   const tiles = [
@@ -68,6 +74,18 @@ export default async function Metrics({ searchParams }: { searchParams: Promise<
             <p className="paragraph-xs muted">{t.detail}</p>
           </div>
         ))}
+      </section>
+      <section className="section db-stack" aria-labelledby="gates-h">
+        <h2 id="gates-h" className="label-md">Funnel gates</h2>
+        <div className="metrics-grid">
+          {(Object.keys(GATE_LABELS) as Gate[]).map((g) => (
+            <div key={g} className="db-card metric">
+              <p className="label-sm muted">{GATE_LABELS[g].label}</p>
+              <p className="metric__value">{pct(gates[g])}</p>
+              <p className="paragraph-xs muted">{`${gates[g].num} of ${gates[g].den} ${GATE_LABELS[g].ask}`}</p>
+            </div>
+          ))}
+        </div>
       </section>
       <section className="section">
         <h2 className="label-md">Events logged</h2>
