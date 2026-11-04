@@ -32,40 +32,51 @@ function revalidatePlan(slug: string) {
 
 const clean = (v: FormDataEntryValue | null, max = 40) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, max);
 
-/** Guest (or signed-in organiser) joins a plan from its link with just their name. */
+/**
+ * Guest (or signed-in organiser) joins a plan from its link with just their first name, and
+ * says if they're in with the same tap (the button they pressed: "in" or "maybe"). Going is
+ * what lets them vote, so a stranger gets from the link to a vote in one step.
+ */
 export async function joinPlan(slug: string, _prev: FormState, form: FormData): Promise<FormState> {
   const view = await loadPlan(slug);
   if (!view) return { error: "This plan doesn't exist any more." };
   if (view.me) return undefined;
   if (view.plan.status === "cancelled") return { error: "This one's been called off." };
+  const raw = form.get("rsvp");
+  const rsvp: Rsvp | null = raw === "in" || raw === "maybe" ? raw : null;
+
+  const joined = async () => {
+    // The RSVP runs as its own step so capacity, the waitlist and nudges work as they always do.
+    if (rsvp) await setRsvp(slug, rsvp);
+    revalidatePlan(slug);
+    return undefined;
+  };
 
   if (view.organiser) {
     const profile = await store.getProfile(view.organiser.id);
     if (profile) {
-      await store.addMember({ planId: view.plan.id, userId: view.organiser.id, name: `${profile.first_name} ${profile.last_name}`, role: "guest" });
+      await store.addMember({ planId: view.plan.id, userId: view.organiser.id, name: `${profile.first_name} ${profile.last_name}`.trim(), role: "guest" });
       await track({ name: "member_joined", planId: view.plan.id, userId: view.organiser.id });
-      revalidatePlan(slug);
-      return undefined;
+      return joined();
     }
   }
 
   const first = clean(form.get("first_name"));
   const last = clean(form.get("last_name"));
-  if (!first || !last) return { error: "Pop in your first and last name so the crew knows who you are." };
+  if (!first) return { error: "Pop in your name so the crew knows who you are." };
+  const name = `${first} ${last}`.trim();
 
   // Signed in but never set up to organise (a guest who added their email): join as the account.
   if (view.organiser) {
-    await store.addMember({ planId: view.plan.id, userId: view.organiser.id, name: `${first} ${last}`, role: "guest" });
+    await store.addMember({ planId: view.plan.id, userId: view.organiser.id, name, role: "guest" });
     await track({ name: "member_joined", planId: view.plan.id, userId: view.organiser.id });
-    revalidatePlan(slug);
-    return undefined;
+    return joined();
   }
 
   const guest = view.guest ?? (await createGuestSession(first, last));
-  await store.addMember({ planId: view.plan.id, guestId: guest.id, name: `${first} ${last}`, role: "guest" });
+  await store.addMember({ planId: view.plan.id, guestId: guest.id, name, role: "guest" });
   await track({ name: "member_joined", planId: view.plan.id, guestId: guest.id });
-  revalidatePlan(slug);
-  return undefined;
+  return joined();
 }
 
 export async function setRsvp(slug: string, rsvp: Rsvp, _form?: FormData): Promise<void> {
