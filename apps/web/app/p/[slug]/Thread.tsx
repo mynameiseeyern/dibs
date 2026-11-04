@@ -1,4 +1,5 @@
 import type { Message, PlanMember, Vibe } from "@dibs/shared/types";
+import { ChatEmailGate } from "./ChatEmailGate";
 import { REACTIONS, type Reaction } from "@/lib/store/types";
 import { DibbyMark } from "@/components/Logo";
 import { Dibby } from "@/components/Dibby";
@@ -32,6 +33,7 @@ export function Thread({
   reactions = [],
   react,
   summary,
+  emailGate,
 }: {
   vibe: Vibe;
   reactions?: Reaction[];
@@ -48,6 +50,8 @@ export function Thread({
   /** Names of the places on this plan's vote, by Google place ID, for Dibby's place tiles. */
   placeNames?: Record<string, string>;
   post: (s: FormState, f: FormData) => Promise<FormState>;
+  /** A guest going on this plan: ask for an email (which lets them chat) instead of a dead end. */
+  emailGate?: { planId: string; demo: boolean };
 }) {
   const byId = new Map(members.map((m) => [m.id, m]));
   let lastStamp = 0;
@@ -128,6 +132,8 @@ export function Thread({
           <ReadOnlyComposer note={readOnly} />
         ) : canPost ? (
           <Composer action={post} />
+        ) : emailGate ? (
+          <ChatEmailGate planId={emailGate.planId} demo={emailGate.demo} />
         ) : (
           <p className="paragraph-sm muted thread__readonly">Get the Dibby app to chat here. You can still vote and RSVP.</p>
         )}

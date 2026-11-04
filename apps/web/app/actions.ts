@@ -46,11 +46,14 @@ export async function keepMyPlans(_prev: FormState, form: FormData): Promise<For
     console.error("[keep plans] save email", e);
     return { error: "Couldn't save that. Try again in a sec." };
   }
+  // Asked from a plan (the chat's email box): the link brings them back to it.
+  const rawNext = String(form.get("next") ?? "");
+  const next = /^\/p\/[\w-]+(\/chat)?$/.test(rawNext) ? rawNext : "/home";
   if (!usingSupabase) {
     await demoSignIn();
-    redirect("/home");
+    redirect(next);
   }
-  return sendLink(email, "/home");
+  return sendLink(email, next);
 }
 
 async function sendLink(email: string, next: string): Promise<FormState> {
