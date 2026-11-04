@@ -23,6 +23,15 @@ export const EVENT_NAMES = [
   "bill_shares_set",
   /** One share was confirmed paid. */
   "share_settled",
+  /**
+   * Someone not on the plan opened its link. props.anon: a random ID this browser keeps, so a
+   * person counts once per plan; props.signed_in: whether they had an account.
+   */
+  "plan_link_opened",
+  /** Someone added a pick to the vote (not when they untick one). */
+  "vote_cast",
+  /** A person got an account. props.via: "sign_up" (finished sign-up) | "guest_claim" (a guest's plans moved onto a new sign-in). */
+  "account_created",
   /** A funnel gate was shown, e.g. "Keep this plan". props.gate: a `Gate`. Once per view. */
   "gate_shown",
   /** Someone did what a gate asked (sent their email). props.gate as above. */
@@ -136,4 +145,41 @@ export function computeGates(events: LoggedEvent[]): Record<Gate, Rate> {
     out[gate] = rate(done.length, shown.size);
   }
   return out;
+}
+
+export interface Funnel {
+  /** People who joined a plan, of the browsers that opened its link (counted per plan). */
+  linkToJoin: Rate;
+  /** People who joined a plan from its link and then voted on it. */
+  joinToVote: Rate;
+  /** New accounts: finished sign-up, and guests moved onto a sign-in. */
+  accounts: { signUp: number; guestClaim: number };
+}
+
+/** The top of the funnel: from a plan link to a vote. Only plans whose link was opened count. */
+export function computeFunnel(events: LoggedEvent[]): Funnel {
+  const who = (e: LoggedEvent) => e.guestId ?? e.userId ?? null;
+  const opened = new Map<string, Set<string>>();
+  for (const e of events) {
+    if (e.name !== "plan_link_opened" || !e.planId || typeof e.props?.anon !== "string") continue;
+    if (!opened.has(e.planId)) opened.set(e.planId, new Set());
+    opened.get(e.planId)!.add(e.props.anon);
+  }
+  const joined = new Set<string>();
+  for (const e of events) {
+    const w = who(e);
+    if (e.name === "member_joined" && e.planId && w && opened.has(e.planId)) joined.add(`${e.planId}:${w}`);
+  }
+  const voted = new Set<string>();
+  for (const e of events) {
+    const w = who(e);
+    if (e.name === "vote_cast" && e.planId && w && joined.has(`${e.planId}:${w}`)) voted.add(`${e.planId}:${w}`);
+  }
+  const openers = [...opened.values()].reduce((n, s) => n + s.size, 0);
+  const via = (v: string) => events.filter((e) => e.name === "account_created" && e.props?.via === v).length;
+  return {
+    linkToJoin: rate(Math.min(joined.size, openers), openers),
+    joinToVote: rate(voted.size, joined.size),
+    accounts: { signUp: via("sign_up"), guestClaim: via("guest_claim") },
+  };
 }

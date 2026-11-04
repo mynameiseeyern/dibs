@@ -29,6 +29,7 @@ import { hostRejoinLink, setHost, setPlace } from "./manage/actions";
 import { SaveSpot } from "@/components/SaveSpot";
 import { guestRejoinUrl } from "@/lib/rejoin";
 import { JoinForm } from "./JoinForm";
+import { LinkOpened } from "@/components/LinkOpened";
 import { ShareButton } from "./ShareButton";
 import { GetTheApp } from "./GetTheApp";
 import { CameraCard } from "./CameraCard";
@@ -413,6 +414,7 @@ export default async function PlanPage({ params, searchParams }: Props) {
           <section className="section db-card" aria-labelledby="join-h">
             <h2 id="join-h" className="title-h4">You coming?</h2>
             <JoinForm action={joinPlan.bind(null, slug)} signedIn={view.here.canOrganise} slug={slug} />
+            <LinkOpened slug={slug} />
           </section>
         )}
 
