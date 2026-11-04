@@ -325,6 +325,7 @@ export async function vote(slug: string, optionId: string): Promise<{ error?: st
     // A three-pick plan down to one pick (two places) still adds in the database, so clear the rest first.
     if (step.kind === "move" && mine.length) await store.removeVote(view.plan.id, view.me.id);
     await store.castVote(view.plan.id, optionId, view.me.id);
+    await track({ name: "vote_cast", planId: view.plan.id, userId: view.me.user_id, guestId: view.me.user_id ? null : view.me.guest_id });
   }
   revalidatePlan(slug);
   return {};

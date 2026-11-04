@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeGates, computeMetrics, type LoggedEvent } from "./metrics";
+import { computeFunnel, computeGates, computeMetrics, type LoggedEvent } from "./metrics";
 
 const ev = (name: LoggedEvent["name"], at: string, rest: Partial<LoggedEvent> = {}): LoggedEvent => ({ name, at, ...rest });
 
@@ -76,5 +76,37 @@ describe("computeGates", () => {
     ]);
     expect(g.keep_plan).toEqual({ num: 1, den: 2, rate: 0.5 });
     expect(g.chat).toEqual({ num: 0, den: 1, rate: 0 });
+  });
+});
+
+describe("computeFunnel", () => {
+  it("is empty, not zero, with no events", () => {
+    const f = computeFunnel([]);
+    expect(f.linkToJoin.rate).toBeNull();
+    expect(f.joinToVote.rate).toBeNull();
+    expect(f.accounts).toEqual({ signUp: 0, guestClaim: 0 });
+  });
+
+  it("goes from link opens to joins to votes, per plan, counting each person once", () => {
+    const f = computeFunnel([
+      ev("plan_link_opened", "2026-11-11T00:00:00Z", { planId: "a", props: { anon: "x1" } }),
+      ev("plan_link_opened", "2026-11-11T00:01:00Z", { planId: "a", props: { anon: "x1" } }),
+      ev("plan_link_opened", "2026-11-11T00:00:00Z", { planId: "a", props: { anon: "x2" } }),
+      ev("plan_link_opened", "2026-11-11T00:00:00Z", { planId: "a", props: { anon: "x3" } }),
+      ev("plan_link_opened", "2026-11-11T00:00:00Z", { planId: "a", props: { anon: "x4" } }),
+      ev("member_joined", "2026-11-11T00:02:00Z", { planId: "a", guestId: "g1" }),
+      ev("member_joined", "2026-11-11T00:02:00Z", { planId: "a", guestId: "g2" }),
+      // A plan nobody opened from a link doesn't count.
+      ev("member_joined", "2026-11-11T00:02:00Z", { planId: "b", guestId: "g3" }),
+      ev("vote_cast", "2026-11-11T00:03:00Z", { planId: "a", guestId: "g1" }),
+      ev("vote_cast", "2026-11-11T00:04:00Z", { planId: "a", guestId: "g1" }),
+      // The organiser voting isn't a link join.
+      ev("vote_cast", "2026-11-11T00:04:00Z", { planId: "a", userId: "host" }),
+      ev("account_created", "2026-11-11T00:05:00Z", { userId: "u1", props: { via: "guest_claim" } }),
+      ev("account_created", "2026-11-11T00:05:00Z", { userId: "u2", props: { via: "sign_up" } }),
+    ]);
+    expect(f.linkToJoin).toEqual({ num: 2, den: 4, rate: 0.5 });
+    expect(f.joinToVote).toEqual({ num: 1, den: 2, rate: 0.5 });
+    expect(f.accounts).toEqual({ signUp: 1, guestClaim: 1 });
   });
 });

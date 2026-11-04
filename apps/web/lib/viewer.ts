@@ -1,4 +1,5 @@
 import "server-only";
+import { track } from "./events";
 import { currentOrganiser, type Organiser } from "./auth";
 import { currentGuest } from "./guest";
 import { store, type Guest, type Plan, type PlanMember } from "./store";
@@ -31,7 +32,9 @@ export async function whoIsHere(): Promise<Here> {
   const [organiser, guest] = await Promise.all([currentOrganiser(), currentGuest()]);
   if (organiser) {
     try {
-      await store.claimGuests(organiser.id, organiser.email, guest?.id ?? null);
+      const moved = await store.claimGuests(organiser.id, organiser.email, guest?.id ?? null);
+      // A guest's plans moving onto a sign-in is the moment they get an account.
+      if (moved > 0) await track({ name: "account_created", userId: organiser.id, guestId: guest?.id ?? null, props: { via: "guest_claim", plans: moved } });
     } catch (e) {
       console.error("[claim guests]", e);
     }

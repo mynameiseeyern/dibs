@@ -1,5 +1,6 @@
 "use server";
 
+import { track } from "@/lib/events";
 import { readNear } from "@/lib/near";
 import { redirect } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
@@ -132,6 +133,7 @@ export async function saveProfile(_prev: FormState, form: FormData): Promise<For
   const last = clean(form.get("last_name"), 40);
   const payid = clean(form.get("payid"), 100) || null;
   if (!first || !last) return { error: "We need your first and last name." };
+  const isNew = !(await store.getProfile(me.id).catch(() => null));
   try {
     await store.upsertProfile({ user_id: me.id, first_name: first, last_name: last, dob: null, payid, payid_name: payid ? `${first} ${last}` : null });
   } catch (e) {
@@ -139,6 +141,7 @@ export async function saveProfile(_prev: FormState, form: FormData): Promise<For
     console.error("[onboarding] save profile failed", me.id, e);
     return { error: "Couldn't save that. Try again in a sec, and if it keeps happening, tell Ee." };
   }
+  if (isNew) await track({ name: "account_created", userId: me.id, props: { via: "sign_up" } });
   // The sign-up box is their answer to beta updates either way, so the home card never asks.
   await store.answerBetaPrompt(me.id).catch((e) => console.error("[onboarding] beta prompt", me.id, e));
   // Opt-in only: the box starts unticked, and ticking it is the consent we keep a record of.

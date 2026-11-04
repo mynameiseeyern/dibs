@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { computeGates, computeMetrics, EVENT_NAMES, type Gate, type Rate } from "@dibs/shared/metrics";
+import { computeFunnel, computeGates, computeMetrics, EVENT_NAMES, type Gate, type Rate } from "@dibs/shared/metrics";
 import { Wordmark } from "@/components/Logo";
 import * as Button from "@/components/ui/button";
 import { currentOrganiser } from "@/lib/auth";
@@ -36,6 +36,12 @@ export default async function Metrics({ searchParams }: { searchParams: Promise<
   const events = await store.listEvents(since.toISOString());
   const m = computeMetrics(events);
   const gates = computeGates(events);
+  const funnel = computeFunnel(events);
+  const top = [
+    { label: "Link to join", value: pct(funnel.linkToJoin), detail: `${funnel.linkToJoin.num} of ${funnel.linkToJoin.den} people who opened a plan link joined it` },
+    { label: "Join to vote", value: pct(funnel.joinToVote), detail: `${funnel.joinToVote.num} of ${funnel.joinToVote.den} who joined from a link voted` },
+    { label: "New accounts", value: String(funnel.accounts.signUp + funnel.accounts.guestClaim), detail: `${funnel.accounts.signUp} finished sign-up · ${funnel.accounts.guestClaim} guests added an email` },
+  ];
   const counts = EVENT_NAMES.map((n) => [n, events.filter((e) => e.name === n).length] as const);
 
   const tiles = [
@@ -74,6 +80,18 @@ export default async function Metrics({ searchParams }: { searchParams: Promise<
             <p className="paragraph-xs muted">{t.detail}</p>
           </div>
         ))}
+      </section>
+      <section className="section db-stack" aria-labelledby="top-h">
+        <h2 id="top-h" className="label-md">Link to vote</h2>
+        <div className="metrics-grid">
+          {top.map((t) => (
+            <div key={t.label} className="db-card metric">
+              <p className="label-sm muted">{t.label}</p>
+              <p className="metric__value">{t.value}</p>
+              <p className="paragraph-xs muted">{t.detail}</p>
+            </div>
+          ))}
+        </div>
       </section>
       <section className="section db-stack" aria-labelledby="gates-h">
         <h2 id="gates-h" className="label-md">Funnel gates</h2>
