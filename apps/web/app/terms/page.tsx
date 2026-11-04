@@ -10,7 +10,7 @@ export default function Terms() {
 
       <h2>Who can use it</h2>
       <p>
-        Anyone with a plan link can join it as a guest. You&rsquo;re responsible for who you share
+        You need to be 16 or older to use Dibby. Anyone 16+ with a plan link can join it as a guest. You&rsquo;re responsible for who you share
         your plan links with: anyone with the link can see the plan&rsquo;s name, time and place name.
       </p>
       <p>

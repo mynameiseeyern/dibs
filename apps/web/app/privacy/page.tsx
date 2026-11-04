@@ -112,6 +112,12 @@ export default function Privacy() {
         </li>
       </ul>
 
+      <h2>Under 16s</h2>
+      <p>
+        Dibby is for people 16 and up. If you think someone younger has joined, email{" "}
+        <a href="mailto:hello@dibby.social">hello@dibby.social</a> and we&rsquo;ll delete their details.
+      </p>
+
       <h2>Your rights</h2>
       <p>
         We follow the Australian Privacy Principles. You can ask what we hold about you, ask us to correct it, or complain, by emailing{" "}
