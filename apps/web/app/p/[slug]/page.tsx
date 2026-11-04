@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { categoryIcon, countIn, extraOn, planAccess, READ_ONLY_NOTE, shareText, unreadCount, wrapState } from "@dibs/shared/plans";
+import { categoryIcon, countIn, extraOn, FORMER_MEMBER, planAccess, READ_ONLY_NOTE, shareText, unreadCount, wrapState } from "@dibs/shared/plans";
+import { likelyDuplicates } from "@dibs/shared/merge";
 import { formatAud } from "@dibs/shared/bills";
 import type { PlanMember, Rsvp } from "@dibs/shared/types";
 import { Wordmark } from "@/components/Logo";
@@ -9,7 +10,9 @@ import { Suspense } from "react";
 import { Weather, WeatherFact } from "./Weather";
 import { LockedHero } from "./LockedHero";
 import { RsvpPicker } from "./RsvpPicker";
-import { HostMenu } from "./HostMenu";
+import { HostMenu, type MergeTarget } from "./HostMenu";
+import { InAppBanner } from "@/components/InAppBanner";
+import { currentInApp } from "@/lib/inapp";
 import { AddToCalendar } from "./AddToCalendar";
 import { canAddToCalendar, googleCalendarLink, outlookCalendarLink } from "@/lib/calendar";
 import { Once } from "@/components/moments/Once";
@@ -25,7 +28,7 @@ import { store } from "@/lib/store";
 import { countdown, formatDay, formatShort, formatWhen, isoToLocal } from "@/lib/time";
 import { loadPlan } from "@/lib/viewer";
 import { removeMyPhoto, setPlusOne, removePlusOne, addTime, goWithTime, markFree, removeTime, appInterest, trackShare, addOption, askDibbyMore, joinPlan, lockPlan, removeMe, removeOption, setRsvp, vote } from "./actions";
-import { hostRejoinLink, setHost, setPlace } from "./manage/actions";
+import { hostRejoinLink, mergeMembers, setHost, setPlace } from "./manage/actions";
 import { SaveSpot } from "@/components/SaveSpot";
 import { guestRejoinUrl } from "@/lib/rejoin";
 import { JoinForm } from "./JoinForm";
@@ -227,6 +230,20 @@ export default async function PlanPage({ params, searchParams }: Props) {
     </div>
   );
 
+  // Hosts can fold a guest's extra spot into another one (the same person in two browsers).
+  const twins = likelyDuplicates(members, FORMER_MEMBER);
+  const inApp = await currentInApp();
+  const mergeTargets = (m: PlanMember): MergeTarget[] =>
+    members
+      .filter((o) => o.id !== m.id && o.display_name !== FORMER_MEMBER && (o.user_id || o.guest_id))
+      .map((o) => ({
+        id: o.id,
+        name: o.display_name,
+        detail: `${GROUP_LABEL[groupOf(o)]} · ${o.user_id ? "has an account" : "guest"}`,
+        suggested: twins.get(m.id) === o.id || twins.get(o.id) === m.id,
+      }))
+      .sort((a, b) => Number(b.suggested) - Number(a.suggested));
+
   const peopleList = (
     <>
       <ul className="people">
@@ -270,6 +287,8 @@ export default async function PlanPage({ params, searchParams }: Props) {
                       setHost={setHost.bind(null, slug, m.id)}
                       rejoin={m.user_id ? undefined : hostRejoinLink.bind(null, slug, m.id)}
                       canManage={me?.role === "organiser"}
+                      merge={m.user_id ? undefined : mergeMembers.bind(null, slug, m.id)}
+                      mergeTargets={m.user_id ? [] : mergeTargets(m)}
                     />
                   )}
                 </li>,
@@ -286,6 +305,9 @@ export default async function PlanPage({ params, searchParams }: Props) {
               ])
           )}
       </ul>
+      {!wrapped && isHost && twins.size > 0 && (
+        <p className="paragraph-xs muted who__cap">Same person on here twice? Tap the menu on the extra spot and merge it.</p>
+      )}
       {!wrapped && plan.capacity !== null && (
         <p className="paragraph-xs muted who__cap">
           {inCount} of {plan.capacity} spots taken{waitlist ? `. ${waitlist} waiting, and they move up in order as spots open.` : ""}
@@ -304,6 +326,7 @@ export default async function PlanPage({ params, searchParams }: Props) {
             <AccountButton here={view.here} />
           </div>
         </header>
+        {inApp && <InAppBanner inApp={inApp} context="plan" />}
 
         {kept && (
           <Alert.Root status="success" role="status">

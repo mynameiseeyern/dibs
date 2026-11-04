@@ -247,6 +247,24 @@ export const supabaseStore: Store = {
     // Votes on it go too (votes.option_id cascades).
     must(await admin().from("options").delete().eq("id", optionId).eq("plan_id", planId));
   },
+  async mergeMember(planId, fromId, intoId, plan) {
+    const ids = must(await admin().from("plan_members").select("id").eq("plan_id", planId).in("id", [fromId, intoId])) as { id: string }[];
+    if (ids.length !== 2) return;
+    // Everything moves onto the kept spot first; the extra spot goes last, so a failure halfway
+    // leaves two spots (as before), never a lost one.
+    if (Object.keys(plan.intoPatch).length) must(await admin().from("plan_members").update(plan.intoPatch).eq("id", intoId));
+    for (const optionId of plan.addVotes) must(await admin().from("votes").upsert({ option_id: optionId, member_id: intoId }));
+    if (plan.addTimes.length) must(await admin().from("time_votes").upsert(plan.addTimes.map((time_id) => ({ time_id, plan_id: planId, member_id: intoId })), { ignoreDuplicates: true }));
+    must(await admin().from("messages").update({ member_id: intoId }).eq("plan_id", planId).eq("member_id", fromId));
+    const theirs = must(await admin().from("message_reactions").select("message_id, emoji").eq("plan_id", planId).eq("member_id", fromId)) as { message_id: string; emoji: string }[];
+    if (theirs.length) must(await admin().from("message_reactions").upsert(theirs.map((r) => ({ plan_id: planId, member_id: intoId, ...r })), { ignoreDuplicates: true }));
+    must(await admin().from("options").update({ added_by: intoId }).eq("plan_id", planId).eq("added_by", fromId));
+    must(await admin().from("plan_photos").update({ member_id: intoId }).eq("plan_id", planId).eq("member_id", fromId));
+    if (plan.moveRecap) must(await admin().from("recap_answers").update({ member_id: intoId }).eq("plan_id", planId).eq("member_id", fromId));
+    must(await admin().from("recap_answers").update({ mvp_member_id: intoId }).eq("plan_id", planId).eq("mvp_member_id", fromId));
+    // Their own votes, times, reactions and any recap left over go with the spot (on delete cascade).
+    must(await admin().from("plan_members").delete().eq("id", fromId).eq("plan_id", planId));
+  },
   async listVotes(planId) {
     return must(await admin().from("votes").select("option_id, member_id, options!inner(plan_id)").eq("options.plan_id", planId)).map(
       (v: { option_id: string; member_id: string }) => ({ option_id: v.option_id, member_id: v.member_id })

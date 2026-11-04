@@ -13,7 +13,9 @@
     "./photos": "./src/photos.ts",
     "./api": "./src/api.ts",
     "./votes": "./src/votes.ts",
-    "./calendar": "./src/calendar.ts"
+    "./calendar": "./src/calendar.ts",
+    "./merge": "./src/merge.ts",
+    "./inapp": "./src/inapp.ts"
   },
   "scripts": {
     "test": "vitest run",

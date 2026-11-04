@@ -5,6 +5,8 @@ import { usingSupabase } from "@/lib/store";
 import { LoginForm } from "./LoginForm";
 import * as Alert from "@/components/ui/alert";
 import { SiteFooter } from "@/components/SiteFooter";
+import { InAppBanner } from "@/components/InAppBanner";
+import { currentInApp } from "@/lib/inapp";
 
 export const metadata = { title: "Sign in" };
 
@@ -19,6 +21,7 @@ export default async function Login({ searchParams }: { searchParams: Promise<{ 
   const next = sp.next ?? "/home";
   const problem = sp.error ? ERRORS[sp.error] ?? ERRORS.link : null;
   if (await currentOrganiser()) redirect(next);
+  const inApp = await currentInApp();
   return (
     <main className="page page--center">
       <Wordmark />
@@ -26,6 +29,7 @@ export default async function Login({ searchParams }: { searchParams: Promise<{ 
       <p className="muted">
         {usingSupabase ? "We'll email you a link, no password. Your plans come with you to any device." : "Demo mode: Supabase isn't set up yet, so you'll go straight in."}
       </p>
+      {inApp && usingSupabase && <InAppBanner inApp={inApp} context="login" />}
       {problem && (
         <Alert.Root status="warning" role="alert">
           <Alert.Icon as="i" className="ri-error-warning-fill" aria-hidden="true" />

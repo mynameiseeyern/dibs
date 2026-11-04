@@ -1,9 +1,10 @@
 "use server";
 
-import { MAX_SPOTS, MIN_SPOTS } from "@dibs/shared/plans";
+import { FORMER_MEMBER, MAX_SPOTS, MIN_SPOTS } from "@dibs/shared/plans";
 import { fillFromWaitlist } from "@/lib/plan-ops";
 import { MULTI_VOTES, maxVotes } from "@dibs/shared/votes";
 import { memberRejoinUrl } from "@/lib/rejoin";
+import { mergeBlock, planMerge } from "@dibs/shared/merge";
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -337,6 +338,63 @@ export async function setHost(slug: string, memberId: string, to: "cohost" | "gu
     if (them.role !== "cohost") return { name: first };
     await store.updateMember(them.id, { role: "guest" });
   }
+  revalidatePath(`/p/${slug}`);
+  revalidatePath(`/p/${slug}/manage`);
+  return { name: first };
+}
+
+const MERGE_BLOCKED: Record<NonNullable<ReturnType<typeof mergeBlock>>, (first: string) => string> = {
+  same: () => "Pick someone else to merge with.",
+  account: (f) => `${f} has an account, so that spot can't be merged away. Merge the other one into it instead.`,
+  organiser: () => "The organiser's spot can't be merged away.",
+  bill: (f) => `${f} is on a bill on that spot, so it can't be merged without changing the split.`,
+  former: () => "That spot isn't anyone any more.",
+};
+
+/**
+ * The same person on the plan twice (a guest who opened the link in Messenger and then Safari):
+ * a host folds the extra spot (`fromId`, a guest) into the one to keep (`intoId`). Their furthest-in
+ * answer, votes, times, chat and the rest move across, the extra spot goes, and the chat says so.
+ */
+export async function mergeMembers(slug: string, fromId: string, intoId: string): Promise<Result & { name?: string }> {
+  const view = await editable(slug);
+  if (!isView(view)) return view;
+  const { plan, members } = view;
+  const from = members.find((m) => m.id === fromId);
+  const into = members.find((m) => m.id === intoId);
+  if (!from || !into) return { error: "Couldn't find them on the plan." };
+  const first = into.display_name.split(" ")[0];
+
+  const [votes, times, recap, bills, shares] = await Promise.all([
+    store.listVotes(plan.id),
+    store.listTimeVotes(plan.id),
+    store.listRecap(plan.id),
+    store.listBills(plan.id),
+    store.listShares(plan.id),
+  ]);
+  const fromOnBill = bills.some((b) => b.payer_member_id === from.id) || shares.some((s) => s.member_id === from.id);
+  const blocked = mergeBlock({ from, into, fromOnBill }, FORMER_MEMBER);
+  if (blocked) return { error: MERGE_BLOCKED[blocked](from.display_name.split(" ")[0]) };
+
+  const picks = (id: string) => votes.filter((v) => v.member_id === id).map((v) => v.option_id);
+  const ticks = (id: string) => times.filter((t) => t.member_id === id).map((t) => t.time_id);
+  const answered = (id: string) => recap.some((a) => a.member_id === id);
+  const merge = planMerge({
+    from,
+    into,
+    maxVotes: maxVotes(plan),
+    fromVotes: picks(from.id),
+    intoVotes: picks(into.id),
+    fromTimes: ticks(from.id),
+    intoTimes: ticks(into.id),
+    fromRecap: answered(from.id),
+    intoRecap: answered(into.id),
+    fromOnBill,
+  });
+  await store.mergeMember(plan.id, from.id, into.id, merge);
+  await store.addMessage({ planId: plan.id, memberId: null, kind: "system", body: `${view.me!.display_name.split(" ")[0]} merged ${first}'s two spots into one.` });
+  // Two going spots became one: someone on the waitlist may move up.
+  await fillFromWaitlist(plan);
   revalidatePath(`/p/${slug}`);
   revalidatePath(`/p/${slug}/manage`);
   return { name: first };
