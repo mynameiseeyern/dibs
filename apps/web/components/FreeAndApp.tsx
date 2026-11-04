@@ -12,7 +12,7 @@ const FREE = [
   "Chat",
   "Splitting bills",
   "PayID settle-up",
-  "Card roulette",
+  "Spin the wheel",
   "The Dibby camera",
   "Recaps",
 ];
@@ -47,6 +47,7 @@ const BROWSER = [
   "Vote, RSVP and ask Dibby for spots",
   "Chat once you add your email",
   "Split the bill and square up",
+  "Plans in your calendar, with an account",
 ];
 
 const APP = [
@@ -83,7 +84,7 @@ export function BrowserOrApp({ appLink = true }: { appLink?: boolean }) {
           <h3 className="label-lg">
             <i className="ri-smartphone-line db-icon" aria-hidden="true" /> In the app
           </h3>
-          <span className="paragraph-xs muted">Coming to the App Store</span>
+          <span className="paragraph-xs muted">Coming to iPhone and Android</span>
           <ul>
             {APP.map((b, i) => (
               <li key={b} className={`paragraph-sm${i === 0 ? " landing__plus" : ""}`}>

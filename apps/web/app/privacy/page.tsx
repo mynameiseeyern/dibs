@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: "Privacy", robots: { index: true, fol
 
 export default function Privacy() {
   return (
-    <LegalPage title="Privacy" updated="24 October 2026">
+    <LegalPage title="Privacy" updated="5 November 2026">
       <p>
         Dibby helps a group make a plan, decide where to go and square up after. This is what we keep, why, and how to get rid of it. If
         anything here is unclear, email <a href="mailto:hello@dibby.social">hello@dibby.social</a>.
@@ -38,8 +38,14 @@ export default function Privacy() {
           next time. The cookie lasts a year.
         </li>
         <li>
-          <strong>Usage counts:</strong> we log moments like &ldquo;a plan was made&rdquo; or &ldquo;a bill was settled&rdquo;, with IDs only (no
-          names, messages, places or amounts), to see whether Dibby is working.
+          <strong>Your calendar link,</strong> if you have an account and turn it on. It&rsquo;s a private address your calendar app checks for
+          plans you&rsquo;re going to once they have a time. Anyone with the link can see those plans, so keep it to yourself. You can reset it on{" "}
+          <a href="/account">You</a> any time and the old link stops working.
+        </li>
+        <li>
+          <strong>Usage counts:</strong> we log moments like &ldquo;a plan was made&rdquo;, &ldquo;a vote was cast&rdquo; or &ldquo;a bill was
+          settled&rdquo;, with IDs only (no names, messages, places or amounts), to see whether Dibby is working. When someone opens a plan link
+          they&rsquo;re not on yet, we count it with a random ID kept in that browser, which isn&rsquo;t tied to a name or account.
         </li>
       </ul>
 
@@ -54,6 +60,12 @@ export default function Privacy() {
         Dibby has an AI member in every plan&rsquo;s chat. It only reads messages that tag @dibby, and what you type in &ldquo;Ask Dibby&rdquo;. Those
         are sent to our AI provider, Anthropic, so it can reply. It doesn&rsquo;t remember anything between plans and never mentions money or anything
         personal.
+      </p>
+
+      <h2>The app and the browser</h2>
+      <p>
+        The Dibby app for iPhone and Android uses the same account and keeps the same data as the website. It doesn&rsquo;t collect anything
+        extra about you.
       </p>
 
       <h2>Places and your location</h2>
@@ -71,8 +83,16 @@ export default function Privacy() {
         <li>Google Maps Platform: place search, place details and weather.</li>
         <li>Resend: sends sign-in links and, if you opt in, beta updates.</li>
         <li>Sentry: crash reports, so we can fix what breaks. We don&rsquo;t send it names, messages or amounts.</li>
+        <li>Apple and Google: if you use the Dibby app, you get it from their app stores, under their own privacy policies.</li>
       </ul>
-      <p>We don&rsquo;t sell your data or use it for ads.</p>
+      <p>
+        Some of these companies store or process data outside Australia, mostly in the United States. We only share what each one needs to do
+        its job.
+      </p>
+      <p>
+        We don&rsquo;t sell your data or use it for ads. If places ever pay to show up as a suggestion, they&rsquo;ll be marked Sponsored, and we
+        won&rsquo;t use your data to aim them at you.
+      </p>
 
       <h2>Emails</h2>
       <p>
@@ -86,8 +106,8 @@ export default function Privacy() {
           <strong>Guests:</strong> tap &ldquo;Remove me from this plan&rdquo; on a plan to delete your name and data from it.
         </li>
         <li>
-          <strong>Accounts:</strong> go to <a href="/account">You</a> and tap &ldquo;Delete my account&rdquo;. Your sign-in, email, date of birth
-          and PayID are deleted. On plans you were part of, you show as &ldquo;Former member&rdquo;, so everyone else&rsquo;s bills still add up.
+          <strong>Accounts:</strong> go to <a href="/account">You</a> and tap &ldquo;Delete my account&rdquo;. Your sign-in, email, PayID, calendar link and any date of
+          birth you gave in the early beta are deleted. On plans you were part of, you show as &ldquo;Former member&rdquo;, so everyone else&rsquo;s bills still add up.
           Messages you sent in a plan&rsquo;s chat stay there for the group, under that name.
         </li>
       </ul>
