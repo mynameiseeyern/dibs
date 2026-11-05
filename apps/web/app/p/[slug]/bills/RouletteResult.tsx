@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Wheel, type WheelMode } from "./Wheel";
 import * as Button from "@/components/ui/button";
-import { buzz, HAPTICS, rouletteSoundOn, setRouletteSound } from "@/lib/feedback";
+import { buzz, HAPTICS, soundOn, setSoundOn } from "@/lib/feedback";
 
 const seenKey = (billId: string) => `dibs:spin-seen:${billId}`;
 
@@ -47,9 +47,9 @@ export function RouletteResult({
   }, [billId]);
 
   const [sound, setSound] = useState(false);
-  useEffect(() => setSound(rouletteSoundOn()), []);
+  useEffect(() => setSound(soundOn()), []);
   const toggleSound = () => {
-    setRouletteSound(!sound);
+    setSoundOn(!sound);
     setSound(!sound);
   };
 

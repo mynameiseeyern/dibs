@@ -9,6 +9,7 @@ import { formatAud, rouletteTally } from "@dibs/shared/bills";
 import { deleteAccountAction, forgetDeviceAction, signOutAction, switchAccountAction } from "../actions";
 import { DeleteAccount } from "./DeleteAccount";
 import { ThemePicker } from "./ThemePicker";
+import { SoundToggle } from "./SoundToggle";
 import { SiteFooter } from "@/components/SiteFooter";
 import { KeepPlansForm } from "./KeepPlansForm";
 import { BetaUpdatesToggle } from "./BetaUpdatesToggle";
@@ -110,8 +111,9 @@ export default async function Account() {
       )}
 
       <section className="db-card section" aria-labelledby="theme-h">
-        <h2 id="theme-h" className="title-h5">Appearance</h2>
+        <h2 id="theme-h" className="title-h5">Look and sound</h2>
         <ThemePicker />
+        <SoundToggle />
       </section>
 
       {name && (

@@ -259,12 +259,12 @@ export default async function Bills({ params, searchParams }: Props) {
                   <div className="payid__row"><div><span>Reference</span><strong className="payid__name">{ref}</strong></div><CopyButton value={ref} label="reference" /></div>
                 </div>
                 <p className="paragraph-sm muted">You each paid for something, so it&rsquo;s one payment instead of two. Dibby never touches the money.</p>
-                <ActionForm action={settleNet.bind(null, slug, id)} what="that payment" haptic={HAPTICS.paid} block icon="ri-check-line" label={<>I&rsquo;ve paid {first(id)} {formatAud(net)}</>} />
+                <ActionForm action={settleNet.bind(null, slug, id)} what="that payment" haptic={HAPTICS.paid} sound="paid" block icon="ri-check-line" label={<>I&rsquo;ve paid {first(id)} {formatAud(net)}</>} />
               </>
             ) : net > 0 ? (
               <p className="paragraph-sm muted">{first(id)} hasn&rsquo;t added a PayID yet.</p>
             ) : net === 0 ? (
-              <ActionForm action={settleNet.bind(null, slug, id)} what="that" haptic={HAPTICS.paid} block icon="ri-check-double-line" label="It cancels out. Call it square" />
+              <ActionForm action={settleNet.bind(null, slug, id)} what="that" haptic={HAPTICS.paid} sound="paid" block icon="ri-check-double-line" label="It cancels out. Call it square" />
             ) : (
               <p className="paragraph-sm muted">{first(id)} sees the same thing and pays you the difference.</p>
             )}
@@ -295,7 +295,7 @@ export default async function Bills({ params, searchParams }: Props) {
                   <div className="payid__row"><div><span>Reference</span><strong className="payid__name">{ref}</strong></div><CopyButton value={ref} label="reference" /></div>
                 </div>
                 <p className="paragraph-sm muted">Pay from your banking app. Dibby never touches the money.</p>
-                <ActionForm action={saysPaid.bind(null, slug, bill.id)} what="that payment" haptic={HAPTICS.paid} block icon="ri-check-line" label={<>I&rsquo;ve paid {first(bill.payer_member_id)}</>} />
+                <ActionForm action={saysPaid.bind(null, slug, bill.id)} what="that payment" haptic={HAPTICS.paid} sound="paid" block icon="ri-check-line" label={<>I&rsquo;ve paid {first(bill.payer_member_id)}</>} />
               </>
             ) : (
               <p className="paragraph-sm muted">{first(bill.payer_member_id)} hasn&rsquo;t added a PayID yet.</p>
@@ -395,10 +395,10 @@ function PayerCard({
             {s.status === "confirmed" ? (
               <Badge.Root color="success"><Badge.Icon as="i" className="ri-check-line" aria-hidden="true" />Square</Badge.Root>
             ) : s.status === "says_paid" ? (
-              <ActionForm action={confirmPaid.bind(null, slug, bill.id, s.member_id)} what="that" haptic={HAPTICS.paid} size="small" label="Confirm" ariaLabel={`Confirm ${m?.display_name.split(" ")[0] ?? "they"} paid`} />
+              <ActionForm action={confirmPaid.bind(null, slug, bill.id, s.member_id)} what="that" haptic={HAPTICS.paid} sound="paid" size="small" label="Confirm" ariaLabel={`Confirm ${m?.display_name.split(" ")[0] ?? "they"} paid`} />
             ) : m && !m.user_id && !m.guest_id ? (
               // Came last minute with no app: they can't tap "I've paid", so the payer marks it.
-              <ActionForm action={confirmPaid.bind(null, slug, bill.id, s.member_id)} what="that" haptic={HAPTICS.paid} size="small" label={`Got ${formatAud(s.amount_cents)}`} ariaLabel={`${m.display_name.split(" ")[0]} paid you ${formatAud(s.amount_cents)}`} />
+              <ActionForm action={confirmPaid.bind(null, slug, bill.id, s.member_id)} what="that" haptic={HAPTICS.paid} sound="paid" size="small" label={`Got ${formatAud(s.amount_cents)}`} ariaLabel={`${m.display_name.split(" ")[0]} paid you ${formatAud(s.amount_cents)}`} />
             ) : (
               <span className="db-split__owe">{formatAud(s.amount_cents)}</span>
             )}

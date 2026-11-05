@@ -8,6 +8,7 @@ import * as Button from "@/components/ui/button";
 import * as Hint from "@/components/ui/hint";
 import * as Input from "@/components/ui/input";
 import { toast } from "@/components/ui/toast";
+import { play } from "@/lib/feedback";
 
 export function Composer({ action }: { action: (s: FormState, f: FormData) => Promise<FormState> }) {
   const [text, setText] = useState("");
@@ -32,6 +33,7 @@ export function Composer({ action }: { action: (s: FormState, f: FormData) => Pr
       }
     }
     const r = await action(s, f);
+    if (!r?.error) play("send");
     setText("");
     return r;
   }, undefined);

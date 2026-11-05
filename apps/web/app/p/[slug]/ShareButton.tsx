@@ -3,6 +3,7 @@
 import * as Button from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 import { CircleAction } from "@/components/CircleAction";
+import { play } from "@/lib/feedback";
 
 /** Opens the share sheet (WhatsApp on most phones); falls back to a WhatsApp link, then copy. */
 export function ShareButton({
@@ -44,6 +45,7 @@ export function ShareButton({
     }
     try {
       await navigator.clipboard.writeText(url);
+      play("copy");
       toast.success("Link copied", { description: "Paste it in the group chat." });
     } catch {
       // Clipboard blocked (some browsers, in-app webviews): show the link to copy by hand.
