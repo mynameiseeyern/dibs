@@ -34,9 +34,8 @@ EXPO_PUBLIC_API_URL=http://<your-laptop-ip>:3000 pnpm mobile
 ## Still to set up
 
 1. First builds: see Building and shipping below.
-2. Universal links: serve `/.well-known/apple-app-site-association` and `/.well-known/assetlinks.json` from `apps/web`. `app.json` already declares `dibby.social` for both.
+2. Universal links: `apps/web` serves `/.well-known/apple-app-site-association` and `/.well-known/assetlinks.json` (`lib/app-links.ts`). Set `APPLE_TEAM_ID` and `ANDROID_CERT_SHA256` on Vercel once the first builds are signed, and add the Play app signing fingerprint after the first Play upload.
 3. Sign-in on the phone (Supabase auth, token sent to the API), then joining, RSVP and voting endpoints.
-4. Proper Android adaptive icon (a padded foreground layer); for now it reuses the App Store icon.
 
 ## Building and shipping
 
