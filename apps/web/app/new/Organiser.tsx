@@ -75,7 +75,7 @@ export function Organiser({ who, errorFor = () => undefined }: { who: Organising
       {who.kind === "new" && (
         <p className="paragraph-xs muted">
           Got an account?{" "}
-          <a href="/login?next=/new" className="underline">
+          <a href="/login?next=/" className="underline">
             Sign in
           </a>
         </p>

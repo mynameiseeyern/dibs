@@ -40,7 +40,7 @@ export default async function AppPage() {
         </p>
         <AppWaitlist signedIn={Boolean(me)} />
         <Button.Root asChild variant="neutral" mode="lighter" size="large" block>
-          <a href="/new">Make a plan now</a>
+          <a href="/">Make a plan now</a>
         </Button.Root>
       </section>
 

@@ -825,7 +825,7 @@ export function PlanChat({ organising, searchPass, initialAsk }: { organising: O
           </label>
         </div>
         <p className="paragraph-sm muted">
-          Got an account? <a href="/login?next=/new">Sign in</a>
+          Got an account? <a href="/login?next=/chat">Sign in</a>
         </p>
       </>
     );

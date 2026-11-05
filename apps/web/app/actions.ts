@@ -268,7 +268,7 @@ async function whoIsOrganising(form: FormData): Promise<Host | { error: string; 
   const me = await currentOrganiser();
   if (me) {
     const profile = await store.getProfile(me.id);
-    if (!profile) redirect("/onboarding?next=/new");
+    if (!profile) redirect("/onboarding?next=/");
     return {
       name: `${profile.first_name} ${profile.last_name}`,
       ids: async () => ({ organiserUserId: me.id, organiserGuestId: null }),
