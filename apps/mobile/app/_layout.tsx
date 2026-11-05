@@ -5,6 +5,7 @@ import { StatusBar } from "expo-status-bar";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { useDibbyFonts } from "@/lib/fonts";
+import { SessionProvider } from "@/lib/session";
 import { ThemeRoot, useColour, useMode } from "@/lib/theme";
 import { Toaster } from "@/components/ui/toast";
 
@@ -39,7 +40,9 @@ export default function RootLayout() {
   if (!loaded) return null;
   return (
     <ThemeRoot>
-      <Screens />
+      <SessionProvider>
+        <Screens />
+      </SessionProvider>
     </ThemeRoot>
   );
 }

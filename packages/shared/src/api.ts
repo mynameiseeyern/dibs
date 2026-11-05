@@ -49,3 +49,45 @@ export function toPlanSummary(plan: Plan, members: readonly PlanMember[], when: 
     voting,
   };
 }
+
+/**
+ * Sign-in on the phone. The app never holds a Supabase key: it asks the web app to email a
+ * code (`POST /api/v1/auth/code`), swaps the code for a session (`POST /api/v1/auth/verify`)
+ * and keeps it fresh (`POST /api/v1/auth/refresh`). Every other call sends
+ * `Authorization: Bearer <access_token>`.
+ */
+export interface AuthSession {
+  access_token: string;
+  refresh_token: string;
+  /** Unix seconds. Refresh a minute or so before. */
+  expires_at: number;
+}
+
+/** `GET /api/v1/me`. `name` is null until they've told us it (a new account). */
+export interface Me {
+  id: string;
+  email: string | null;
+  name: { first: string; last: string } | null;
+}
+
+/** A row on the phone's home screen (`GET /api/v1/me/plans`): your plans, with your answer. */
+export interface MyPlan extends PlanSummary {
+  /** Your answer on this plan. */
+  rsvp: PlanMember["rsvp"];
+  waitlisted: boolean;
+  host: boolean;
+}
+
+export function toMyPlan(plan: Plan, members: readonly PlanMember[], me: PlanMember, when: string | null): MyPlan {
+  return {
+    ...toPlanSummary(plan, members, when),
+    rsvp: me.rsvp,
+    waitlisted: me.waitlisted,
+    host: me.role === "organiser" || me.role === "cohost",
+  };
+}
+
+/** Error body every /api/v1 route sends: `{ error }`, copy that's fine to show as is. */
+export interface ApiError {
+  error: string;
+}

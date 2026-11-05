@@ -15,6 +15,16 @@ It talks to `https://dibby.social` by default. To point it at your laptop instea
 EXPO_PUBLIC_API_URL=http://<your-laptop-ip>:3000 pnpm mobile
 ```
 
+## Signing in
+
+The phone signs in with the same email as the web, using its 6-digit code instead of the link:
+`POST /api/v1/auth/code` emails it, `POST /api/v1/auth/verify` swaps it for a session, and
+`lib/session.tsx` keeps that in the keychain (`expo-secure-store`) and refreshes it. Every other
+call sends `Authorization: Bearer …`, checked by `apps/web/lib/api-auth.ts`. In demo mode (no
+Supabase) any 6 digits sign in.
+
+Delete account is in the app (Apple requires it): `DELETE /api/v1/me`, the same as the web's.
+
 ## How it fits with the web app
 
 - **The web app is the backend.** The phone calls `apps/web/app/api/v1/*` and never talks to Supabase directly, so every rule in the root `CLAUDE.md` (who sees addresses, balances, PayID) is enforced in one place.
@@ -35,7 +45,7 @@ EXPO_PUBLIC_API_URL=http://<your-laptop-ip>:3000 pnpm mobile
 
 1. First builds: see Building and shipping below.
 2. Universal links: serve `/.well-known/apple-app-site-association` and `/.well-known/assetlinks.json` from `apps/web`. `app.json` already declares `dibby.social` for both.
-3. Sign-in on the phone (Supabase auth, token sent to the API), then joining, RSVP and voting endpoints.
+3. Sign-in codes: paste the regenerated `supabase/templates/magic-link.html` and `confirm-signup.html` into Supabase > Authentication > Emails (they now carry the 6-digit code as well as the link). Until then the email has no code to type.
 4. Proper Android adaptive icon (a padded foreground layer); for now it reuses the App Store icon.
 
 ## Building and shipping

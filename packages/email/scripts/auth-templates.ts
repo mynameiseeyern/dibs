@@ -30,12 +30,14 @@ const signIn = (heading: string, lead: string) =>
   renderEmail({
     sender,
     title: heading,
-    preheader: "Tap to sign in. The link works once and runs out in an hour.",
+    preheader: "Tap to sign in, or type the code in the app. Both work once and run out in an hour.",
     body: [
       h1(heading),
       para(lead),
       button(SIGN_IN_LINK, "Sign in to Dibby"),
-      muted("The link works once and runs out in an hour. Open it on the phone or laptop you want to use Dibby on."),
+      // The phone app signs in with the code instead (POST /api/v1/auth/verify).
+      para(`On the Dibby app? Type this code: <span style="font:600 22px/30px 'DM Mono', ui-monospace, Menlo, monospace;letter-spacing:0.12em;">{{ .Token }}</span>`),
+      muted("The link and the code work once and run out in an hour. Open the link on the phone or laptop you want to use Dibby on."),
       muted("Didn't ask for this? You can ignore it. Nobody can sign in without this email."),
     ].join("\n"),
     footer: { reason: "You're getting this because someone asked to sign in to Dibby with this email." },
