@@ -23,6 +23,9 @@ The phone signs in with the same email as the web, using its 6-digit code instea
 call sends `Authorization: Bearer …`, checked by `apps/web/lib/api-auth.ts`. In demo mode (no
 Supabase) any 6 digits sign in.
 
+The code only arrives once Supabase has the current templates: paste `supabase/templates/magic-link.html`
+and `confirm-signup.html` into Supabase > Authentication > Emails after changing them.
+
 Delete account is in the app (Apple requires it): `DELETE /api/v1/me`, the same as the web's.
 
 ## How it fits with the web app
@@ -45,7 +48,7 @@ Delete account is in the app (Apple requires it): `DELETE /api/v1/me`, the same 
 
 1. First builds: see Building and shipping below.
 2. Universal links: serve `/.well-known/apple-app-site-association` and `/.well-known/assetlinks.json` from `apps/web`. `app.json` already declares `dibby.social` for both.
-3. Sign-in codes: paste the regenerated `supabase/templates/magic-link.html` and `confirm-signup.html` into Supabase > Authentication > Emails (they now carry the 6-digit code as well as the link). Until then the email has no code to type.
+3. Sign-in on the phone (Supabase auth, token sent to the API), then joining, RSVP and voting endpoints.
 4. Proper Android adaptive icon (a padded foreground layer); for now it reuses the App Store icon.
 
 ## Building and shipping
