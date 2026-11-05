@@ -3,7 +3,7 @@
 import { useTransition, type ReactNode } from "react";
 import * as Button from "@/components/ui/button";
 import { send } from "@/lib/send";
-import { buzz } from "@/lib/feedback";
+import { buzz, play, type SoundName } from "@/lib/feedback";
 
 /**
  * A one-button form for a server action (mark paid, confirm), with "Saving…", a retry when the
@@ -19,6 +19,7 @@ export function ActionForm({
   size,
   ariaLabel,
   haptic,
+  sound,
 }: {
   action: () => Promise<unknown>;
   /** "that payment": used in "Couldn't save that payment". */
@@ -31,6 +32,8 @@ export function ActionForm({
   ariaLabel?: string;
   /** A little buzz when it saves, on phones that support it. */
   haptic?: readonly number[];
+  /** And a sound, if they have sound on. */
+  sound?: SoundName;
 }) {
   const [pending, start] = useTransition();
   return (
@@ -45,7 +48,8 @@ export function ActionForm({
             ok = true;
             return r;
           }, { retry, what });
-          if (haptic && ok) buzz(haptic);
+          if (ok && haptic) buzz(haptic);
+          if (ok && sound) play(sound, { within: 2000 });
         });
       }}
     >

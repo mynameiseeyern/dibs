@@ -9,6 +9,7 @@ import * as React from 'react';
 import { Toaster as Sonner, toast as sonnerToast, type ExternalToast } from 'sonner';
 import { RiCheckboxCircleFill, RiErrorWarningFill, RiInformationFill, RiAlertFill } from '@remixicon/react';
 import * as Alert from '@/components/ui/alert';
+import { play } from '@/lib/feedback';
 
 type Status = 'success' | 'error' | 'warning' | 'information';
 
@@ -72,7 +73,7 @@ function show(status: Status, title: string, opts?: ExternalToast & Extra) {
 /** `toast.success("Link copied")`, `toast.error("Couldn't save that", { description: "Try again in a sec." })` */
 export const toast = {
   success: (title: string, opts?: ExternalToast & Extra) => show('success', title, opts),
-  error: (title: string, opts?: ExternalToast & Extra) => show('error', title, opts),
+  error: (title: string, opts?: ExternalToast & Extra) => (play('error'), show('error', title, opts)),
   warning: (title: string, opts?: ExternalToast & Extra) => show('warning', title, opts),
   info: (title: string, opts?: ExternalToast & Extra) => show('information', title, opts),
   dismiss: sonnerToast.dismiss,

@@ -18,6 +18,8 @@ import * as ProgressBar from "@/components/ui/progress-bar";
 import * as Tooltip from "@/components/ui/tooltip";
 import * as Modal from "@/components/ui/modal";
 import { toast } from "@/components/ui/toast";
+import { play, type SoundName } from "@/lib/feedback";
+import { SOUNDS } from "@/lib/sounds/recipes";
 import { Calendar } from "@/components/ui/datepicker";
 import * as Select from "@/components/ui/select";
 import * as Textarea from "@/components/ui/textarea";
@@ -283,6 +285,10 @@ export function Gallery() {
         <MomentsDemo />
       </Section>
 
+      <Section title="Sounds">
+        <SoundsDemo />
+      </Section>
+
       <Section title="Date picker">
         <DateDemo />
       </Section>
@@ -413,6 +419,23 @@ function MomentsDemo() {
       <Button.Root variant="neutral" mode="lighter" onClick={() => setRun(run + 1)}>
         Play again
       </Button.Root>
+    </>
+  );
+}
+
+/** Every sound in lib/sounds/recipes.ts, to audition. They follow the sound switch on /account. */
+function SoundsDemo() {
+  return (
+    <>
+      <p className="paragraph-sm muted">Tap to hear each one. To swap a sound, see the note in lib/sounds/recipes.ts.</p>
+      <div className="db-row flex-wrap">
+        {(Object.keys(SOUNDS) as SoundName[]).map((name) => (
+          <Button.Root key={name} variant="neutral" mode="lighter" size="small" onClick={() => play(name)}>
+            <i className="ri-volume-up-line db-icon" aria-hidden="true" />
+            {name}
+          </Button.Root>
+        ))}
+      </div>
     </>
   );
 }

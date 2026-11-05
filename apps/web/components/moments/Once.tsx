@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { Moment } from "./Moment";
 import type { MomentKind } from "./plays";
-import { buzz, HAPTICS } from "@/lib/feedback";
+import { buzz, HAPTICS, play, type SoundName } from "@/lib/feedback";
+
+const SOUND: Record<MomentKind, SoundName> = { pop: "pop", lock: "locked", square: "square", paid: "paid" };
 
 /**
  * Plays a moment the first time this browser sees a given state (keyed), then never again.
@@ -39,6 +41,8 @@ export function Once({
     } catch {}
     setState(seen ? "done" : "play");
     if (!seen && kind === "lock") buzz(HAPTICS.locked);
+    // The tap that got here may already have played it.
+    if (!seen) play(SOUND[kind], { within: 2000 });
   }, [key, kind]);
 
   if (state === "unknown") return <>{after}</>;

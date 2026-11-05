@@ -14,6 +14,7 @@ import { trackShare } from "../actions";
 import { Overview } from "./Overview";
 import { KeepCard } from "./KeepCard";
 import { usingSupabase } from "@/lib/store";
+import { Chime } from "@/components/moments/Chime";
 
 export const metadata: Metadata = { title: "Plan's made", robots: { index: false } };
 
@@ -49,6 +50,7 @@ export default async function Made({ params, searchParams }: { params: Promise<{
 
       <section className="made__hero" aria-labelledby="made-h">
         <Dibby mood="cheer" size="lg" />
+        <Chime sound="made" id={`made:${plan.id}`} />
         <h1 id="made-h" className="title-h3">
           It&rsquo;s on.
         </h1>

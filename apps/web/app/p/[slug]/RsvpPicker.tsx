@@ -6,6 +6,7 @@ import type { Rsvp, Vibe } from "@dibs/shared/types";
 import { rsvpHeading } from "@/lib/copy";
 import * as Button from "@/components/ui/button";
 import { send } from "@/lib/send";
+import { play } from "@/lib/feedback";
 import { PlusOne } from "./PlusOne";
 
 /**
@@ -42,6 +43,8 @@ export function RsvpPicker({
 
   function choose(r: Rsvp) {
     if (pending && shown === r) return;
+    // "I'm in" gets the pop (the moment that follows won't play it twice); the rest a tap.
+    if (shown !== r) play(r === "in" ? "pop" : "tap");
     startTransition(async () => {
       setShown(r);
       await send(() => setRsvp(r), { what: "your answer" });

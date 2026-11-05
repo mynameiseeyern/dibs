@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import * as Button from "@/components/ui/button";
+import { play } from "@/lib/feedback";
 
 export function CopyButton({ value, label }: { value: string; label: string }) {
   const [done, setDone] = useState(false);
@@ -16,6 +17,7 @@ export function CopyButton({ value, label }: { value: string; label: string }) {
         try {
           await navigator.clipboard.writeText(value);
           setDone(true);
+          play("copy");
           setTimeout(() => setDone(false), 1500);
         } catch {
           /* clipboard blocked: the value is still on screen to copy by hand */

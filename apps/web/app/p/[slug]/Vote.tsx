@@ -19,6 +19,7 @@ import * as Modal from "@/components/ui/modal";
 import * as Dropdown from "@/components/ui/dropdown";
 import { toast } from "@/components/ui/toast";
 import { send } from "@/lib/send";
+import { play } from "@/lib/feedback";
 import { splitLeaders, voteStep } from "@dibs/shared/votes";
 
 export interface VoteRow extends PlanOption {
@@ -147,6 +148,7 @@ export function VoteList({
           if (step.kind === "none") return;
           // All picks used: say so here rather than send a vote the server will turn down.
           if (step.kind === "full") return void toast.info(`That's your ${step.max} picks. Untick one to swap it.`);
+          play(r.mine ? "deselect" : "select");
           startVote(async () => {
             moveVote(r.id);
             // Moving your one pick is safe to resend; a tick or untick isn't.
@@ -332,7 +334,8 @@ export function VoteList({
                 disabled={lockBusy}
                 onClick={() =>
                   startLock(async () => {
-                    await send(lock, { what: "that" });
+                    const done = await send(async () => (await lock(), true), { what: "that" });
+                    if (done) play("locked", { within: 2000 });
                     setLocking(false);
                   })
                 }
