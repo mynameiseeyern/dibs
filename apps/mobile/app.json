@@ -17,8 +17,8 @@
     "android": {
       "package": "social.dibby.app",
       "adaptiveIcon": {
-        "backgroundColor": "#6D4AFF",
-        "foregroundImage": "./assets/icon.png"
+        "backgroundColor": "#684CFC",
+        "foregroundImage": "./assets/adaptive-icon.png"
       },
       "intentFilters": [
         {
