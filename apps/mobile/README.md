@@ -28,6 +28,23 @@ and `confirm-signup.html` into Supabase > Authentication > Emails after changing
 
 Delete account is in the app (Apple requires it): `DELETE /api/v1/me`, the same as the web's.
 
+## Making a plan (no account needed)
+
+The web's form (`apps/web/app/new/PlanFlow.tsx`) as hopscotch: `app/new.tsx`. One question a chalk
+square (what, when, where, then your name if we don't know it). Dibby hops a square per answer,
+reads the next question out (it's the heading, coming in word by word) and rests there.
+
+- `components/dibby/hello.tsx`: tapping Make plans on the welcome screen dims it, Dibby climbs out
+  from behind the button, waves, then hops onto the first square. Skip, top right.
+- `components/dibby/hopscotch.tsx`: Dibby's three phases per square, hop → talk → rest. Each plays a
+  Runway clip when there is one (`CLIPS`: transparent animated WebP in `assets/dibby`) and a code
+  stand-in until then. The hello moment's clip goes in `HELLO_CLIP`.
+- Reduce Motion or a screen reader: no hello, no hops, no waiting. The question is a real heading
+  and focus moves to it on each square.
+- Sent to `POST /api/v1/plans` (`apps/web/lib/api-create-plan.ts`, same rules as the web's
+  `createPlan`: change both). The first plan gives the phone a guest pass, kept in the keychain and
+  sent as `X-Dibby-Guest`; signing in later moves its plans onto the account and drops the pass.
+
 ## How it fits with the web app
 
 - **The web app is the backend.** The phone calls `apps/web/app/api/v1/*` and never talks to Supabase directly, so every rule in the root `CLAUDE.md` (who sees addresses, balances, PayID) is enforced in one place.

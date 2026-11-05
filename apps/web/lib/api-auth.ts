@@ -1,10 +1,10 @@
 import "server-only";
-import { randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import type { AuthSession } from "@dibs/shared/api";
 import type { Organiser } from "./auth";
-import { usingSupabase } from "./store";
+import { store, usingSupabase, type Guest } from "./store";
 
 /**
  * Sign-in for the native app. The web uses cookies (`lib/auth.ts`); the phone sends
@@ -32,6 +32,26 @@ export async function apiOrganiser(req: Request): Promise<Organiser | null> {
   const claims = data?.claims;
   if (error || !claims?.sub) return null;
   return { id: claims.sub, email: typeof claims.email === "string" && claims.email ? claims.email : null };
+}
+
+/**
+ * Guests on the phone, like the web's device cookie: a random token the app keeps in the
+ * keychain and sends as `X-Dibby-Guest`. We store only its hash, so holding the token is the proof.
+ */
+const GUEST_HEADER = "x-dibby-guest";
+const hashToken = (t: string) => createHash("sha256").update(t).digest("hex");
+
+export async function apiGuest(req: Request): Promise<Guest | null> {
+  const token = req.headers.get(GUEST_HEADER)?.trim();
+  if (!token || token.length < 32 || token.length > 100) return null;
+  return store.findGuestByTokenHash(hashToken(token)).catch(() => null);
+}
+
+/** A new guest and the token the app keeps for them. Only once everything else checks out. */
+export async function newApiGuest(first: string, last: string): Promise<{ guest: Guest; token: string }> {
+  const token = randomBytes(32).toString("base64url");
+  const guest = await store.createGuest({ first_name: first, last_name: last, tokenHash: hashToken(token) });
+  return { guest, token };
 }
 
 export const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
