@@ -15,6 +15,19 @@ It talks to `https://dibby.social` by default. To point it at your laptop instea
 EXPO_PUBLIC_API_URL=http://<your-laptop-ip>:3000 pnpm mobile
 ```
 
+## Signing in
+
+The phone signs in with the same email as the web, using its 6-digit code instead of the link:
+`POST /api/v1/auth/code` emails it, `POST /api/v1/auth/verify` swaps it for a session, and
+`lib/session.tsx` keeps that in the keychain (`expo-secure-store`) and refreshes it. Every other
+call sends `Authorization: Bearer …`, checked by `apps/web/lib/api-auth.ts`. In demo mode (no
+Supabase) any 6 digits sign in.
+
+The code only arrives once Supabase has the current templates: paste `supabase/templates/magic-link.html`
+and `confirm-signup.html` into Supabase > Authentication > Emails after changing them.
+
+Delete account is in the app (Apple requires it): `DELETE /api/v1/me`, the same as the web's.
+
 ## How it fits with the web app
 
 - **The web app is the backend.** The phone calls `apps/web/app/api/v1/*` and never talks to Supabase directly, so every rule in the root `CLAUDE.md` (who sees addresses, balances, PayID) is enforced in one place.
