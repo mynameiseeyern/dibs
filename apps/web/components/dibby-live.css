@@ -1,0 +1,33 @@
+/* Dibby reacting in the chat (DibbyLive). Springy and quick, like the rest of the app. */
+
+.dl { display: inline-block; flex: none; line-height: 0; }
+.dl__move, .dl__pose { display: block; transform-origin: 50% 85%; }
+
+.dl__pose { animation: dl-pop 240ms cubic-bezier(.34, 1.56, .64, 1) both; }
+@keyframes dl-pop { from { opacity: 0; transform: scale(.88); } }
+
+/* Breathing while nothing's happening */
+.dl--idle .dl__move { animation: dl-breathe 3.2s ease-in-out infinite; }
+@keyframes dl-breathe { 50% { transform: scale(1.03) translateY(-1px); } }
+
+/* Leaning in when the box has the cursor */
+.dl--attentive .dl__move { transform: translateY(2px) rotate(-3deg); transition: transform 200ms cubic-bezier(.34, 1.56, .64, 1); }
+
+/* Nodding along while you type */
+.dl--listening .dl__move { transform: rotate(-3deg); }
+.dl__move--nod-a { animation: dl-nod-a 320ms cubic-bezier(.34, 1.56, .64, 1); }
+.dl__move--nod-b { animation: dl-nod-b 320ms cubic-bezier(.34, 1.56, .64, 1); }
+@keyframes dl-nod-a { 40% { transform: rotate(-3deg) translateY(3px) scaleY(.96); } }
+@keyframes dl-nod-b { 40% { transform: rotate(-3deg) translateY(3px) scaleY(.96); } }
+
+/* Head tilt when you stop mid-message */
+.dl--waiting .dl__move { transform: rotate(7deg); transition: transform 260ms cubic-bezier(.34, 1.56, .64, 1); }
+
+/* A little bounce as Dibby's message lands */
+.dl--talking .dl__move { animation: dl-talk 420ms cubic-bezier(.34, 1.56, .64, 1); }
+@keyframes dl-talk { 30% { transform: translateY(-4px) scale(1.04); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .dl__pose, .dl__move, .dl--idle .dl__move, .dl__move--nod-a, .dl__move--nod-b, .dl--talking .dl__move { animation: none; }
+  .dl--attentive .dl__move, .dl--listening .dl__move, .dl--waiting .dl__move { transform: none; transition: none; }
+}

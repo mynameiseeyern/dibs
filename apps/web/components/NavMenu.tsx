@@ -40,7 +40,7 @@ export function NavMenu({ name, signedIn }: Props) {
             Your plans
           </Item>
         )}
-        <Item href="/" icon="ri-add-line">
+        <Item href="/new" icon="ri-add-line">
           New plan
         </Item>
         {signedIn && (

@@ -172,7 +172,7 @@ export default async function Home() {
       <div className="dock">
         <div className="dock__inner">
           <Button.Root asChild variant="dibs" size="large" block>
-            <a href="/">
+            <a href="/new">
               <i className="ri-add-line db-icon" aria-hidden="true" /> Start a plan
             </a>
           </Button.Root>
