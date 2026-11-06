@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { categoryIcon, countIn, extraOn, FORMER_MEMBER, planAccess, READ_ONLY_NOTE, shareText, unreadCount, wrapState } from "@dibs/shared/plans";
+import { addPlaceNote, categoryIcon, countIn, extraOn, FORMER_MEMBER, planAccess, READ_ONLY_NOTE, shareText, unreadCount, wrapState } from "@dibs/shared/plans";
 import { likelyDuplicates } from "@dibs/shared/merge";
 import { formatAud } from "@dibs/shared/bills";
 import type { PlanMember, Rsvp } from "@dibs/shared/types";
@@ -614,6 +614,7 @@ export default async function PlanPage({ params, searchParams }: Props) {
                   canRemoveAll={isHost}
                   meId={me?.id ?? null}
                   readOnly={readOnly}
+                  addNote={addPlaceNote(me ?? null)}
                   area={plan.area}
                   askDibby={me && process.env.ANTHROPIC_API_KEY ? askDibbyMore.bind(null, slug) : undefined}
                   decide={isHost ? setPlace.bind(null, slug) : undefined}

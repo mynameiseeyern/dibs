@@ -37,6 +37,7 @@ export function VoteList({
   canRemoveAll = false,
   meId = null,
   readOnly = null,
+  addNote = null,
   area,
   askDibby,
   decide,
@@ -57,6 +58,8 @@ export function VoteList({
   meId?: string | null;
   /** Set when this person can only look (a maybe, not replied, waitlisted): why, shown when they tap. */
   readOnly?: string | null;
+  /** Set when this person can see the vote but can't add to it (addPlaceNote): shown where Add a place would be. */
+  addNote?: string | null;
   /** The plan's area, to start the map search near it. */
   area?: string | null;
   /** Dibby adds up to three more spots. Set when this person can add places and Dibby's on. */
@@ -215,7 +218,12 @@ export function VoteList({
 
   // Add a place (or ask Dibby): the last row of the list, or a button under the cards.
   const addButton = (as: "row" | "block") =>
-    canVote && open && rows.length < 8 ? (
+    open && rows.length < 8 && addNote ? (
+      <p className="vote-add-note paragraph-sm" data-row={as === "row" || undefined}>
+        <i className="ri-add-circle-line db-icon" aria-hidden="true" />
+        {addNote}
+      </p>
+    ) : canVote && open && rows.length < 8 ? (
       <Button.Root
         type="button"
         variant="neutral"
@@ -250,7 +258,7 @@ export function VoteList({
           </Button.Root>
         </div>
       )}
-      {rows.length === 0 && <p className="paragraph-sm muted">No options yet. Add a place, or ask Dibby.</p>}
+      {rows.length === 0 && <p className="paragraph-sm muted">{addNote ? "No options yet." : "No options yet. Add a place, or ask Dibby."}</p>}
       {open && canVote && !readOnly && (maxPicks > 1 || picked > 1) && rows.length > 1 && (
         <p className="paragraph-xs muted" aria-live="polite">
           {picked > maxPicks

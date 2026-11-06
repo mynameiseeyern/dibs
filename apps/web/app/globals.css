@@ -385,6 +385,9 @@ gmp-place-details-compact {
 .vote-row__name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .vote-row__more { color: var(--primary-dark); font-weight: 600; }
 .vote-row__add { width: 100%; min-height: 56px; justify-content: flex-start; border-top: 1px solid var(--stroke-soft-200); border-radius: 0; color: var(--primary-dark); }
+/* Someone who can see the vote but can't add to it yet: a quiet line where Add a place would be. */
+.vote-add-note { display: flex; align-items: center; gap: var(--space-2); margin: 0; color: var(--text-sub-600); }
+.vote-add-note[data-row] { min-height: 56px; border-top: 1px solid var(--stroke-soft-200); }
 gmp-place-details {
   --gmp-mat-font-family: var(--font-sans);
   --gmp-mat-color-surface: transparent;
