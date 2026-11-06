@@ -113,6 +113,18 @@ export const READ_ONLY_NOTE = {
   waitlist: "You're on the waitlist, so you can only read along until a spot opens.",
 } as const;
 
+/**
+ * The small line shown where Add a place would be, for someone who can see the vote but can't
+ * add to it: not joined yet, a maybe, not replied or waitlisted. Null when they can add (or
+ * can't see the vote at all).
+ */
+export function addPlaceNote(me: Pick<PlanMember, "rsvp" | "waitlisted" | "role"> | null): string | null {
+  if (!me) return "Tap I'm in to add a place.";
+  const a = planAccess(me);
+  if (a.level !== "read") return null;
+  return a.why === "waitlist" ? "You can add a place once a spot opens." : "Tap I'm in to add a place.";
+}
+
 /** A place typed in instead of picked on the map: a title, and an optional address. */
 export interface CustomPlace {
   name: string;
