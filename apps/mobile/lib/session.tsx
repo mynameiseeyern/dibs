@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import * as SecureStore from "expo-secure-store";
 import type { AuthSession, Me } from "@dibs/shared/api";
 import { getMe, refresh, setGuestSource, setSignedOutHandler, setTokenSource, verifyCode } from "./api";
+import { forgetPush } from "./push";
 
 /**
  * Who's signed in on this phone. The session (from an emailed code) lives in the keychain /
@@ -142,7 +143,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setState({ status: "signedIn", me });
         return me;
       },
-      signOut: clear,
+      async signOut() {
+        // Stop pushes for this account on this phone before the session goes.
+        await forgetPush();
+        await clear();
+      },
       setMe: (me) => setState({ status: "signedIn", me }),
       hasGuestPass,
       setGuestPass,

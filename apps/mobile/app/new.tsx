@@ -10,6 +10,7 @@ import { TIME_PRESETS } from "@dibs/shared/daypart";
 import { shareText } from "@dibs/shared/plans";
 import { PlanCard, type PlanFact } from "@/components/dibby/plan-card";
 import { Answers, Choice, DIBBY, DibbyAsks, Option, Stagger, talkMs, usePace, type Pose } from "@/components/dibby/flow";
+import { PushAsk } from "@/components/dibby/push-ask";
 import { Hopscotch, type Rest, type Square } from "@/components/dibby/hopscotch";
 import * as Button from "@/components/ui/button";
 import * as Hint from "@/components/ui/hint";
@@ -401,6 +402,8 @@ function Done({ slug, plan, title }: { slug: string; plan: PlanSummary | null; t
         <Animated.View entering={pace.reduce ? undefined : FadeInDown.duration(380).delay(650)}>
           <PlanCard eyebrow={plan?.when ?? null} title={plan?.title ?? title} status={plan?.status ?? "voting"} facts={facts} />
         </Animated.View>
+
+        <PushAsk delay={pace.reduce ? 0 : 1100} />
 
         {state.status !== "signedIn" ? (
           <Animated.View entering={pace.reduce ? undefined : FadeIn.duration(300).delay(900)}>

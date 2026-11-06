@@ -97,6 +97,12 @@ export interface Store {
   calendarFeedToken(userId: string, opts?: { reset?: boolean }): Promise<string>;
   /** Whose calendar link this is, or null. */
   userForCalendarToken(token: string): Promise<string | null>;
+  /** A phone's Expo push token, for an account or a guest pass. Same token again: moves it over. */
+  savePushToken(t: { token: string; userId: string | null; guestId: string | null; platform: "ios" | "android" }): Promise<void>;
+  /** Signed out, or Expo said the app's gone from that phone. */
+  removePushToken(token: string): Promise<void>;
+  /** Every phone belonging to these accounts and guests. */
+  listPushTokens(who: { userIds: string[]; guestIds: string[] }): Promise<PushToken[]>;
   /** They answered the beta updates question (yes or no), so the card stops showing. */
   answerBetaPrompt(userId: string): Promise<void>;
   unsubscribe(list: string, who: { userId: string } | { token: string }): Promise<Subscription | null>;
@@ -209,4 +215,12 @@ export interface Reaction {
   message_id: string;
   member_id: string;
   emoji: (typeof REACTIONS)[number];
+}
+
+/** A phone that gets push notifications (supabase/migrations/0028_push_tokens.sql). */
+export interface PushToken {
+  token: string;
+  user_id: string | null;
+  guest_id: string | null;
+  platform: "ios" | "android";
 }

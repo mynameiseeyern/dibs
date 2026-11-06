@@ -4,6 +4,7 @@ import { Redirect, router, Stack, useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { MyPlan } from "@dibs/shared/api";
 import { DibbyHello, type Anchor } from "@/components/dibby/hello";
+import { PushAsk } from "@/components/dibby/push-ask";
 import { PlanCard, PlanCardSkeleton, type PlanFact } from "@/components/dibby/plan-card";
 import * as Button from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -132,6 +133,7 @@ function MyPlans({ signedIn }: { signedIn: boolean }) {
           />
         }
       >
+        {load.kind === "ok" && load.upcoming.length > 0 ? <PushAsk /> : null}
         {load.kind === "loading" ? (
           <>
             <PlanCardSkeleton />

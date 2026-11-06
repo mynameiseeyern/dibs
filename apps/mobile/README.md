@@ -45,6 +45,26 @@ reads the next question out (it's the heading, coming in word by word) and rests
   `createPlan`: change both). The first plan gives the phone a guest pass, kept in the keychain and
   sent as `X-Dibby-Guest`; signing in later moves its plans onto the account and drops the pass.
 
+## Push notifications
+
+The server sends them (`apps/web/lib/push.ts`): `withPush` in `apps/web/lib/store/index.ts` wraps
+`addMessage` and `addMember`, so anything that lands in a plan's chat (people, Dibby's nudges,
+"A spot opened up", "Ee picked the place", "called off") pushes to everyone who can see the chat
+except its author, and someone joining tells the hosts. Can't go gets nothing; muted Dibby
+nudges stay muted. Tapping one opens the plan or its chat.
+
+The app (`lib/push.ts`) never asks on first launch: `PushAsk` shows on "It's on" and on your
+plans list, and "Not now" is remembered. Once allowed, the phone registers its token
+(`POST /api/v1/push`) whenever who's signed in changes; signing out removes it.
+
+Setup, once:
+1. Apply `supabase/migrations/0028_push_tokens.sql`.
+2. iOS: `npx eas-cli credentials -p ios` and let EAS make a push key (or say yes when `eas build` asks).
+3. Android: a Firebase project with an Android app `social.dibby.app`, then upload its FCM V1
+   service account key with `npx eas-cli credentials -p android` (Push Notifications). Put
+   `google-services.json` in this folder and set `android.googleServicesFile` in `app.json`.
+4. Pushes need a development build; Expo Go on Android can't receive them.
+
 ## How it fits with the web app
 
 - **The web app is the backend.** The phone calls `apps/web/app/api/v1/*` and never talks to Supabase directly, so every rule in the root `CLAUDE.md` (who sees addresses, balances, PayID) is enforced in one place.

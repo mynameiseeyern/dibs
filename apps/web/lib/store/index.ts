@@ -3,6 +3,7 @@ import type { AppEvent } from "@dibs/shared/metrics";
 import { memoryStore } from "./memory";
 import { supabaseStore } from "./supabase";
 import type { Store } from "./types";
+import { pushForJoin, pushForMessage } from "../push";
 
 export const usingSupabase = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
 
@@ -49,5 +50,30 @@ function withEvents(base: Store): Store {
   });
 }
 
-export const store: Store = withEvents(usingSupabase ? supabaseStore : memoryStore);
+/**
+ * Push notifications to the native app ride on the same writes: a new message in a plan (people,
+ * Dibby, system notes) and someone joining. Rules and sending are in lib/push.ts.
+ */
+function withPush(base: Store): Store {
+  const wrapped: Partial<Store> = {
+    async addMessage(m) {
+      const msg = await base.addMessage(m);
+      pushForMessage(base, msg);
+      return msg;
+    },
+    async addMember(m) {
+      const member = await base.addMember(m);
+      pushForJoin(base, member);
+      return member;
+    },
+  };
+  return new Proxy(base, {
+    get(target, key, receiver) {
+      if (typeof key === "string" && key in wrapped) return wrapped[key as keyof Store];
+      return Reflect.get(target, key, receiver);
+    },
+  });
+}
+
+export const store: Store = withPush(withEvents(usingSupabase ? supabaseStore : memoryStore));
 export type * from "./types";
