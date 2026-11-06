@@ -26,7 +26,10 @@ function Screens() {
           headerTitle: "",
           contentStyle: { backgroundColor: page },
         }}
-      />
+      >
+        {/* Making a plan: no slide, Dibby hops on from the hello moment (components/dibby/hello.tsx). */}
+        <Stack.Screen name="new" options={{ headerShown: false, animation: "none" }} />
+      </Stack>
       <Toaster />
     </>
   );

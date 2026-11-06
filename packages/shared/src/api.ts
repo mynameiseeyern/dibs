@@ -91,3 +91,32 @@ export function toMyPlan(plan: Plan, members: readonly PlanMember[], me: PlanMem
 export interface ApiError {
   error: string;
 }
+
+/** `GET /api/v1/me/plans`. `claimed`: how many guest plans just moved onto the account (signed in only). */
+export interface MyPlans {
+  upcoming: MyPlan[];
+  past: MyPlan[];
+  claimed?: number;
+}
+
+/** `POST /api/v1/plans`. One question a screen in the app, all sent together at the end. */
+export interface NewPlanRequest {
+  title: string;
+  category?: string | null;
+  /** "2026-11-14" and "19:00", Sydney wall clock. */
+  date?: string | null;
+  time?: string | null;
+  where: "vote" | "place" | "dibby";
+  place?: { name: string; address?: string | null } | null;
+  ask?: string;
+  spend?: 1 | 2 | 3 | null;
+  /** Only for someone with no account and no guest pass yet. */
+  first?: string;
+  last?: string;
+}
+
+/** `guest_token`: a new guest pass, sent back as `X-Dibby-Guest` from then on. */
+export interface NewPlanResponse {
+  slug: string;
+  guest_token?: string;
+}

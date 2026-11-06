@@ -1,0 +1,107 @@
+import "server-only";
+import type { Vibe } from "@dibs/shared/types";
+import { resolveStart } from "@dibs/shared/when";
+import { cleanCategory, cleanCustomPlace } from "@dibs/shared/plans";
+import { draftPlan, type DraftPicks } from "./dibby";
+import { withPlaces } from "./place-ids";
+import { report } from "./report";
+import { store } from "./store";
+import { localToIso } from "./time";
+
+/**
+ * Making a plan from the phone (`POST /api/v1/plans`). The same rules as the web's `createPlan`
+ * action in `app/actions.ts`: change one, change the other. Kept apart so the web form's
+ * FormData, cookies and redirects stay as they are.
+ *
+ * The app sends a typed-in place (name + optional address) rather than one picked from the map;
+ * the map picker comes to the app later.
+ */
+
+export interface NewPlanInput {
+  title: string;
+  category: string | null;
+  /** "2026-11-14" and "19:00", Sydney wall clock. Fixed facts, like the web's chips. */
+  date: string | null;
+  time: string | null;
+  where: "vote" | "place" | "dibby";
+  place: { name: string; address: string | null } | null;
+  /** What to ask Dibby for ("dumplings near Chatswood"), and the budget, 1 to 3. */
+  ask: string;
+  spend: 1 | 2 | 3 | null;
+}
+
+export type Host = { organiserName: string; organiserUserId: string | null; organiserGuestId: string | null };
+
+const clip = (v: unknown, max: number) => (typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, max) : "");
+
+export function readNewPlan(body: Record<string, unknown>): NewPlanInput {
+  const date = clip(body.date, 10);
+  const time = clip(body.time, 5);
+  const where = body.where === "place" || body.where === "dibby" ? body.where : "vote";
+  const p = body.place && typeof body.place === "object" ? (body.place as Record<string, unknown>) : null;
+  const custom = p ? cleanCustomPlace(p.name, p.address) : null;
+  const spend = Number(body.spend);
+  return {
+    title: clip(body.title, 80),
+    category: cleanCategory(body.category),
+    date: /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null,
+    time: /^([01]\d|2[0-3]):[0-5]\d$/.test(time) ? time : null,
+    where,
+    place: custom ? { name: custom.name, address: custom.address } : null,
+    ask: clip(body.ask, 500).replace(/^@dibby\s*/i, ""),
+    spend: spend === 1 || spend === 2 || spend === 3 ? spend : null,
+  };
+}
+
+/** What's wrong with it before anyone's made, so a new guest isn't created for a plan that fails. */
+export function checkNewPlan(p: NewPlanInput): { error: string; field: string } | null {
+  if (p.where === "dibby") {
+    if (!p.ask && !p.spend) return { error: "Tell Dibby what you're after, like “dumplings” or “bowling”.", field: "ask" };
+    if (!process.env.ANTHROPIC_API_KEY) return { error: "Dibby can't find places just yet. Type the place in, or let the crew vote.", field: "where" };
+    return null;
+  }
+  if (!p.title) return { error: "Give it a name, like “Friday dinner”.", field: "title" };
+  if (p.where === "place" && !p.place) return { error: "Type the place in, or let the crew vote on it.", field: "place" };
+  return null;
+}
+
+/** Makes the plan. Returns its slug, or an error that's fine to show. */
+export async function makePlan(p: NewPlanInput, host: Host): Promise<{ slug: string } | { error: string; field?: string }> {
+  const vibe: Vibe = "chill";
+  const picks: DraftPicks = { date: p.date, time: p.time, spend: p.spend, near: null };
+  const startLocal = resolveStart(null, picks);
+  const startsAt = startLocal ? localToIso(startLocal) : null;
+  const base = { ...host, category: p.category, description: null, extrasOff: [], vibe, plusOnes: true };
+
+  if (p.where === "dibby") {
+    let draft;
+    try {
+      draft = await draftPlan([p.title, p.ask].filter(Boolean).join(": "), vibe, picks);
+    } catch (e) {
+      report("dibby draft (app)", e);
+      return { error: "brb, Dibby's having a moment. Try again, or let the crew vote." };
+    }
+    const plan = await store.createPlan({
+      ...base,
+      title: p.title || draft.title,
+      area: draft.area,
+      startsAt: startsAt ?? (draft.startsAtLocal ? localToIso(draft.startsAtLocal) : null),
+    });
+    for (const v of draft.venues) await store.addOption({ planId: plan.id, label: v.name, placeId: v.placeId, note: v.address });
+    const organiser = (await store.listMembers(plan.id)).find((m) => m.role === "organiser") ?? null;
+    await store.addMessage({ planId: plan.id, memberId: organiser?.id ?? null, kind: "text", body: `@dibby ${p.ask}`.trim(), mentionsDibby: true });
+    await store.addMessage({
+      planId: plan.id,
+      memberId: null,
+      kind: "system",
+      body: "Heads up: messages that tag @dibby are sent to an AI provider so Dibby can reply. Dibby only reads messages it's tagged in.",
+    });
+    const tail = draft.venues.length ? "Vote's open for 24 hours." : "Couldn't find spots for that on Maps, so add a few and the vote opens.";
+    await store.addMessage({ planId: plan.id, memberId: null, kind: "dibby", body: `${draft.reply} ${tail}`, template: withPlaces(null, draft.venues.map((v) => v.placeId)) });
+    return { slug: plan.slug };
+  }
+
+  const venue = p.where === "place" && p.place ? { placeId: null, name: p.place.name, address: p.place.address } : null;
+  const plan = await store.createPlan({ ...base, title: p.title, area: null, startsAt, venue });
+  return { slug: plan.slug };
+}
