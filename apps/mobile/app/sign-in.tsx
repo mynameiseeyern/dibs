@@ -9,6 +9,7 @@ import * as Hint from "@/components/ui/hint";
 import * as Input from "@/components/ui/input";
 import * as Label from "@/components/ui/label";
 import * as LinkButton from "@/components/ui/link-button";
+import { AgreeLine } from "@/components/dibby/agree-line";
 import { sendCode } from "@/lib/api";
 import { useSession } from "@/lib/session";
 
@@ -115,6 +116,7 @@ export default function SignIn() {
                   </Hint.Root>
                 ) : null}
               </View>
+              <AgreeLine />
             </>
           )}
         </ScrollView>

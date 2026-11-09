@@ -19,6 +19,7 @@ import { DibbyLive, type DibbyState } from "@/components/DibbyLive";
 import { Chip, SearchChips, SPENDS, type SearchValue } from "./chips";
 import { useCyclingPlaceholder } from "./DibbyBubble";
 import type { Organising } from "./Organiser";
+import { AgreeLine } from "@/components/AgreeLine";
 import { BigTime } from "./BigTime";
 import "./plan-flow.css";
 import "./plan-chat.css";
@@ -562,6 +563,8 @@ export function PlanChat({ organising, searchPass, initialAsk }: { organising: O
                     <p className="pc-q pc-q--past">{QUESTION[s]}</p>
                   )}
                   {current && s === "who" && <p className="paragraph-md muted">So the crew knows who&rsquo;s organising. No account needed.</p>}
+                  {current && s === "who" && <AgreeLine />}
+                  {current && s === "dibby" && <p className="paragraph-xs muted">What you type here goes to Anthropic, the AI company behind Dibby, so it can find spots. It&rsquo;s not used to train their models.</p>}
                   {current && s === "when" && (
                     <p className={`pf-echo${line ? "" : " pf-echo--empty"}`} aria-live="polite">
                       {line ?? "Pick a day and a time"}

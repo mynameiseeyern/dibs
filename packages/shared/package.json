@@ -16,7 +16,9 @@
     "./calendar": "./src/calendar.ts",
     "./merge": "./src/merge.ts",
     "./inapp": "./src/inapp.ts",
-    "./plan-text": "./src/plan-text.ts"
+    "./plan-text": "./src/plan-text.ts",
+    "./moderation": "./src/moderation.ts",
+    "./report-reasons": "./src/report-reasons.ts"
   },
   "scripts": {
     "test": "vitest run",
@@ -25,5 +27,8 @@
   "devDependencies": {
     "typescript": "5.9.3",
     "vitest": "3.2.4"
+  },
+  "dependencies": {
+    "obscenity": "0.4.4"
   }
 }

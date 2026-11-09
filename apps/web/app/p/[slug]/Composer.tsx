@@ -98,6 +98,7 @@ export function Composer({ action }: { action: (s: FormState, f: FormData) => Pr
           {near ? "Dibby looks near you. Name a place to look somewhere else." : "Name a place, like “in Newtown”, and Dibby looks there."}
         </p>
       )}
+      {tagging && <p className="paragraph-xs muted composer__where">Tagging @dibby sends this and the last 20 messages here to Anthropic, the AI company behind Dibby, so it can reply.</p>}
       {state?.error && (
         <Hint.Root hasError role="alert">
           {state.error}

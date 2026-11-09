@@ -1,4 +1,6 @@
-import { useMemo, useState } from "react";
+import { AgreeLine } from "@/components/dibby/agree-line";
+import { AiConsent, hasAiConsent } from "@/components/dibby/ai-consent";
+import { useEffect, useMemo, useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Share, Text, TextInput, View } from "react-native";
 import { router, Stack } from "expo-router";
 import { Image } from "expo-image";
@@ -78,6 +80,17 @@ export default function NewPlan() {
     setStep(s);
   };
 
+  // Apple 5.1.2(i): say who gets it and ask first. Once per phone.
+  const [aiOk, setAiOk] = useState(false);
+  const [askingAi, setAskingAi] = useState(false);
+  useEffect(() => {
+    hasAiConsent().then(setAiOk);
+  }, []);
+  function askDibby() {
+    if (aiOk) setWhere("dibby");
+    else setAskingAi(true);
+  }
+
   async function submit() {
     setError(null);
     setStep("making");
@@ -90,6 +103,7 @@ export default function NewPlan() {
       place: where === "place" ? { name: placeName.trim(), address: placeAddress.trim() || null } : null,
       ask: where === "dibby" ? ask.trim() : undefined,
       spend: where === "dibby" ? spend : null,
+      ai_consent: where === "dibby" ? aiOk : undefined,
       ...(needName ? { first: first.trim(), last: last.trim() } : {}),
     };
     const started = Date.now();
@@ -260,7 +274,7 @@ export default function NewPlan() {
                   <Option icon="bar-chart-2-line" title="Let the crew vote" body="Everyone chucks in ideas. Most votes wins" selected={where === "vote"} onPress={() => setWhere("vote")} />
                 </Stagger>
                 <Stagger index={2}>
-                  <Option dibby title="Ask Dibby" body="Dibby digs up three real spots for the crew to vote on" selected={where === "dibby"} onPress={() => setWhere("dibby")} />
+                  <Option dibby title="Ask Dibby" body="Dibby digs up three real spots for the crew to vote on" selected={where === "dibby"} onPress={askDibby} />
                 </Stagger>
                 {where === "dibby" ? (
                   <Animated.View entering={pace.reduce ? undefined : FadeInDown.duration(240)} className="gap-3">
@@ -277,7 +291,7 @@ export default function NewPlan() {
                         <Choice key={s} label={"$".repeat(s)} selected={spend === s} onPress={() => setSpend(spend === s ? null : s)} />
                       ))}
                     </View>
-                    <Text className="text-paragraph-xs text-text-soft-400">Dibby picks real spots and won&rsquo;t pick a day or time for you. What you type goes to an AI provider.</Text>
+                    <Text className="text-paragraph-xs text-text-soft-400">Dibby picks real spots and won&rsquo;t pick a day or time for you. What you type goes to Anthropic, the AI company behind Dibby.</Text>
                   </Animated.View>
                 ) : null}
                 <Problem msg={err} />
@@ -309,11 +323,20 @@ export default function NewPlan() {
                 <LinkButton.Root variant="gray" onPress={() => router.push("/sign-in")}>
                   Got an account? Sign in
                 </LinkButton.Root>
+                <AgreeLine />
               </Answers>
             </>
           ) : null}
         </ScrollView>
 
+        <AiConsent
+          open={askingAi}
+          onOpenChange={setAskingAi}
+          onAllow={() => {
+            setAiOk(true);
+            setWhere("dibby");
+          }}
+        />
         <View className="px-4 pb-4" style={{ paddingBottom: Math.max(insets.bottom, 16) }}>
           {step === "what" ? (
             <Button.Root size="large" block disabled={!title.trim()} onPress={() => go("when")}>

@@ -1,5 +1,7 @@
 import { apiError, apiGuest, apiJson, apiOrganiser, newApiGuest, readBody, text } from "@/lib/api-auth";
 import { checkNewPlan, makePlan, readNewPlan, type Host } from "@/lib/api-create-plan";
+import { FILTERED_NOTE, isFiltered } from "@dibs/shared/moderation";
+import { BANNED_NOTE, isBanned } from "@/lib/moderation";
 import { store } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -15,16 +17,19 @@ export async function POST(req: Request) {
   const input = readNewPlan(body);
   const problem = checkNewPlan(input);
   if (problem) return apiJson(problem, 400);
+  if (isFiltered(input.title, input.ask, input.place?.name, input.place?.address, text(body.first, 40), text(body.last, 40))) return apiJson({ error: FILTERED_NOTE, field: "title" }, 400);
 
   let host: Host;
   let guestToken: string | undefined;
   const me = await apiOrganiser(req);
   if (me) {
+    if (await isBanned(`u:${me.id}`, null)) return apiError(BANNED_NOTE, 403);
     const profile = await store.getProfile(me.id).catch(() => null);
     if (!profile) return apiJson({ error: "Add your name first.", field: "first" }, 400);
     host = { organiserName: `${profile.first_name} ${profile.last_name}`, organiserUserId: me.id, organiserGuestId: null };
   } else {
     const guest = await apiGuest(req);
+    if (guest && (await isBanned(`g:${guest.id}`, null))) return apiError(BANNED_NOTE, 403);
     if (guest) host = { organiserName: `${guest.first_name} ${guest.last_name}`, organiserUserId: null, organiserGuestId: guest.id };
     else {
       const first = text(body.first, 40);

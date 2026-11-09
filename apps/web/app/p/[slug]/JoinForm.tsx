@@ -6,6 +6,7 @@ import * as Button from "@/components/ui/button";
 import * as Label from "@/components/ui/label";
 import * as Hint from "@/components/ui/hint";
 import * as Input from "@/components/ui/input";
+import { AgreeLine } from "@/components/AgreeLine";
 
 export function JoinForm({ action, signedIn, slug }: { action: (s: FormState, f: FormData) => Promise<FormState>; signedIn: boolean; slug: string }) {
   const [state, formAction, pending] = useActionState(action, undefined);
@@ -38,6 +39,7 @@ export function JoinForm({ action, signedIn, slug }: { action: (s: FormState, f:
           <Hint.Icon as="i" className="ri-error-warning-fill" aria-hidden="true" /> {state.error}
         </Hint.Root>
       )}
+      {!signedIn && <AgreeLine />}
       {/* Going is what lets you vote, so the main button says you're in as you join. */}
       <Button.Root size="large" block variant="dibs" name="rsvp" value="in" disabled={pending}>
         {pending ? "Joining…" : "I'm in"}

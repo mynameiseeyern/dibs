@@ -18,6 +18,9 @@ import { PlaceTiles } from "@/components/maps/PlaceTiles";
 import { placesOf } from "@/lib/place-ids";
 import { areaChoices, askOf, memoOf } from "@/lib/area";
 import { WhereChips } from "./WhereChips";
+import { ContentMenu } from "@/components/ContentMenu";
+import { canDeleteMessage, personKey, type ReportReason } from "@dibs/shared/moderation";
+import { blockMember, deleteMessage, reportThing } from "./moderation-actions";
 
 const time = (iso: string) => new Intl.DateTimeFormat("en-AU", { timeZone: TZ, weekday: "short", hour: "numeric", minute: "2-digit" }).format(new Date(iso));
 
@@ -34,6 +37,8 @@ export function Thread({
   react,
   summary,
   emailGate,
+  slug,
+  isHost = false,
 }: {
   vibe: Vibe;
   reactions?: Reaction[];
@@ -52,6 +57,9 @@ export function Thread({
   post: (s: FormState, f: FormData) => Promise<FormState>;
   /** A guest going on this plan: ask for an email (which lets them chat) instead of a dead end. */
   emailGate?: { planId: string; demo: boolean };
+  /** Report, block and delete need to know the plan and who's running it. */
+  slug: string;
+  isHost?: boolean;
 }) {
   const byId = new Map(members.map((m) => [m.id, m]));
   let lastStamp = 0;
@@ -102,7 +110,15 @@ export function Thread({
                           places={placesOf(m.template).map((id) => ({ placeId: id, name: placeNames?.[id] ?? "A place Dibby found", onVote: Boolean(placeNames?.[id]) }))}
                         />
                         {canPost && !readOnly && m.id === lastDibby?.id && <Where template={m.template} areas={areasUsed} post={post} />}
-                        <Reactions messageId={m.id} all={reactions} meId={meId} react={react} />
+                        <div className="msg-foot">
+                          <Reactions messageId={m.id} all={reactions} meId={meId} react={react} />
+                          {/* AI replies can be reported too. */}
+                          <ContentMenu
+                            title="Dibby's message"
+                            label="Report Dibby's message"
+                            report={reportThing.bind(null, slug, "message", m.id) as (r: ReportReason, n: string) => Promise<{ error?: string }>}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -118,7 +134,18 @@ export function Thread({
                     <div>
                       {!mine && <div className="db-msg__name">{who?.display_name.split(" ")[0] ?? "Someone"}</div>}
                       <div className="db-msg__bubble">{m.body}</div>
-                      <Reactions messageId={m.id} all={reactions} meId={meId} react={react} />
+                      <div className="msg-foot">
+                        <Reactions messageId={m.id} all={reactions} meId={meId} react={react} />
+                        {meId && (
+                          <ContentMenu
+                            title={mine ? "Your message" : `${who?.display_name.split(" ")[0] ?? "Someone"}'s message`}
+                            label={mine ? "Options for your message" : `Options for ${who?.display_name.split(" ")[0] ?? "this"} message`}
+                            report={mine ? undefined : (reportThing.bind(null, slug, "message", m.id) as (r: ReportReason, n: string) => Promise<{ error?: string }>)}
+                            block={!mine && who && personKey(who) ? { name: who.display_name, act: blockMember.bind(null, slug, who.id) } : undefined}
+                            remove={canDeleteMessage(m, { id: meId }, isHost) ? { label: "Delete message", done: "Deleted", act: deleteMessage.bind(null, slug, m.id) } : undefined}
+                          />
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

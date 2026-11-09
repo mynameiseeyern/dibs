@@ -59,6 +59,7 @@ export function renderReleaseNote(note: ReleaseNote, sender: Sender, links: { un
     "You're getting this because you said yes to Dibby beta updates.",
     `Unsubscribe: ${links.unsubscribeUrl}`,
     `${sender.name} · ${sender.contact}`,
+    `Dibby is run by Ee Yern Ng, ABN 97 837 335 531${sender.postal ? `, ${sender.postal}` : ""}`,
   ].join("\n");
   return { html, text };
 }

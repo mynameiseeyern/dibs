@@ -2,7 +2,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { FORMER_MEMBER, makeSlug, pickColour } from "@dibs/shared/plans";
 import type { LoggedEvent } from "@dibs/shared/metrics";
 import { MULTI_VOTES, maxVotes, overLimit } from "@dibs/shared/votes";
-import type { Bill, BillShare, Guest, Message, NewMember, NewPlan, Plan, PlanMember, PlanOption, PlanPhoto, PlanTime, Profile, Store, Subscription, TimeVote, Vote, RecapAnswer, Reaction } from "./types";
+import type { Bill, BillShare, Guest, Message, NewMember, NewPlan, Plan, PlanMember, PlanOption, PlanPhoto, PlanTime, Profile, Store, Subscription, TimeVote, Vote, RecapAnswer, Reaction, Report } from "./types";
 
 // In-memory store for local runs without Supabase. Lost on restart.
 interface Db {
@@ -27,7 +27,9 @@ interface Db {
   timeVotes: (TimeVote & { plan_id: string })[];
 }
 
-const g = globalThis as unknown as { __dibsDb?: Db };
+const g = globalThis as unknown as { __dibsDb?: Db; __dibsMod?: { reports: Report[]; blocks: { blocker: string; person: string; name: string }[]; bans: { person: string; planId: string | null }[] } };
+// Kept apart from Db so an already-running dev server picks it up without a restart.
+const mod = (g.__dibsMod ??= { reports: [], blocks: [], bans: [] });
 const db: Db = (g.__dibsDb ??= {
   profiles: new Map(),
   calendarFeeds: new Map(),
@@ -318,6 +320,49 @@ export const memoryStore: Store = {
     db.votes = db.votes.filter((v) => !drop.has(v));
   },
 
+  async deleteMessage(planId, messageId) {
+    db.messages = db.messages.filter((m) => !(m.plan_id === planId && m.id === messageId));
+    db.reactions = db.reactions.filter((r) => r.message_id !== messageId);
+  },
+  async deleteMessagesBy(memberId) {
+    db.messages = db.messages.filter((m) => m.member_id !== memberId);
+  },
+  async ejectMember(memberId) {
+    await this.removePhotosBy([memberId]);
+    const m = db.members.get(memberId);
+    if (m) db.members.set(memberId, { ...m, display_name: FORMER_MEMBER, user_id: null, guest_id: null, rsvp: "out" });
+  },
+  async addReport({ kind, planId, targetId, targetPerson, reporter, reason, note, snapshot }) {
+    mod.reports.push({ id: randomUUID(), kind, plan_id: planId, target_id: targetId, target_person: targetPerson, reporter, reason, note, snapshot, status: "open", created_at: new Date().toISOString() });
+  },
+  async listOpenReports() {
+    return mod.reports.filter((r) => r.status === "open");
+  },
+  async getReport(id) {
+    return mod.reports.find((r) => r.id === id) ?? null;
+  },
+  async resolveReport(id, status) {
+    const r = mod.reports.find((x) => x.id === id);
+    if (r) r.status = status;
+  },
+  async listReportedTargets(reporter) {
+    return mod.reports.filter((r) => r.reporter === reporter && r.target_id).map((r) => r.target_id!);
+  },
+  async addBlock(blocker, blocked, name) {
+    if (!mod.blocks.some((b) => b.blocker === blocker && b.person === blocked)) mod.blocks.push({ blocker, person: blocked, name });
+  },
+  async removeBlock(blocker, blocked) {
+    mod.blocks = mod.blocks.filter((b) => !(b.blocker === blocker && b.person === blocked));
+  },
+  async listBlocks(blocker) {
+    return mod.blocks.filter((b) => b.blocker === blocker).map(({ person, name }) => ({ person, name }));
+  },
+  async addBan(person, planId) {
+    mod.bans.push({ person, planId });
+  },
+  async isBanned(person, planId) {
+    return mod.bans.some((b) => b.person === person && (b.planId === null || b.planId === planId));
+  },
   async listMessages(planId, limit = 100) {
     return db.messages.filter((m) => m.plan_id === planId).slice(-limit);
   },

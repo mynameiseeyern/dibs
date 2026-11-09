@@ -4,6 +4,7 @@ import { useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { PlanSummary } from "@dibs/shared/api";
 import * as Button from "@/components/ui/button";
+import { ReportPlan } from "@/components/dibby/report-plan";
 import { getPlan } from "@/lib/api";
 import { useColour } from "@/lib/theme";
 
@@ -50,6 +51,7 @@ export default function PlanScreen() {
           <Text className="text-paragraph-md text-text-sub-600">{plan.status === "cancelled" ? "Called off." : spots}</Text>
           {plan.description ? <Text className="text-paragraph-md text-text-sub-600">{plan.description}</Text> : null}
         </View>
+        <ReportPlan slug={plan.slug} />
       </ScrollView>
       <View className="p-4">
         <Button.Root size="large" block onPress={() => Linking.openURL(`https://dibby.social/p/${plan.slug}`)}>

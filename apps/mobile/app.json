@@ -12,7 +12,10 @@
       "supportsTablet": false,
       "associatedDomains": [
         "applinks:dibby.social"
-      ]
+      ],
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "social.dibby.app",

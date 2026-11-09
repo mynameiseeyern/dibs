@@ -8,6 +8,8 @@ export interface Sender {
   name: string;
   /** Where replies and questions go, e.g. hello@dibby.social. */
   contact: string;
+  /** A street address or PO box, for mail to the US (CAN-SPAM). Never a home address. */
+  postal?: string;
 }
 
 export interface EmailParts {
@@ -30,6 +32,9 @@ export interface EmailParts {
   };
 }
 
+/** Who sends these, as the Spam Act wants it: a real name and ABN, whatever the sender line says. */
+const LEGAL_NAME = "Ee Yern Ng, ABN 97 837 335 531";
+
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 /**
@@ -40,7 +45,7 @@ const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replac
 export function renderEmail(p: EmailParts): string {
   const L = light;
   const D = dark;
-  const { site, name, contact } = p.sender;
+  const { site, name, contact, postal } = p.sender;
   const links = [
     p.footer.unsubscribeUrl && `<a href="${esc(p.footer.unsubscribeUrl)}" class="db-link-sub" style="color:${L["text-sub-600"]};text-decoration:underline;">Unsubscribe</a>`,
     p.footer.settingsUrl && `<a href="${esc(p.footer.settingsUrl)}" class="db-link-sub" style="color:${L["text-sub-600"]};text-decoration:underline;">Email settings</a>`,
@@ -55,7 +60,6 @@ export function renderEmail(p: EmailParts): string {
 <meta name="color-scheme" content="light dark">
 <meta name="supported-color-schemes" content="light dark">
 <title>${esc(p.title)}</title>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
   body { margin: 0; padding: 0; width: 100% !important; -webkit-text-size-adjust: 100%; }
   table { border-collapse: collapse; }
@@ -103,6 +107,7 @@ ${p.body}
       <p class="db-sub" style="margin:0 0 8px;color:${L["text-sub-600"]};">${esc(p.footer.reason)}</p>
       ${links.length ? `<p class="db-sub" style="margin:0 0 8px;color:${L["text-sub-600"]};">${links.join(" &nbsp;·&nbsp; ")}</p>` : ""}
       <p class="db-sub" style="margin:0 0 8px;color:${L["text-sub-600"]};">Dibby never asks for your password or bank details by email.</p>
+      <p class="db-sub" style="margin:0 0 8px;color:${L["text-sub-600"]};">Dibby is run by ${esc(LEGAL_NAME)}${postal ? `, ${esc(postal)}` : ""}</p>
       <p class="db-sub" style="margin:0;color:${L["text-sub-600"]};">${esc(name)} &nbsp;·&nbsp; <a href="mailto:${esc(contact)}" class="db-link-sub" style="color:${L["text-sub-600"]};text-decoration:underline;">${esc(contact)}</a></p>
     </td></tr>
   </table>

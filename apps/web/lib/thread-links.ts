@@ -2,7 +2,7 @@
 // message body as its own line, "→ /p/<slug>", and the thread renders it as a button.
 
 export const DIBBY_HEADS_UP =
-  "Heads up: messages that tag @dibby are sent to an AI provider so Dibby can reply. Dibby only reads messages it's tagged in.";
+  "Heads up: when you tag @dibby, your message and the last 20 in this chat go to Anthropic, the AI company behind Dibby, so it can reply. Dibby doesn't do anything until it's tagged.";
 
 const LINK_LINE = /\n→ \/p\/([A-Za-z0-9_-]+)\s*$/;
 

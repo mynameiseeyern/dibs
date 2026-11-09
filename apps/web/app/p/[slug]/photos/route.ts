@@ -4,6 +4,8 @@ import { canAddPhotos, cleanGlow, MAX_PHOTOS } from "@dibs/shared/photos";
 import { store } from "@/lib/store";
 import { loadPlan } from "@/lib/viewer";
 import { report } from "@/lib/report";
+import { personKey } from "@dibs/shared/moderation";
+import { BANNED_NOTE, isBanned } from "@/lib/moderation";
 
 /** Phones shrink and re-encode before sending, so a real shot is well under this. */
 const MAX_BYTES = 4 * 1024 * 1024;
@@ -18,6 +20,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ slug: s
   const view = await loadPlan(slug);
   if (!view?.me) return err(403, "Join the plan first.");
   const { plan, me } = view;
+  if (await isBanned(personKey(me), plan.id)) return err(403, BANNED_NOTE);
   if (!extraOn(plan, "photos")) return err(403, "Pics are switched off for this plan.");
   if (!canAddPhotos(plan, me, new Date())) return err(403, plan.status === "wrapped" ? "Photos are for people who came." : "The camera opens when the plan starts.");
   const mine = (await store.listPhotos(plan.id)).filter((p) => p.member_id === me.id);

@@ -37,6 +37,9 @@ import { ShareButton } from "./ShareButton";
 import { GetTheApp } from "./GetTheApp";
 import { CameraCard } from "./CameraCard";
 import { PhotoRoll } from "./PhotoRoll";
+import { ContentMenu } from "@/components/ContentMenu";
+import { canEject, personKey, type ReportReason } from "@dibs/shared/moderation";
+import { blockMember, hostRemovePhoto, removeFromPlan, reportThing } from "./moderation-actions";
 import { loadRoll } from "@/lib/photos";
 import { CircleAction } from "@/components/CircleAction";
 import { RemovePlusOne } from "./RemovePlusOne";
@@ -291,6 +294,15 @@ export default async function PlanPage({ params, searchParams }: Props) {
                       mergeTargets={m.user_id ? [] : mergeTargets(m)}
                     />
                   )}
+                  {me && m.id !== me.id && personKey(m) && (
+                    <ContentMenu
+                      title={m.display_name}
+                      label={`Report or block ${m.display_name}`}
+                      report={reportThing.bind(null, slug, "member", m.id) as (r: ReportReason, n: string) => Promise<{ error?: string }>}
+                      block={{ name: m.display_name, act: blockMember.bind(null, slug, m.id) }}
+                      remove={canEject(m, me, isHost) ? { label: "Remove from plan", done: "They're off the plan", warn: "Their chat messages and photos go too, and they can't join this plan again.", act: removeFromPlan.bind(null, slug, m.id) } : undefined}
+                    />
+                  )}
                 </li>,
                 m.plus_one && m.plus_one_name ? (
                   <li key={`${m.id}-plus`} className="person person--plus">
@@ -464,7 +476,7 @@ export default async function PlanPage({ params, searchParams }: Props) {
         {roll && (roll.canAdd || roll.photos.length > 0) && (
           <div className="db-stack">
             {roll.canAdd && <CameraCard slug={slug} taken={roll.taken} max={roll.max} revealed={roll.revealed} />}
-            <PhotoRoll slug={slug} photos={roll.photos} revealed={roll.revealed} remove={removeMyPhoto.bind(null, slug)} />
+            <PhotoRoll slug={slug} photos={roll.photos} revealed={roll.revealed} remove={removeMyPhoto.bind(null, slug)} report={reportThing.bind(null, slug)} hostRemove={isHost ? hostRemovePhoto.bind(null, slug) : undefined} />
           </div>
         )}
 
@@ -643,6 +655,17 @@ export default async function PlanPage({ params, searchParams }: Props) {
               </form>
             )}
           </footer>
+        )}
+        {plan.status !== "cancelled" && !isHost && (
+          <div className="plan-report">
+            <ContentMenu
+              variant="link"
+              triggerText="Report this plan"
+              title="This plan"
+              label="Report this plan"
+              report={reportThing.bind(null, slug, "plan", plan.id) as (r: ReportReason, n: string) => Promise<{ error?: string }>}
+            />
+          </div>
         )}
       </main>
 

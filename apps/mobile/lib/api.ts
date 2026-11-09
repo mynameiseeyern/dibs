@@ -80,6 +80,8 @@ export const refresh = (refresh_token: string) => call<AuthSession>("/api/v1/aut
 // Account
 export const getMe = () => call<Me>("/api/v1/me");
 export const saveName = (first: string, last: string) => call<Me>("/api/v1/me", { method: "PUT", body: { first, last } });
+export type ReportBody = { kind: "plan" | "message" | "member" | "photo"; target_id?: string; reason: string; note?: string; block?: boolean };
+export const reportContent = (slug: string, body: ReportBody) => call<{ reported: true }>(`/api/v1/plans/${encodeURIComponent(slug)}/report`, { method: "POST", body });
 export const deleteAccount = () => call<{ deleted: true }>("/api/v1/me", { method: "DELETE" });
 export const getMyPlans = () => call<MyPlans>("/api/v1/me/plans");
 

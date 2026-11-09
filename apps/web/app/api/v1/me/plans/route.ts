@@ -1,6 +1,8 @@
 import { toMyPlan, type MyPlan } from "@dibs/shared/api";
 import { apiError, apiGuest, apiJson, apiOrganiser } from "@/lib/api-auth";
 import { track } from "@/lib/events";
+import { personKey } from "@dibs/shared/moderation";
+import { screenFor } from "@/lib/moderation";
 import { store } from "@/lib/store";
 import { formatShort } from "@/lib/time";
 
@@ -18,7 +20,7 @@ export async function GET(req: Request) {
   const guest = await apiGuest(req);
   if (!me) {
     if (!guest) return apiError("Sign in again.", 401);
-    return apiJson(await listed(await store.listPlansForGuest(guest.id)));
+    return apiJson(await listed(await store.listPlansForGuest(guest.id), `g:${guest.id}`));
   }
 
   // Plans made or joined as a guest (on this phone, or with this email) come across, like signing in on the web.
@@ -30,13 +32,23 @@ export async function GET(req: Request) {
     console.error("[api claim guests]", e);
   }
 
-  return apiJson({ ...(await listed(await store.listPlansForUser(me.id))), claimed });
+  return apiJson({ ...(await listed(await store.listPlansForUser(me.id), `u:${me.id}`)), claimed });
 }
 
-async function listed(rows: Awaited<ReturnType<typeof store.listPlansForUser>>) {
-  const plans: MyPlan[] = await Promise.all(
-    rows.map(async ({ plan, member }) => toMyPlan(plan, await store.listMembers(plan.id), member, formatShort(plan.starts_at)))
-  );
+async function listed(rows: Awaited<ReturnType<typeof store.listPlansForUser>>, viewer: string) {
+  const screen = await screenFor(viewer);
+  const hidden = (plan: { id: string }, members: { role: string; user_id: string | null; guest_id: string | null }[]) => {
+    const host = members.find((m) => m.role === "organiser");
+    return screen.reported.has(plan.id) || (host ? screen.blocked.has(personKey(host) ?? "") : false);
+  };
+  const plans: MyPlan[] = (
+    await Promise.all(
+      rows.map(async ({ plan, member }) => {
+        const members = await store.listMembers(plan.id);
+        return hidden(plan, members) ? null : toMyPlan(plan, members, member, formatShort(plan.starts_at));
+      })
+    )
+  ).filter((p): p is MyPlan => p !== null);
   const upcoming = (p: MyPlan) => (p.status === "voting" || p.status === "locked") && (!p.starts_at || Date.parse(p.starts_at) > Date.now() - SIX_HOURS);
   const soonest = (a: MyPlan, b: MyPlan) => (a.starts_at ? Date.parse(a.starts_at) : Infinity) - (b.starts_at ? Date.parse(b.starts_at) : Infinity);
   const next = plans.filter(upcoming).sort(soonest);

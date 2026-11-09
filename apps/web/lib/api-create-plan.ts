@@ -28,6 +28,8 @@ export interface NewPlanInput {
   /** What to ask Dibby for ("dumplings near Chatswood"), and the budget, 1 to 3. */
   ask: string;
   spend: 1 | 2 | 3 | null;
+  /** Said yes to sending this to Anthropic. The app asks first (Apple 5.1.2(i)). */
+  aiConsent: boolean;
 }
 
 export type Host = { organiserName: string; organiserUserId: string | null; organiserGuestId: string | null };
@@ -50,12 +52,14 @@ export function readNewPlan(body: Record<string, unknown>): NewPlanInput {
     place: custom ? { name: custom.name, address: custom.address } : null,
     ask: clip(body.ask, 500).replace(/^@dibby\s*/i, ""),
     spend: spend === 1 || spend === 2 || spend === 3 ? spend : null,
+    aiConsent: body.ai_consent === true,
   };
 }
 
 /** What's wrong with it before anyone's made, so a new guest isn't created for a plan that fails. */
 export function checkNewPlan(p: NewPlanInput): { error: string; field: string } | null {
   if (p.where === "dibby") {
+    if (!p.aiConsent) return { error: "Dibby needs your OK before it can look. Type the place in, or let the crew vote.", field: "where" };
     if (!p.ask && !p.spend) return { error: "Tell Dibby what you're after, like “dumplings” or “bowling”.", field: "ask" };
     if (!process.env.ANTHROPIC_API_KEY) return { error: "Dibby can't find places just yet. Type the place in, or let the crew vote.", field: "where" };
     return null;
@@ -94,7 +98,7 @@ export async function makePlan(p: NewPlanInput, host: Host): Promise<{ slug: str
       planId: plan.id,
       memberId: null,
       kind: "system",
-      body: "Heads up: messages that tag @dibby are sent to an AI provider so Dibby can reply. Dibby only reads messages it's tagged in.",
+      body: "Heads up: when you tag @dibby, your message and the last 20 in this chat go to Anthropic, the AI company behind Dibby, so it can reply. Dibby doesn't do anything until it's tagged.",
     });
     const tail = draft.venues.length ? "Vote's open for 24 hours." : "Couldn't find spots for that on Maps, so add a few and the vote opens.";
     await store.addMessage({ planId: plan.id, memberId: null, kind: "dibby", body: `${draft.reply} ${tail}`, template: withPlaces(null, draft.venues.map((v) => v.placeId)) });

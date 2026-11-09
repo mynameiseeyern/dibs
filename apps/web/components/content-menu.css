@@ -1,0 +1,6 @@
+.content-menu__dots { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; color: var(--text-soft-400); cursor: pointer; }
+.content-menu__dots:focus-visible, .content-menu__link:focus-visible { outline: 2px solid var(--primary-base); outline-offset: 2px; border-radius: var(--radius-md); }
+.content-menu__link { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: var(--space-1); min-height: 44px; font: 500 14px/20px var(--font-sans); color: var(--text-sub-600); cursor: pointer; }
+.msg-foot { display: flex; align-items: center; flex-wrap: wrap; }
+.db-msg--mine .msg-foot { justify-content: flex-end; }
+.plan-report { display: flex; justify-content: center; margin-top: var(--space-2); }
