@@ -1,5 +1,5 @@
 import { countIn } from "./plans";
-import type { Plan, PlanMember, PlanStatus } from "./types";
+import type { MonogramColour, Plan, PlanMember, PlanStatus } from "./types";
 
 /**
  * What the native app gets for a plan link (`GET /api/v1/plans/:slug`). The web and the app both
@@ -118,5 +118,41 @@ export interface NewPlanRequest {
 /** `guest_token`: a new guest pass, sent back as `X-Dibby-Guest` from then on. */
 export interface NewPlanResponse {
   slug: string;
+  guest_token?: string;
+}
+
+/**
+ * `GET /api/v1/plans/:slug/view`: the plan as the person asking sees it (sign-in or guest pass).
+ * Follows the web's rules: can't-go sees no votes, chat or who's in; maybes, the waitlist and
+ * people who haven't replied read along; a typed-in place's address is for people in the plan.
+ */
+export interface PlanDetail {
+  plan: PlanSummary;
+  /** Null: not in the plan yet (show join). */
+  me: {
+    name: string;
+    rsvp: PlanMember["rsvp"];
+    waitlisted: boolean;
+    host: boolean;
+    /** full: vote and chat. read: see it, can't act (`note` says why). hidden: said can't go. */
+    access: "full" | "read" | "hidden";
+    note: string | null;
+    /** Chat needs an account (guests read along). */
+    canPost: boolean;
+  } | null;
+  /** Who's going, for people in the plan who can see it. */
+  going: { name: string; host: boolean; waitlisted: boolean; colour: MonogramColour }[] | null;
+  vote: {
+    open: boolean;
+    maxPicks: number;
+    options: { id: string; label: string; note: string | null; votes: number; mine: boolean }[];
+  } | null;
+  chat: {
+    messages: { id: string; kind: "text" | "dibby" | "system"; body: string; author: string | null; colour: MonogramColour | null; mine: boolean; at: string }[];
+  } | null;
+}
+
+/** `POST /api/v1/plans/:slug/join` → maybe a new guest pass, like making a plan. */
+export interface JoinResponse {
   guest_token?: string;
 }

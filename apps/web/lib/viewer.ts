@@ -3,6 +3,7 @@ import { track } from "./events";
 import { currentOrganiser, type Organiser } from "./auth";
 import { currentGuest } from "./guest";
 import { store, type Guest, type Plan, type PlanMember } from "./store";
+import { apiHere } from "./api-viewer";
 
 export interface PlanView {
   plan: Plan;
@@ -29,7 +30,9 @@ export interface Here {
  * or by a guest who asked for a link to their email, move onto their account.
  */
 export async function whoIsHere(): Promise<Here> {
-  const [organiser, guest] = await Promise.all([currentOrganiser(), currentGuest()]);
+  // From the native app: its sign-in or guest pass, not cookies (lib/api-viewer.ts).
+  const app = apiHere();
+  const [organiser, guest] = app ? [app.organiser, app.guest] : await Promise.all([currentOrganiser(), currentGuest()]);
   if (organiser) {
     try {
       const moved = await store.claimGuests(organiser.id, organiser.email, guest?.id ?? null);

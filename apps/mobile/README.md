@@ -45,6 +45,22 @@ reads the next question out (it's the heading, coming in word by word) and rests
   `createPlan`: change both). The first plan gives the phone a guest pass, kept in the keychain and
   sent as `X-Dibby-Guest`; signing in later moves its plans onto the account and drops the pass.
 
+## Taking part in a plan
+
+`app/p/[slug]/index.tsx` (join, RSVP, vote, add a place, who's going) and `app/p/[slug]/chat.tsx`.
+`lib/use-plan.ts` loads `GET /api/v1/plans/:slug/view` and refreshes every 8 seconds while open;
+every action sends the fresh plan back.
+
+The app's endpoints don't copy the rules: they run the web's own actions
+(`apps/web/app/p/[slug]/actions.ts`) inside `asViewer` (`apps/web/lib/api-viewer.ts`), which makes
+`whoIsHere` answer with the app's sign-in or guest pass instead of cookies. So capacity, the
+waitlist, vote limits and who can vote or chat change in one place for both.
+
+- Join: first name only (last optional), I'm in or Maybe. No pass yet: the join hands one back.
+- Maybes, the waitlist and people who haven't replied read along; can't go sees no votes or chat.
+- Chat: guests read; posting needs an account (add your email, one code). Tag @dibby for ideas.
+- Places are typed in for now (name + optional address); the map picker comes later.
+
 ## How it fits with the web app
 
 - **The web app is the backend.** The phone calls `apps/web/app/api/v1/*` and never talks to Supabase directly, so every rule in the root `CLAUDE.md` (who sees addresses, balances, PayID) is enforced in one place.

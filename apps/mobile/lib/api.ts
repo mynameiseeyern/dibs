@@ -1,5 +1,5 @@
 import Constants from "expo-constants";
-import type { AuthSession, Me, MyPlans, NewPlanRequest, NewPlanResponse, PlanSummary } from "@dibs/shared/api";
+import type { AuthSession, JoinResponse, Me, MyPlans, NewPlanRequest, NewPlanResponse, PlanDetail, PlanSummary } from "@dibs/shared/api";
 
 /** The web app is the backend: the phone never talks to the database directly. */
 export const API_URL: string = process.env.EXPO_PUBLIC_API_URL ?? Constants.expoConfig?.extra?.apiUrl ?? "https://dibby.social";
@@ -85,6 +85,16 @@ export const getMyPlans = () => call<MyPlans>("/api/v1/me/plans");
 
 // Making a plan: no account needed
 export const createPlan = (plan: NewPlanRequest) => call<NewPlanResponse>("/api/v1/plans", { method: "POST", body: plan });
+
+// A plan, as the person on this phone sees it, and taking part in it.
+const plan = (slug: string, path = "") => `/api/v1/plans/${encodeURIComponent(slug)}${path}`;
+export const getPlanDetail = (slug: string) => call<PlanDetail>(plan(slug, "/view"));
+export const joinPlan = (slug: string, rsvp: "in" | "maybe", name?: { first: string; last: string }) =>
+  call<JoinResponse & { detail: PlanDetail }>(plan(slug, "/join"), { method: "POST", body: { rsvp, ...name } });
+export const setRsvp = (slug: string, rsvp: "in" | "maybe" | "out") => call<PlanDetail>(plan(slug, "/rsvp"), { method: "POST", body: { rsvp } });
+export const castVote = (slug: string, optionId: string) => call<PlanDetail>(plan(slug, "/vote"), { method: "POST", body: { option_id: optionId } });
+export const addPlace = (slug: string, name: string, address: string) => call<PlanDetail>(plan(slug, "/options"), { method: "POST", body: { name, address } });
+export const sendMessage = (slug: string, body: string) => call<PlanDetail>(plan(slug, "/messages"), { method: "POST", body: { body } });
 
 /** "https://dibby.social/p/k7m2qx9a", "dibby.social/p/k7m2qx9a" or just "k7m2qx9a". */
 export function slugFrom(input: string): string | null {
