@@ -5,7 +5,8 @@ import { StatusBar } from "expo-status-bar";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { useDibbyFonts } from "@/lib/fonts";
-import { SessionProvider } from "@/lib/session";
+import { usePushSetup } from "@/lib/push";
+import { SessionProvider, useSession } from "@/lib/session";
 import { ThemeRoot, useColour, useMode } from "@/lib/theme";
 import { Toaster } from "@/components/ui/toast";
 
@@ -44,8 +45,16 @@ export default function RootLayout() {
   return (
     <ThemeRoot>
       <SessionProvider>
+        <PushSetup />
         <Screens />
       </SessionProvider>
     </ThemeRoot>
   );
+}
+
+/** Registers this phone for pushes when who's here changes, and opens the plan a tapped notification is about. */
+function PushSetup() {
+  const { state, hasGuestPass } = useSession();
+  usePushSetup(state.status === "signedIn" ? `user:${state.me?.id ?? ""}` : hasGuestPass ? "guest" : state.status);
+  return null;
 }

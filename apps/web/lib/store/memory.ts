@@ -2,13 +2,15 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { FORMER_MEMBER, makeSlug, pickColour } from "@dibs/shared/plans";
 import type { LoggedEvent } from "@dibs/shared/metrics";
 import { MULTI_VOTES, maxVotes, overLimit } from "@dibs/shared/votes";
-import type { Bill, BillShare, Guest, Message, NewMember, NewPlan, Plan, PlanMember, PlanOption, PlanPhoto, PlanTime, Profile, Store, Subscription, TimeVote, Vote, RecapAnswer, Reaction } from "./types";
+import type { Bill, BillShare, Guest, Message, NewMember, NewPlan, Plan, PlanMember, PlanOption, PlanPhoto, PlanTime, Profile, PushToken, Store, Subscription, TimeVote, Vote, RecapAnswer, Reaction } from "./types";
 
 // In-memory store for local runs without Supabase. Lost on restart.
 interface Db {
   profiles: Map<string, Profile>;
   /** Calendar subscription tokens by user id. */
   calendarFeeds: Map<string, string>;
+  /** Push tokens by token. */
+  pushTokens: Map<string, PushToken>;
   guests: Map<string, Guest & { tokenHash: string; email?: string; email_requested_at?: number }>;
   plans: Map<string, Plan>;
   members: Map<string, PlanMember>;
@@ -31,6 +33,7 @@ const g = globalThis as unknown as { __dibsDb?: Db };
 const db: Db = (g.__dibsDb ??= {
   profiles: new Map(),
   calendarFeeds: new Map(),
+  pushTokens: new Map(),
   guests: new Map(),
   plans: new Map(),
   members: new Map(),
@@ -53,6 +56,7 @@ db.times ??= [];
 db.photos ??= [];
 db.timeVotes ??= [];
 db.calendarFeeds ??= new Map();
+db.pushTokens ??= new Map();
 db.nudges ??= [];
 db.reactions ??= [];
 
@@ -84,6 +88,15 @@ export const memoryStore: Store = {
   async userForCalendarToken(token) {
     for (const [userId, t] of db.calendarFeeds) if (t === token) return userId;
     return null;
+  },
+  async savePushToken({ token, userId, guestId, platform }) {
+    db.pushTokens.set(token, { token, user_id: userId, guest_id: userId ? null : guestId, platform });
+  },
+  async removePushToken(token) {
+    db.pushTokens.delete(token);
+  },
+  async listPushTokens({ userIds, guestIds }) {
+    return [...db.pushTokens.values()].filter((t) => (t.user_id && userIds.includes(t.user_id)) || (t.guest_id && guestIds.includes(t.guest_id)));
   },
   async answerBetaPrompt(userId) {
     const p = db.profiles.get(userId);

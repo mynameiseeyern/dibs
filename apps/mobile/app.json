@@ -51,7 +51,15 @@
       ],
       "@react-native-community/datetimepicker",
       "expo-secure-store",
-      "expo-image"
+      "expo-image",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#684CFC",
+          "defaultChannel": "default"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
