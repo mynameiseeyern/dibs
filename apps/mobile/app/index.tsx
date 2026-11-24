@@ -70,7 +70,6 @@ function Welcome() {
       <DibbyHello
         anchor={anchor}
         label={MAKE}
-        squares={4}
         onDone={() => {
           router.push("/new");
           // Let the form mount under him before the overlay goes, so there's no gap.
