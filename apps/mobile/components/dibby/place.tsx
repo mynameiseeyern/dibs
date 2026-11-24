@@ -4,7 +4,7 @@
 // place ID is ever kept (Places terms). A place typed in shows its name and address instead.
 
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Linking, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Linking, Pressable, ScrollView, Text, useWindowDimensions, View } from "react-native";
 import { Image } from "expo-image";
 import type { PlaceHit, PlaceInfo } from "@dibs/shared/api";
 import * as Button from "@/components/ui/button";
@@ -43,7 +43,12 @@ export function PlacePhoto({ place, className, big }: { place: PlaceInfo | null;
   );
 }
 
-/** Everything about one place, in a bottom sheet: the web's PlaceDetailsSheet. */
+/**
+ * Everything about one place, in a bottom sheet: the web's PlaceDetailsSheet, which shows Google's
+ * panel (photos, rating, type, price, address, hours, website, phone, summary, reviews). The app
+ * can't use Google's panel, so the server fetches the same things (`?full=1`), only once the
+ * sheet's open since each load is billed. Nothing but the place ID is stored.
+ */
 export function PlaceSheet({
   open,
   onOpenChange,
@@ -60,29 +65,47 @@ export function PlaceSheet({
   /** "Vote for this", say. */
   action?: { label: string; onPress: () => void } | null;
 }) {
-  const place = usePlace(open ? placeId : null);
+  const place = usePlace(open ? placeId : null, true);
   const line = placeLine(place);
   const where = place?.address ?? address;
+  const { height } = useWindowDimensions();
+  const photos = place?.photos?.length ? place.photos : place?.photo ? [place.photo] : [];
   return (
     <Modal.Root open={open} onOpenChange={onOpenChange}>
       <Modal.Content>
-        <Modal.Body>
-          <View className="gap-3">
-            {placeId ? <PlacePhoto place={place} className="h-48 w-full rounded-lg" big /> : null}
-            {place?.photo?.by ? <Text className="text-paragraph-xs text-text-soft-400">Photo: {place.photo.by}, from Google Maps</Text> : null}
-            <View className="gap-1">
-              <Text accessibilityRole="header" className="text-title-h4 text-text-strong-950">
-                {place?.name ?? name}
-              </Text>
-              {line ? <Text className="text-paragraph-sm text-text-sub-600">{line}</Text> : null}
-              {place?.open_now != null ? (
-                <Text className={place.open_now ? "text-label-sm text-success-base" : "text-label-sm text-error-base"}>{place.open_now ? "Open now" : "Closed now"}</Text>
-              ) : null}
-              {where ? <Text className="text-paragraph-sm text-text-sub-600">{where}</Text> : null}
-            </View>
-            {placeId && !place ? <ActivityIndicator /> : null}
+        <Modal.Header title={place?.name ?? name} />
+        <ScrollView style={{ maxHeight: height * 0.62 }} contentContainerClassName="gap-4" showsVerticalScrollIndicator={false}>
+          {placeId ? <Gallery photos={photos} loading={!place} /> : null}
+          <View className="gap-1">
+            {line ? <Text className="text-paragraph-sm text-text-sub-600">{line}</Text> : null}
+            {place?.open_now != null ? (
+              <Text className={place.open_now ? "text-label-sm text-success-base" : "text-label-sm text-error-base"}>{place.open_now ? "Open now" : "Closed now"}</Text>
+            ) : null}
+            {where ? <Text className="text-paragraph-sm text-text-sub-600">{where}</Text> : null}
           </View>
-        </Modal.Body>
+          {placeId && !place ? <ActivityIndicator /> : null}
+          {place?.hours?.length ? <Hours lines={place.hours} /> : null}
+          {place?.website ? <Row icon="global-line" label={place.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")} onPress={() => Linking.openURL(place.website!)} /> : null}
+          {place?.phone ? <Row icon="phone-line" label={place.phone} onPress={() => Linking.openURL(`tel:${place.phone!.replace(/\s/g, "")}`)} /> : null}
+          {place?.summary ? <Text className="text-paragraph-md text-text-strong-950">{place.summary}</Text> : null}
+          {place?.reviews?.length ? (
+            <View className="gap-3">
+              <Text className="text-label-md text-text-strong-950">Reviews</Text>
+              {place.reviews.map((r, i) => (
+                <View key={i} className="gap-1 border-t border-stroke-soft-200 pt-3">
+                  <Text className="text-label-sm text-text-strong-950">{r.author}</Text>
+                  <Text className="text-paragraph-xs text-text-sub-600">
+                    {[r.rating ? `${"★".repeat(Math.round(r.rating))}${"☆".repeat(5 - Math.round(r.rating))}` : null, r.when].filter(Boolean).join(" · ")}
+                  </Text>
+                  <Text numberOfLines={6} className="text-paragraph-sm text-text-strong-950">
+                    {r.text}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
+          {place ? <Text className="text-paragraph-xs text-text-soft-400">From Google Maps</Text> : null}
+        </ScrollView>
         <Modal.Footer>
           {action ? (
             <Button.Root size="large" block onPress={action.onPress}>
@@ -98,6 +121,78 @@ export function PlaceSheet({
         </Modal.Footer>
       </Modal.Content>
     </Modal.Root>
+  );
+}
+
+/** Google's photos, swiped sideways with the next one peeking in, and who took the one you're on. */
+function Gallery({ photos, loading }: { photos: { uri: string; by: string | null }[]; loading: boolean }) {
+  const { width } = useWindowDimensions();
+  const w = Math.min(width - 32, 560) - (photos.length > 1 ? 40 : 0);
+  const [at, setAt] = useState(0);
+  if (!photos.length)
+    return (
+      <View className="h-48 w-full items-center justify-center rounded-lg bg-bg-weak-50">
+        {loading ? <ActivityIndicator /> : <Icon name="map-pin-2-line" className="text-[32px] leading-[32px] text-primary-base" />}
+      </View>
+    );
+  return (
+    <View className="gap-1.5">
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        snapToInterval={w + 8}
+        decelerationRate="fast"
+        contentContainerStyle={{ gap: 8 }}
+        onMomentumScrollEnd={(e) => setAt(Math.round(e.nativeEvent.contentOffset.x / (w + 8)))}
+      >
+        {photos.map((p, i) => (
+          <Image
+            key={p.uri}
+            source={{ uri: p.uri }}
+            style={{ width: w, height: 220, borderRadius: 12 }}
+            contentFit="cover"
+            transition={200}
+            accessibilityLabel={`Photo ${i + 1} of ${photos.length}`}
+          />
+        ))}
+      </ScrollView>
+      <Text className="text-paragraph-xs text-text-soft-400">
+        {photos.length > 1 ? `${Math.min(at, photos.length - 1) + 1} of ${photos.length}` : ""}
+        {photos.length > 1 && photos[at]?.by ? " · " : ""}
+        {photos[Math.min(at, photos.length - 1)]?.by ? `Photo: ${photos[Math.min(at, photos.length - 1)]!.by}` : ""}
+      </Text>
+    </View>
+  );
+}
+
+/** Opening hours: today's line, tap for the week (Google's panel does the same). */
+function Hours({ lines }: { lines: string[] }) {
+  const [open, setOpen] = useState(false);
+  // Google's lines start Monday; JS days start Sunday.
+  const today = lines[(new Date().getDay() + 6) % 7] ?? lines[0];
+  return (
+    <Pressable accessibilityRole="button" accessibilityState={{ expanded: open }} onPress={() => setOpen(!open)} className="flex-row gap-3 active:opacity-70">
+      <Icon name="time-line" className="text-[20px] leading-[20px] text-text-sub-600" />
+      <View className="flex-1 gap-0.5">
+        {(open ? lines : [today]).map((l) => (
+          <Text key={l} className={l === today ? "text-paragraph-sm text-text-strong-950" : "text-paragraph-sm text-text-sub-600"}>
+            {l}
+          </Text>
+        ))}
+      </View>
+      <Icon name={open ? "arrow-up-s-line" : "arrow-down-s-line"} className="text-[20px] leading-[20px] text-text-sub-600" />
+    </Pressable>
+  );
+}
+
+function Row({ icon, label, onPress }: { icon: "global-line" | "phone-line"; label: string; onPress: () => void }) {
+  return (
+    <Pressable accessibilityRole="link" onPress={onPress} className="min-h-11 flex-row items-center gap-3 active:opacity-70">
+      <Icon name={icon} className="text-[20px] leading-[20px] text-text-sub-600" />
+      <Text numberOfLines={1} className="flex-1 text-paragraph-md text-primary-dark">
+        {label}
+      </Text>
+    </Pressable>
   );
 }
 

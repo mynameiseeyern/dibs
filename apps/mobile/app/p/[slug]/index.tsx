@@ -26,7 +26,7 @@ import { useColour, useShadow } from "@/lib/theme";
 import { cn } from "@/utils/cn";
 import { countdown, whenLong, whenParts } from "@/lib/dates";
 import { usePlan } from "@/lib/use-plan";
-import { TopBar } from "@/components/dibby/top-bar";
+import { AppBar } from "@/components/dibby/app-bar";
 
 /**
  * A plan, opened from its link (same path as the web, /p/:slug, so dibby.social links open here).
@@ -41,14 +41,14 @@ export default function PlanScreen() {
   if (state.kind === "loading")
     return (
       <View className="flex-1">
-        <TopBar />
+        <AppBar />
         <ActivityIndicator className="flex-1" color={spinner} />
       </View>
     );
   if (state.kind !== "ok")
     return (
       <View className="flex-1">
-        <TopBar />
+        <AppBar />
         <View className="gap-2 p-4">
           <Text className="text-title-h4 text-text-strong-950">{state.kind === "missing" ? "Can't find that plan" : "Couldn't load it"}</Text>
           <Text className="text-paragraph-md text-text-sub-600">{state.kind === "missing" ? "It might have been called off, or the link's run out." : state.message}</Text>
@@ -125,7 +125,7 @@ function Plan({ slug, detail, apply }: { slug: string; detail: PlanDetail; apply
 
   return (
     <SafeAreaView className="flex-1" edges={["bottom"]}>
-      <TopBar />
+      <AppBar />
       <ScrollView contentContainerClassName="gap-6 p-4 pb-8">
         {onePage ? (
           <View className="gap-6">
@@ -201,7 +201,7 @@ function WhoRow({ going, me, going_count, capacity }: { going: NonNullable<PlanD
           </Text>
           <Text className="text-paragraph-sm text-text-sub-600">{summary}</Text>
         </View>
-        <LinkButton.Root variant="primary" onPress={() => setOpen(true)}>
+        <LinkButton.Root variant="primary" className="-mb-3" onPress={() => setOpen(true)}>
           See all
         </LinkButton.Root>
       </View>
