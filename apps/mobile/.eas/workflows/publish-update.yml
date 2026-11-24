@@ -1,0 +1,27 @@
+# Publishes the app's JavaScript to phones (an EAS update on the production channel) whenever app
+# code lands on main, so merging a pull request is all it takes. No terminal, no token: it runs
+# on Expo, which is linked to this repo (expo.dev > dibby-social > GitHub, base directory
+# /apps/mobile, where this file has to sit next to eas.json).
+#
+# An update only carries JavaScript and assets. A change to app.json, eas.json, native packages
+# or the iOS/Android folders needs a new build instead; don't merge one of those expecting it
+# to arrive this way. Runs are listed at expo.dev > dibby-social > Workflows.
+
+name: Publish update
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - apps/mobile/**
+      - packages/shared/**
+      - packages/ui/**
+
+jobs:
+  publish_update:
+    name: Publish update to production
+    type: update
+    environment: production
+    params:
+      channel: production
