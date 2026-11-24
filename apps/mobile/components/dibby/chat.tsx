@@ -2,10 +2,13 @@
 // Others on bg-soft-200 with their monogram and first name above a burst; yours on violet;
 // Dibby on accent-lighter with its face and an AI tag; system lines centred and muted.
 
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { Image, Text, View, type ViewProps } from "react-native";
+import { Image as Motion } from "expo-image";
+import Animated, { FadeInDown, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from "react-native-reanimated";
 import type { MonogramColour } from "@dibs/shared/types";
 import { tv } from "@/utils/tv";
+import { DIBBY } from "./flow";
 import { Monogram } from "./monogram";
 
 // Dibby's face: the raised lime friend from the logo (packages/ui/assets/logos).
@@ -69,6 +72,47 @@ export function ChatMessage({ from, children, name, colour = "violet", first = t
       </View>
     </View>
   );
+}
+
+/**
+ * Dibby working out a reply, the web's composer `.db-msg--ai` + `.typing`: Dibby thinking (the
+ * think-loop clip, the still with Reduce Motion) beside a Dibby bubble, "Dibby's on it" and three
+ * violet dots bouncing. Shown from the moment you send an @dibby message until the reply lands.
+ */
+export function DibbyTyping() {
+  const reduce = useReducedMotion();
+  const s = bubble({ from: "dibby" });
+  return (
+    <Animated.View
+      entering={reduce ? undefined : FadeInDown.duration(220)}
+      className={s.row()}
+      accessible
+      accessibilityLiveRegion="polite"
+      accessibilityLabel="Dibby's on it"
+    >
+      {/* 48px like the web's xs Dibby, pulled in so it takes the 32px avatar's spot (`.composer__thinking`). */}
+      <Motion source={reduce ? DIBBY.think : DIBBY.thinking} autoplay={!reduce} style={{ width: 48, height: 48, marginVertical: -8, marginLeft: -8 }} contentFit="contain" />
+      <View className={s.body({ className: "flex-row items-center gap-1.5" })}>
+        <Text className={s.text()}>Dibby&rsquo;s on it</Text>
+        <View className="flex-row gap-[3px]" importantForAccessibility="no-hide-descendants">
+          {[0, 1, 2].map((i) => (
+            <TypingDot key={i} delay={i * 150} still={reduce} />
+          ))}
+        </View>
+      </View>
+    </Animated.View>
+  );
+}
+
+/** The web's `@keyframes dot`: up 4px and fully in at 40% of a 1s beat, resting faded the rest. */
+function TypingDot({ delay, still }: { delay: number; still: boolean }) {
+  const v = useSharedValue(0);
+  useEffect(() => {
+    if (still) return;
+    v.value = withDelay(delay, withRepeat(withSequence(withTiming(1, { duration: 400 }), withTiming(0, { duration: 400 }), withTiming(0, { duration: 200 })), -1));
+  }, [delay, still, v]);
+  const style = useAnimatedStyle(() => ({ opacity: still ? 0.8 : 0.4 + v.value * 0.6, transform: [{ translateY: -4 * v.value }] }));
+  return <Animated.View className="size-1.5 rounded-full bg-primary-base" style={style} />;
 }
 
 /** "Mia set the place." Centred and muted. */
