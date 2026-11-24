@@ -1,14 +1,8 @@
-import { forwardRef, useCallback, useMemo, useRef, useState, type ComponentRef } from "react";
-import { ActivityIndicator, FlatList, Image, Platform, Pressable, Text, TextInput, View, type ScrollViewProps } from "react-native";
-import Animated, { useAnimatedStyle } from "react-native-reanimated";
-import {
-  KeyboardChatScrollView,
-  KeyboardProvider,
-  KeyboardStickyView,
-  useReanimatedKeyboardAnimation,
-  type KeyboardChatScrollViewProps,
-  type KeyboardChatScrollViewRef,
-} from "react-native-keyboard-controller";
+import { forwardRef, useCallback, useEffect, useMemo, useRef, useState, type ComponentRef } from "react";
+import { ActivityIndicator, FlatList, Image, Keyboard, KeyboardAvoidingView, Platform, Pressable, Text, TextInput, View, type ScrollViewProps } from "react-native";
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import type { KeyboardChatScrollViewProps, KeyboardChatScrollViewRef } from "react-native-keyboard-controller";
+import { keyboardController } from "@/lib/keyboard";
 import { router, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -41,13 +35,17 @@ const STAMP_GAP_MS = 15 * 60 * 1000;
  * by frame (react-native-keyboard-controller reads the native keyboard animation on iOS and
  * Android's WindowInsetsAnimation), the newest messages lift with it, and the thread behind dims
  * while you type. Swipe the thread down to put the keyboard away (interactive on iOS).
+ * Builds from before the library was added (see lib/keyboard.ts) get KeyboardAvoidingView instead.
  */
 export default function PlanChatScreen() {
   // Scoped to this screen, so the rest of the app keeps its own keyboard handling.
-  return (
-    <KeyboardProvider>
+  const KC = keyboardController;
+  return KC ? (
+    <KC.KeyboardProvider>
       <PlanChat />
-    </KeyboardProvider>
+    </KC.KeyboardProvider>
+  ) : (
+    <PlanChat />
   );
 }
 
@@ -67,6 +65,7 @@ function PlanChat() {
   const bottom = Math.max(insets.bottom, KEYBOARD_GAP);
   const lift = bottom - KEYBOARD_GAP;
   const scroller = useCallback((props: ScrollViewProps) => <ChatScroll {...props} offset={lift} />, [lift]);
+  const KC = keyboardController;
 
   const detail = state.kind === "ok" ? state.detail : null;
   const messages = useMemo(() => detail?.chat?.messages ?? [], [detail]);
@@ -131,66 +130,81 @@ function PlanChat() {
   );
 
   const empty = rows.length === 0 && !sending;
+  const thread = (
+    <View className="flex-1">
+      {chat?.summary ? (
+        <View className="flex-row items-center gap-2 border-b border-stroke-soft-200 bg-bg-weak-50 px-4 py-2">
+          <Icon name="pushpin-2-line" className="text-[20px] leading-[20px] text-primary-base" />
+          <Text className="flex-1 font-sans-medium text-[14px] leading-[20px] text-text-sub-600">{chat.summary}</Text>
+        </View>
+      ) : null}
+      {empty ? (
+        // Outside the list: an inverted FlatList draws its empty state upside down on some versions.
+        <View className="flex-1 items-center px-4 py-8">
+          <Image source={DIBBY.look} accessibilityIgnoresInvertColors style={{ width: 80, height: 80 }} resizeMode="contain" />
+          <Text className="mt-2 text-center text-paragraph-sm text-text-sub-600">
+            Nothing yet. {canPost ? "Try “@dibby find us somewhere cheap”." : ""}
+          </Text>
+        </View>
+      ) : null}
+      <FlatList
+        style={empty ? { flexGrow: 0 } : undefined}
+        inverted
+        data={rows}
+        keyExtractor={(r) => r.m.id}
+        contentContainerClassName="gap-2 p-4"
+        // Inverted: flex-end is the top, so a short chat starts under the pinned line like the web.
+        contentContainerStyle={{ flexGrow: 1, justifyContent: "flex-end" }}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+        renderScrollComponent={KC ? scroller : undefined}
+        ListHeaderComponent={
+          sending ? (
+            <View className="gap-2">
+              <ChatMessage from="me">{sending}</ChatMessage>
+              {/@dibby/i.test(sending) ? <DibbyTyping /> : null}
+            </View>
+          ) : undefined
+        }
+        renderItem={({ item: { m, first, stamp } }) => (
+          <View className="gap-2">
+            {stamp ? <ChatTime>{stamp}</ChatTime> : null}
+            <Row m={m} first={first} options={chat?.react ?? []} onReact={(e) => react(m.id, e)} />
+          </View>
+        )}
+      />
+      <Dim />
+    </View>
+  );
+  const bar = (
+    <View className="gap-2 border-t border-stroke-soft-200 bg-bg-white-0 px-4 pt-3" style={{ paddingBottom: bottom }}>
+      {footer}
+    </View>
+  );
   return (
     <View className="flex-1 bg-bg-white-0">
       <ChatBar title={detail.plan.title} muted={chat?.muted ?? null} onMute={mute} />
-      <View className="flex-1">
-        {chat?.summary ? (
-          <View className="flex-row items-center gap-2 border-b border-stroke-soft-200 bg-bg-weak-50 px-4 py-2">
-            <Icon name="pushpin-2-line" className="text-[20px] leading-[20px] text-primary-base" />
-            <Text className="flex-1 font-sans-medium text-[14px] leading-[20px] text-text-sub-600">{chat.summary}</Text>
-          </View>
-        ) : null}
-        {empty ? (
-          // Outside the list: an inverted FlatList draws its empty state upside down on some versions.
-          <View className="flex-1 items-center px-4 py-8">
-            <Image source={DIBBY.look} accessibilityIgnoresInvertColors style={{ width: 80, height: 80 }} resizeMode="contain" />
-            <Text className="mt-2 text-center text-paragraph-sm text-text-sub-600">
-              Nothing yet. {canPost ? "Try “@dibby find us somewhere cheap”." : ""}
-            </Text>
-          </View>
-        ) : null}
-        <FlatList
-          style={empty ? { flexGrow: 0 } : undefined}
-          inverted
-          data={rows}
-          keyExtractor={(r) => r.m.id}
-          contentContainerClassName="gap-2 p-4"
-          // Inverted: flex-end is the top, so a short chat starts under the pinned line like the web.
-          contentContainerStyle={{ flexGrow: 1, justifyContent: "flex-end" }}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
-          renderScrollComponent={scroller}
-          ListHeaderComponent={
-            sending ? (
-              <View className="gap-2">
-                <ChatMessage from="me">{sending}</ChatMessage>
-                {/@dibby/i.test(sending) ? <DibbyTyping /> : null}
-              </View>
-            ) : undefined
-          }
-          renderItem={({ item: { m, first, stamp } }) => (
-            <View className="gap-2">
-              {stamp ? <ChatTime>{stamp}</ChatTime> : null}
-              <Row m={m} first={first} options={chat?.react ?? []} onReact={(e) => react(m.id, e)} />
-            </View>
-          )}
-        />
-        <Dim />
-      </View>
-      <KeyboardStickyView offset={{ closed: 0, opened: lift }}>
-        <View className="gap-2 border-t border-stroke-soft-200 bg-bg-white-0 px-4 pt-3" style={{ paddingBottom: bottom }}>
-          {footer}
-        </View>
-      </KeyboardStickyView>
+      {KC ? (
+        <>
+          {thread}
+          <KC.KeyboardStickyView offset={{ closed: 0, opened: lift }}>{bar}</KC.KeyboardStickyView>
+        </>
+      ) : (
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={Platform.OS === "ios" ? insets.top + 61 : 0} className="flex-1">
+          {thread}
+          {bar}
+        </KeyboardAvoidingView>
+      )}
     </View>
   );
 }
 
 /** The thread's scroll view: lifts the newest messages with the keyboard, in step with the composer. */
-const ChatScroll = forwardRef<KeyboardChatScrollViewRef, ScrollViewProps & KeyboardChatScrollViewProps>((props, ref) => (
-  <KeyboardChatScrollView ref={ref} inverted automaticallyAdjustContentInsets={false} contentInsetAdjustmentBehavior="never" {...props} />
-));
+// Only rendered when keyboardController is there.
+const ChatScroll = forwardRef<KeyboardChatScrollViewRef, ScrollViewProps & KeyboardChatScrollViewProps>((props, ref) => {
+  const Scroll = keyboardController!.KeyboardChatScrollView;
+  return <Scroll ref={ref} inverted automaticallyAdjustContentInsets={false} contentInsetAdjustmentBehavior="never" {...props} />;
+});
 ChatScroll.displayName = "ChatScroll";
 
 /**
@@ -198,11 +212,28 @@ ChatScroll.displayName = "ChatScroll";
  * keyboard's own progress, so it fades in and out exactly with it. Touches pass through: you can
  * still scroll, react, and swipe the keyboard away.
  */
-function Dim() {
-  const { progress } = useReanimatedKeyboardAnimation();
+function DimWithKeyboard() {
+  const { progress } = keyboardController!.useReanimatedKeyboardAnimation();
   const style = useAnimatedStyle(() => ({ opacity: progress.value * DIM }));
   return <Animated.View pointerEvents="none" className="absolute inset-0 bg-overlay" style={style} />;
 }
+
+/** Older builds: the same dim, timed to the keyboard's show and hide events instead of its frames. */
+function DimFromEvents() {
+  const progress = useSharedValue(0);
+  useEffect(() => {
+    const ios = Platform.OS === "ios";
+    const fade = (to: number) => (e: { duration?: number }) => {
+      progress.value = withTiming(to, { duration: e.duration || 250 });
+    };
+    const subs = [Keyboard.addListener(ios ? "keyboardWillShow" : "keyboardDidShow", fade(1)), Keyboard.addListener(ios ? "keyboardWillHide" : "keyboardDidHide", fade(0))];
+    return () => subs.forEach((s) => s.remove());
+  }, [progress]);
+  const style = useAnimatedStyle(() => ({ opacity: progress.value * DIM }));
+  return <Animated.View pointerEvents="none" className="absolute inset-0 bg-overlay" style={style} />;
+}
+
+const Dim = keyboardController ? DimWithKeyboard : DimFromEvents;
 
 /** How much of the overlay scrim the dim uses: lighter than a sheet's, the thread stays readable. */
 const DIM = 0.6;
