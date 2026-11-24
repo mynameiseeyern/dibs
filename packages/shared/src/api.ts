@@ -234,6 +234,15 @@ export interface PlaceInfo {
   /** A short-lived photo URL from Google (no key in it), and who took it: show "Photo: <name>". */
   photo: { uri: string; by: string | null } | null;
   maps_url: string;
+  /** With `?full=1` (the place sheet, like the web's Google panel): up to 10 photos, each with who took it. */
+  photos?: { uri: string; by: string | null }[];
+  /** "Monday: 11:30 am – 9:00 pm", a line a day. */
+  hours?: string[] | null;
+  website?: string | null;
+  phone?: string | null;
+  /** Google's one-line summary of the place. */
+  summary?: string | null;
+  reviews?: { author: string; rating: number | null; text: string; when: string | null }[];
 }
 
 /** `GET /api/v1/places?q=` (with `lat`/`lng` or `area`): businesses to pick from, like the web's map picker. */

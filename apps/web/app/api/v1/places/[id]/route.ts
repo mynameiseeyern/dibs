@@ -15,7 +15,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const { id } = await params;
   const [organiser, guest] = await Promise.all([apiOrganiser(req), apiGuest(req)]);
   if (!organiser && !guest && !checkPlacesPass(req.nextUrl.searchParams.get("pass"))) return apiError("Make or join a plan first.", 401);
-  const card = await placeCard(id);
+  // ?full=1: the place sheet, everything the web's Google panel shows. Only when it's opened.
+  const full = req.nextUrl.searchParams.get("full") === "1";
+  const card = await placeCard(id, { full });
   if (!card) return apiError("Couldn't load that place.", 404);
   const info: PlaceInfo = {
     place_id: card.placeId,
@@ -28,6 +30,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     open_now: card.openNow,
     photo: card.photo,
     maps_url: card.mapsUrl,
+    ...(card.full ?? {}),
   };
   return apiJson(info, 200);
 }

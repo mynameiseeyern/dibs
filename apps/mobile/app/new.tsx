@@ -12,6 +12,7 @@ import { shareText } from "@dibs/shared/plans";
 import { PlanCard, type PlanFact } from "@/components/dibby/plan-card";
 import { Answers, Choice, DIBBY, DibbyAsks, Option, Stagger, talkMs, usePace, type Pose } from "@/components/dibby/flow";
 import { DayStrip } from "@/components/dibby/day-strip";
+import { NavMenu } from "@/components/dibby/app-bar";
 import * as Datepicker from "@/components/ui/datepicker";
 import { PushAsk } from "@/components/dibby/push-ask";
 import { Hopscotch, type Rest, type Square } from "@/components/dibby/hopscotch";
@@ -333,6 +334,11 @@ export default function NewPlan() {
         <Button.Root variant="neutral" mode="ghost" iconOnly accessibilityLabel="Back" onPress={back}>
           <Button.Icon name={step === "what" ? "close-line" : "arrow-left-line"} />
         </Button.Root>
+        <View className="flex-1" />
+        {/* The web's menu, top right, like every top bar. */}
+        <View className="pr-2">
+          <NavMenu />
+        </View>
       </View>
       <Hopscotch squares={squares} at={at} pose={pose} rest={rest} talk={talkMs(QUESTION[step as keyof typeof QUESTION] ?? "")} />
 

@@ -53,7 +53,12 @@ const GUTTER = 16;
 /** Dibby's feet sit this far down into the square. */
 const FEET = 14;
 /** One hop, take-off to landing. */
-export const HOP_MS = 520;
+export const HOP_MS = 480;
+/** The crouch before it. */
+const CROUCH_MS = 140;
+/** His shadow: as wide as his stance, sitting where his feet touch the square. */
+const SHADOW_W = 52;
+const FEET_SHADOW = 12;
 
 /** Where Dibby stands on square `index` of `count` (also where the hello moment lands him). */
 export function squareX(width: number, count: number, index: number) {
@@ -104,15 +109,27 @@ export function Hopscotch({ squares, at, pose, rest, talk = 0 }: { squares: Squa
     if (!arrived) after(0, () => setFade(160));
 
     // 1 · hop. The first square has no hop: he's already there (the hello moment lands him).
-    const hopMs = arrived ? 0 : HOP_MS;
+    // He crouches first (anticipation), then the jump: stretched going up, round at the top,
+    // squashed when his feet hit the square, then a little settle. Feet stay the pivot throughout.
+    const hopMs = arrived ? 0 : CROUCH_MS + HOP_MS;
     if (hopMs) {
       after(0, () => setPhase("hop"));
-      x.value = withTiming(to, { duration: HOP_MS, easing: Easing.inOut(Easing.quad) });
       if (!CLIPS.hop) {
-        lift.value = withSequence(withTiming(-48, { duration: HOP_MS / 2, easing: Easing.out(Easing.quad) }), withTiming(0, { duration: HOP_MS / 2, easing: Easing.in(Easing.quad) }));
-        squash.value = withDelay(HOP_MS, withSequence(withTiming(1, { duration: 90 }), withTiming(0, { duration: 200, easing: Easing.out(Easing.back(2)) })));
+        squash.value = withSequence(
+          withTiming(0.7, { duration: CROUCH_MS, easing: Easing.out(Easing.quad) }),
+          withTiming(-0.6, { duration: 90, easing: Easing.out(Easing.quad) }),
+          withTiming(0, { duration: HOP_MS - 180, easing: Easing.inOut(Easing.quad) }),
+          withTiming(-0.3, { duration: 90 }),
+          withTiming(1, { duration: 80, easing: Easing.out(Easing.quad) }),
+          withTiming(0, { duration: 320, easing: Easing.out(Easing.back(2.4)) })
+        );
+        lift.value = withDelay(
+          CROUCH_MS,
+          withSequence(withTiming(-52, { duration: HOP_MS / 2, easing: Easing.out(Easing.quad) }), withTiming(0, { duration: HOP_MS / 2, easing: Easing.in(Easing.quad) }))
+        );
       }
-      after(HOP_MS, () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light));
+      x.value = withDelay(CROUCH_MS, withTiming(to, { duration: HOP_MS, easing: Easing.inOut(Easing.sin) }));
+      after(CROUCH_MS + HOP_MS, () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light));
     } else {
       x.value = to;
     }
@@ -132,26 +149,43 @@ export function Hopscotch({ squares, at, pose, rest, talk = 0 }: { squares: Squa
     after(restAt, () => {
       setPhase("rest");
       if (CLIPS.rest[pose]) return;
+      // Feet planted: he breathes, and shifts his weight from foot to foot ("sway"), never tilting
+      // like a pendulum (that read as floating). Now and then a small bounce on the spot.
+      breathe.value = withRepeat(withTiming(1, { duration: 1300, easing: Easing.inOut(Easing.sin) }), -1, true);
       if (rest === "sway") {
-        sway.value = withRepeat(withSequence(withTiming(4, { duration: 900, easing: Easing.inOut(Easing.sin) }), withTiming(-4, { duration: 900, easing: Easing.inOut(Easing.sin) })), -1, true);
-      } else {
-        breathe.value = withRepeat(withTiming(1, { duration: 1100, easing: Easing.inOut(Easing.sin) }), -1, true);
+        sway.value = withRepeat(withSequence(withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.sin) }), withTiming(-1, { duration: 1400, easing: Easing.inOut(Easing.sin) })), -1, true);
       }
+      const bounce = () => {
+        squash.value = withSequence(withTiming(0.45, { duration: 140, easing: Easing.out(Easing.quad) }), withTiming(-0.2, { duration: 110 }), withTiming(0, { duration: 260, easing: Easing.out(Easing.back(2)) }));
+        lift.value = withDelay(140, withSequence(withTiming(-10, { duration: 140, easing: Easing.out(Easing.quad) }), withTiming(0, { duration: 140, easing: Easing.in(Easing.quad) })));
+      };
+      const idle = setInterval(bounce, 4200 + Math.round(Math.random() * 1800));
+      timers.push(idle as unknown as ReturnType<typeof setTimeout>);
     });
 
-    return () => timers.forEach(clearTimeout);
+    return () => timers.forEach((t) => (clearTimeout(t), clearInterval(t as unknown as ReturnType<typeof setInterval>)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [at, count, width, pose, rest, talk, pace.reduce]);
 
+  // squash > 0: squashed (crouching, landing); < 0: stretched (taking off). Volume stays about the same.
   const dibbyStyle = useAnimatedStyle(() => ({
     transform: [
-      { translateX: x.value },
-      { translateY: lift.value - breathe.value * 3 },
-      { scaleX: 1 + squash.value * 0.08 },
-      { scaleY: 1 - squash.value * 0.1 + chat.value * 0.025 + breathe.value * 0.015 },
-      { rotate: `${sway.value}deg` },
+      { translateX: x.value + sway.value * 2 },
+      { translateY: lift.value },
+      { scaleX: 1 + squash.value * 0.1 - breathe.value * 0.008 },
+      { scaleY: 1 - squash.value * 0.12 + chat.value * 0.03 + breathe.value * 0.02 },
+      // A lean into the weight shift, from the feet: a degree, not a pendulum.
+      { rotate: `${sway.value * 1.2}deg` },
     ],
   }));
+  // His shadow on the square: smaller and fainter the higher he is, wider when he squashes.
+  const shadowStyle = useAnimatedStyle(() => {
+    const up = Math.min(1, -lift.value / 52);
+    return {
+      opacity: 0.45 - up * 0.3,
+      transform: [{ translateX: x.value + DIBBY_SIZE / 2 - SHADOW_W / 2 + sway.value * 2 }, { scaleX: 1 - up * 0.45 + Math.max(0, squash.value) * 0.15 }, { scaleY: 1 - up * 0.3 }],
+    };
+  });
 
   const clip = phase === "hop" ? CLIPS.hop : phase === "talk" ? CLIPS.talk[pose] : CLIPS.rest[pose];
   const sq = (width - GUTTER * 2) / count;
@@ -184,6 +218,12 @@ export function Hopscotch({ squares, at, pose, rest, talk = 0 }: { squares: Squa
           </Pressable>
         ))}
       </View>
+
+      {/* His shadow, where his feet meet the square */}
+      <Animated.View
+        pointerEvents="none"
+        style={[{ position: "absolute", left: 0, top: DIBBY_SIZE - FEET_SHADOW, width: SHADOW_W, height: 10, borderRadius: 999, backgroundColor: "black" }, shadowStyle]}
+      />
 
       {/* Dibby, on the current square */}
       <Animated.View

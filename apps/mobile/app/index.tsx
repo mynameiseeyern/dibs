@@ -1,3 +1,4 @@
+import { AppBar } from "@/components/dibby/app-bar";
 import { useCallback, useRef, useState, type ComponentRef } from "react";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { Redirect, router, Stack, useFocusEffect } from "expo-router";
@@ -6,7 +7,6 @@ import type { MyPlan } from "@dibs/shared/api";
 import { DibbyHello, type Anchor } from "@/components/dibby/hello";
 import { PushAsk } from "@/components/dibby/push-ask";
 import { PlanCard, PlanCardSkeleton, type PlanFact } from "@/components/dibby/plan-card";
-import { Image } from "expo-image";
 import * as Avatar from "@/components/ui/avatar";
 import * as AvatarGroup from "@/components/ui/avatar-group";
 import * as Button from "@/components/ui/button";
@@ -87,7 +87,7 @@ function MyPlans({ signedIn }: { signedIn: boolean }) {
   const [load, setLoad] = useState<Load>({ kind: "loading" });
   const [refreshing, setRefreshing] = useState(false);
 
-  const { setGuestPass, state: auth } = useSession();
+  const { setGuestPass } = useSession();
   const fetchPlans = useCallback(async () => {
     try {
       const { upcoming, sort_out, past, claimed } = await getMyPlans();
@@ -111,21 +111,8 @@ function MyPlans({ signedIn }: { signedIn: boolean }) {
       {/* Our own top bar, not the native header: on iOS 26 the header puts a grey glass bubble
           behind anything in it, which isn't the design (TestFlight, Nov 2026). */}
       <Stack.Screen options={{ headerShown: false }} />
-      <View className="h-14 flex-row items-center justify-between px-4">
-        <View accessible accessibilityRole="header" accessibilityLabel="Dibby" className="flex-row items-center gap-2">
-          <Image source={require("../assets/dibby/icon-192.png")} style={{ width: 32, height: 32, borderRadius: 8 }} accessible={false} />
-          <Text className="font-display text-[28px] leading-[32px] tracking-[-1px] text-text-strong-950">dibby</Text>
-        </View>
-        {signedIn ? (
-          <Pressable accessibilityRole="button" accessibilityLabel="Your account" hitSlop={8} onPress={() => router.push("/account")}>
-            <Avatar.Root size="40" color="violet" name={auth.status === "signedIn" && auth.me?.name ? `${auth.me.name.first} ${auth.me.name.last}`.trim() : undefined} />
-          </Pressable>
-        ) : (
-          <LinkButton.Root variant="primary" onPress={() => router.push("/sign-in")}>
-            Keep my plans
-          </LinkButton.Root>
-        )}
-      </View>
+      {/* The web's top bar: logo, and your initials (or ⋯) for the menu. */}
+      <AppBar top={false} />
       <ScrollView
         contentContainerClassName="gap-4 p-4"
         refreshControl={

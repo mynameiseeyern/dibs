@@ -8,29 +8,31 @@ import { getPlaceInfo } from "./api";
 
 const cache = new Map<string, Promise<PlaceInfo | null>>();
 
-export function loadPlace(placeId: string): Promise<PlaceInfo | null> {
-  let hit = cache.get(placeId);
+/** `full`: everything the web's Google panel shows (gallery, hours, reviews…), for the place sheet only. */
+export function loadPlace(placeId: string, full = false): Promise<PlaceInfo | null> {
+  const key = full ? `${placeId}#full` : placeId;
+  let hit = cache.get(key);
   if (!hit) {
-    hit = getPlaceInfo(placeId).catch(() => {
+    hit = getPlaceInfo(placeId, full).catch(() => {
       // Let a later look try again (offline, say).
-      cache.delete(placeId);
+      cache.delete(key);
       return null;
     });
-    cache.set(placeId, hit);
+    cache.set(key, hit);
   }
   return hit;
 }
 
 /** The card for a place, or null while it loads or when there's no place (a typed-in spot). */
-export function usePlace(placeId: string | null | undefined): PlaceInfo | null {
+export function usePlace(placeId: string | null | undefined, full = false): PlaceInfo | null {
   const [info, setInfo] = useState<PlaceInfo | null>(null);
   useEffect(() => {
     let live = true;
     setInfo(null);
-    if (placeId) loadPlace(placeId).then((p) => live && setInfo(p));
+    if (placeId) loadPlace(placeId, full).then((p) => live && setInfo(p));
     return () => {
       live = false;
     };
-  }, [placeId]);
+  }, [placeId, full]);
   return info;
 }

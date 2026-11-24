@@ -118,8 +118,8 @@ export async function searchPlaces(q: string, near?: { area?: string | null }): 
   const res = await call<{ places: PlaceHit[] }>(`/api/v1/places?${await placesQuery({ q, ...(near?.area ? { area: near.area } : {}) })}`);
   return res.places;
 }
-export async function getPlaceInfo(placeId: string): Promise<PlaceInfo> {
-  return call<PlaceInfo>(`/api/v1/places/${encodeURIComponent(placeId)}?${await placesQuery({})}`);
+export async function getPlaceInfo(placeId: string, full = false): Promise<PlaceInfo> {
+  return call<PlaceInfo>(`/api/v1/places/${encodeURIComponent(placeId)}?${await placesQuery({})}${full ? "&full=1" : ""}`);
 }
 export const sendMessage = (slug: string, body: string) => call<PlanDetail>(plan(slug, "/messages"), { method: "POST", body: { body } });
 
