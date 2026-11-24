@@ -46,6 +46,7 @@
     "tailwind-variants": "3.3.1"
   },
   "devDependencies": {
+    "@babel/plugin-transform-react-jsx": "7.29.7",
     "@expo/metro-runtime": "~58.0.16",
     "@types/react": "19.2.2",
     "babel-preset-expo": "~58.0.22",
