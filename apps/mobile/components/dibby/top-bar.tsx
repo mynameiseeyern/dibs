@@ -16,7 +16,7 @@ export function TopBar({ title, right }: { title?: string; right?: ReactNode }) 
   // Opened straight from a link there's nothing to go back to, so back goes home.
   const back = () => (router.canGoBack() ? router.back() : router.replace("/"));
   return (
-    <View style={{ paddingTop: insets.top }} className="bg-bg-white-0">
+    <View style={{ paddingTop: insets.top }} className="bg-bg-weak-50">
       <View style={{ height: TOP_BAR }} className="flex-row items-center px-1">
         <Pressable accessibilityRole="button" accessibilityLabel={router.canGoBack() ? "Back" : "Home"} hitSlop={8} onPress={back} className="size-11 items-center justify-center active:opacity-60">
           <Icon name="arrow-left-s-line" className="text-[28px] leading-[28px] text-text-strong-950" />

@@ -205,7 +205,7 @@ export default function NewPlan() {
               <DibbyAsks stepKey="what" ack={whatAck} question={QUESTION.what} hint={whatAck ? undefined : "Say the day and time too, if you know it."} />
               <Answers stepKey="what" after={talkMs(QUESTION.what)}>
                 <View className="relative">
-                  <Placeholder show={!title} ink="faint" className="inset-x-0 top-0 border-b-2 border-transparent py-2 font-display text-title-h3">
+                  <Placeholder show={!title} ink="faint" className="inset-x-0 top-0 border-b-2 border-transparent py-2 text-title-h3">
                     Dumplings fri arvo
                   </Placeholder>
                   <TextInput
@@ -220,7 +220,7 @@ export default function NewPlan() {
                     returnKeyType="next"
                     onSubmitEditing={answerWhat}
                     accessibilityLabel="What are we doing?"
-                    className="border-b-2 border-stroke-soft-200 py-2 font-display text-title-h3 text-text-strong-950"
+                    className="border-b-2 border-stroke-soft-200 py-2 text-title-h3 text-text-strong-950"
                     placeholderTextColor="transparent"
                     selectionColor={caret}
                   />
@@ -429,7 +429,7 @@ function Making({ dibby }: { dibby: boolean }) {
     <View className="flex-1 items-center justify-center gap-4 bg-bg-white-0 p-4">
       <Stack.Screen options={{ headerShown: false }} />
       <Image source={DIBBY.thinking} style={{ width: 200, height: 200 }} contentFit="contain" accessible={false} />
-      <Text accessibilityLiveRegion="polite" className="text-center font-display text-title-h4 text-text-strong-950">
+      <Text accessibilityLiveRegion="polite" className="text-center text-title-h4 text-text-strong-950">
         {dibby ? "Finding a few spots…" : "Making it happen…"}
       </Text>
       {dibby ? <Text className="text-center text-paragraph-md text-text-sub-600">Real places, open and nearby. Give it a sec.</Text> : null}
@@ -461,7 +461,7 @@ function Done({ slug, plan, title }: { slug: string; plan: PlanSummary | null; t
       <ScrollView contentContainerClassName="gap-5 px-4 pb-6 pt-6">
         <View className="items-center gap-2">
           <Image source={DIBBY.cheer} style={{ width: 180, height: 180 }} contentFit="contain" accessible={false} />
-          <Animated.Text entering={pace.reduce ? undefined : FadeInDown.duration(380).delay(300)} accessibilityRole="header" className="font-display text-title-h2 text-text-strong-950">
+          <Animated.Text entering={pace.reduce ? undefined : FadeInDown.duration(380).delay(300)} accessibilityRole="header" className="text-title-h2 text-text-strong-950">
             It&rsquo;s on.
           </Animated.Text>
           <Animated.Text entering={pace.reduce ? undefined : FadeIn.duration(300).delay(500)} className="text-center text-paragraph-md text-text-sub-600">

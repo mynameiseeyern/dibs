@@ -1,11 +1,13 @@
 import "server-only";
 import { toPlanSummary, type PlanDetail } from "@dibs/shared/api";
-import { extraOn, planAccess, READ_ONLY_NOTE } from "@dibs/shared/plans";
+import { extraOn, planAccess, READ_ONLY_NOTE, unreadCount } from "@dibs/shared/plans";
 import { picksAllowed } from "@dibs/shared/votes";
 import { apiGuest, apiOrganiser } from "./api-auth";
 import { asViewer } from "./api-viewer";
 import { store } from "./store";
+import { canAddToCalendar } from "./calendar";
 import { mapsLink } from "./places";
+import { siteUrl } from "./site";
 import { formatShort } from "./time";
 import { loadPlan } from "./viewer";
 
@@ -21,7 +23,10 @@ export async function planDetail(slug: string): Promise<PlanDetail | null> {
   if (!view) return null;
   const { plan, members, me } = view;
   const access = me ? planAccess(me) : null;
-  const sees = Boolean(me && access && access.level !== "hidden");
+  // Like the web's plan page: anyone with the link sees who's going and the vote (read only);
+  // someone who said they can't go doesn't. The chat is only for people in the plan.
+  const sees = !me || Boolean(access && access.level !== "hidden");
+  const inChat = Boolean(me && access && access.level !== "hidden");
 
   const [options, votes, messages] = await Promise.all([
     store.listOptions(plan.id),
@@ -37,6 +42,12 @@ export async function planDetail(slug: string): Promise<PlanDetail | null> {
     plan: toPlanSummary(plan, members, formatShort(plan.starts_at)),
     host_name: host ? host.display_name.split(" ")[0] : null,
     directions,
+    // A typed-in place's address, under its name: only for people in the plan.
+    address: me && plan.venue_name && !plan.venue_place_id ? (plan.venue_address ?? null) : null,
+    // The web's Add to calendar: people in the plan, once it's locked in with a time.
+    calendar: me && plan.status === "locked" && canAddToCalendar(plan) ? `${siteUrl()}/p/${plan.slug}/calendar` : null,
+    // New chat messages since they last opened it, for the Chat button's badge.
+    unread: inChat && extraOn(plan, "chat") ? unreadCount(me!.dibby_muted ? messages.filter((m) => !m.auto) : messages, me!) : 0,
     me:
       me && access
         ? {
@@ -62,10 +73,10 @@ export async function planDetail(slug: string): Promise<PlanDetail | null> {
             options: options.map((o) => ({
               id: o.id,
               label: o.label,
-              // A typed-in place's address is for people in the plan (they are, here).
-              note: o.note,
+              // A typed-in place's address is only for people in the plan (the web's voteRows).
+              note: o.place_id || me ? o.note : null,
               votes: votes.filter((v) => v.option_id === o.id).length,
-              mine: votes.some((v) => v.option_id === o.id && v.member_id === me!.id),
+              mine: Boolean(me && votes.some((v) => v.option_id === o.id && v.member_id === me.id)),
               place_id: o.place_id && !o.place_id.startsWith("demo:") ? o.place_id : null,
             })),
             voters: new Set(votes.map((v) => v.member_id)).size,
@@ -74,7 +85,7 @@ export async function planDetail(slug: string): Promise<PlanDetail | null> {
           }
         : null,
     chat:
-      sees && extraOn(plan, "chat")
+      inChat && extraOn(plan, "chat")
         ? {
             // Oldest first, like both stores give them.
             messages: messages

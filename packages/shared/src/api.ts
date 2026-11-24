@@ -76,6 +76,14 @@ export interface MyPlan extends PlanSummary {
   rsvp: PlanMember["rsvp"];
   waitlisted: boolean;
   host: boolean;
+  /** "Hosting", "Co-hosting" or "Going": the web's row label. */
+  role_label?: string;
+  /** The web's status chip text, e.g. "Voting · closes Thu 6:15am". */
+  status_label?: string;
+  /** Faces for the row (people in, not the waitlist), first five or so. */
+  faces?: { name: string; colour: PlanMember["colour"] }[];
+  /** The one thing to do next ("Wrap it up: who came?", "You owe $12."), or null. */
+  nudge?: string | null;
 }
 
 export function toMyPlan(plan: Plan, members: readonly PlanMember[], me: PlanMember, when: string | null): MyPlan {
@@ -96,6 +104,8 @@ export interface ApiError {
 export interface MyPlans {
   upcoming: MyPlan[];
   past: MyPlan[];
+  /** Past plans with money still out or waiting to be wrapped up: the web's "To sort out". */
+  sort_out?: MyPlan[];
   claimed?: number;
 }
 
@@ -133,6 +143,12 @@ export interface PlanDetail {
   host_name?: string | null;
   /** Google Maps directions to the set place (a typed-in address only for people in the plan). */
   directions?: string | null;
+  /** A typed-in place's address (people in the plan only), shown under its name. */
+  address?: string | null;
+  /** An .ics for the plan (people in the plan, locked in with a time): opening it adds it to the calendar. */
+  calendar?: string | null;
+  /** New chat messages since this person last opened the chat. */
+  unread?: number;
   /** Null: not in the plan yet (show join). */
   me: {
     name: string;

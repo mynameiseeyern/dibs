@@ -141,7 +141,7 @@ export function DibbyHello({
         className="items-center"
       >
         <View className="rounded-lg bg-bg-white-0 px-5 py-3">
-          <Text accessibilityLiveRegion="polite" className="text-center font-display text-title-h4 text-text-strong-950">
+          <Text accessibilityLiveRegion="polite" className="text-center text-title-h4 text-text-strong-950">
             Hey, I&rsquo;m Dibby!
           </Text>
           <Text className="text-center text-paragraph-md text-text-sub-600">Let&rsquo;s get this plan locked in.</Text>
