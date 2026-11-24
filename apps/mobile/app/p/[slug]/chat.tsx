@@ -1,11 +1,20 @@
-import { useMemo, useRef, useState, type ComponentRef } from "react";
-import { ActivityIndicator, FlatList, Image, KeyboardAvoidingView, Platform, Pressable, Text, TextInput, View } from "react-native";
+import { forwardRef, useCallback, useMemo, useRef, useState, type ComponentRef } from "react";
+import { ActivityIndicator, FlatList, Image, Platform, Pressable, Text, TextInput, View, type ScrollViewProps } from "react-native";
+import Animated, { useAnimatedStyle } from "react-native-reanimated";
+import {
+  KeyboardChatScrollView,
+  KeyboardProvider,
+  KeyboardStickyView,
+  useReanimatedKeyboardAnimation,
+  type KeyboardChatScrollViewProps,
+  type KeyboardChatScrollViewRef,
+} from "react-native-keyboard-controller";
 import { router, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { PlanDetail } from "@dibs/shared/api";
-import { ChatMessage, ChatSystem, ChatTime } from "@/components/dibby/chat";
-import { DIBBY, Thinking } from "@/components/dibby/flow";
+import { ChatMessage, ChatSystem, ChatTime, DibbyTyping } from "@/components/dibby/chat";
+import { DIBBY } from "@/components/dibby/flow";
 import * as Button from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import * as Input from "@/components/ui/input";
@@ -27,14 +36,37 @@ const STAMP_GAP_MS = 15 * 60 * 1000;
  * the pinned line (what, when, where, how many), the messages, and the composer at the bottom.
  * Anyone going reads it; posting needs an account (guests add their email right here).
  * Tag @dibby and Dibby replies in a few seconds: it only reads messages it's tagged in.
+ *
+ * The keyboard, like iMessage and WhatsApp: the composer rides on top of the system keyboard frame
+ * by frame (react-native-keyboard-controller reads the native keyboard animation on iOS and
+ * Android's WindowInsetsAnimation), the newest messages lift with it, and the thread behind dims
+ * while you type. Swipe the thread down to put the keyboard away (interactive on iOS).
  */
-export default function PlanChat() {
+export default function PlanChatScreen() {
+  // Scoped to this screen, so the rest of the app keeps its own keyboard handling.
+  return (
+    <KeyboardProvider>
+      <PlanChat />
+    </KeyboardProvider>
+  );
+}
+
+/** How far the composer's bottom padding sits above the keyboard while it's up. */
+const KEYBOARD_GAP = 12;
+
+function PlanChat() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const insets = useSafeAreaInsets();
   const spinner = useColour("primary-base");
   const { state, apply } = usePlan(slug);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState<string | null>(null);
+
+  // The composer's bottom padding clears the home indicator; once the keyboard's up it only needs a
+  // small gap, so the composer (and the messages with it) rise by the keyboard less that difference.
+  const bottom = Math.max(insets.bottom, KEYBOARD_GAP);
+  const lift = bottom - KEYBOARD_GAP;
+  const scroller = useCallback((props: ScrollViewProps) => <ChatScroll {...props} offset={lift} />, [lift]);
 
   const detail = state.kind === "ok" ? state.detail : null;
   const messages = useMemo(() => detail?.chat?.messages ?? [], [detail]);
@@ -102,7 +134,7 @@ export default function PlanChat() {
   return (
     <View className="flex-1 bg-bg-white-0">
       <ChatBar title={detail.plan.title} muted={chat?.muted ?? null} onMute={mute} />
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={Platform.OS === "ios" ? insets.top + 61 : 0} className="flex-1">
+      <View className="flex-1">
         {chat?.summary ? (
           <View className="flex-row items-center gap-2 border-b border-stroke-soft-200 bg-bg-weak-50 px-4 py-2">
             <Icon name="pushpin-2-line" className="text-[20px] leading-[20px] text-primary-base" />
@@ -127,16 +159,13 @@ export default function PlanChat() {
           // Inverted: flex-end is the top, so a short chat starts under the pinned line like the web.
           contentContainerStyle={{ flexGrow: 1, justifyContent: "flex-end" }}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+          renderScrollComponent={scroller}
           ListHeaderComponent={
             sending ? (
               <View className="gap-2">
                 <ChatMessage from="me">{sending}</ChatMessage>
-                {/@dibby/i.test(sending) ? (
-                  <View className="flex-row items-center gap-2 pl-9">
-                    <Thinking />
-                    <Text className="text-paragraph-xs text-text-soft-400">Dibby&rsquo;s on it</Text>
-                  </View>
-                ) : null}
+                {/@dibby/i.test(sending) ? <DibbyTyping /> : null}
               </View>
             ) : undefined
           }
@@ -147,13 +176,36 @@ export default function PlanChat() {
             </View>
           )}
         />
-        <View className="gap-2 border-t border-stroke-soft-200 bg-bg-white-0 px-4 pt-3" style={{ paddingBottom: Math.max(insets.bottom, 12) }}>
+        <Dim />
+      </View>
+      <KeyboardStickyView offset={{ closed: 0, opened: lift }}>
+        <View className="gap-2 border-t border-stroke-soft-200 bg-bg-white-0 px-4 pt-3" style={{ paddingBottom: bottom }}>
           {footer}
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardStickyView>
     </View>
   );
 }
+
+/** The thread's scroll view: lifts the newest messages with the keyboard, in step with the composer. */
+const ChatScroll = forwardRef<KeyboardChatScrollViewRef, ScrollViewProps & KeyboardChatScrollViewProps>((props, ref) => (
+  <KeyboardChatScrollView ref={ref} inverted automaticallyAdjustContentInsets={false} contentInsetAdjustmentBehavior="never" {...props} />
+));
+ChatScroll.displayName = "ChatScroll";
+
+/**
+ * The thread dims as the keyboard comes up, so what you're typing is the focus. It follows the
+ * keyboard's own progress, so it fades in and out exactly with it. Touches pass through: you can
+ * still scroll, react, and swipe the keyboard away.
+ */
+function Dim() {
+  const { progress } = useReanimatedKeyboardAnimation();
+  const style = useAnimatedStyle(() => ({ opacity: progress.value * DIM }));
+  return <Animated.View pointerEvents="none" className="absolute inset-0 bg-overlay" style={style} />;
+}
+
+/** How much of the overlay scrim the dim uses: lighter than a sheet's, the thread stays readable. */
+const DIM = 0.6;
 
 /** The web's chat topbar: round back button, the plan's name with "Chat" under it, and the bell. */
 function ChatBar({ title, muted, onMute }: { title: string; muted: boolean | null; onMute: () => void }) {
