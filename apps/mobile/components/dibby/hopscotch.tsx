@@ -40,13 +40,19 @@ const CLIPS: {
   /** Hopping from one square to the next, in place (the app moves him across). Drawn taller than
    *  Dibby (HOP_CLIP) so the jump has room; he's the same size as in the other clips. */
   hop?: Clip;
-  /** Mouth moving, per pose. None yet: the resting loop plays, with the talking bob on top. */
+  /** Mouth moving as he asks the question, per pose (with a pose that has none, the resting loop plays with the talking bob on top). */
   talk: Partial<Record<Pose, Clip>>;
   /** The resting loop, per pose: blinks, a tilt of the head, taps, waves; feet planted. */
   rest: Partial<Record<Pose, Clip>>;
 } = {
   hop: require("../../assets/dibby/motion/hop.webp"),
-  talk: {},
+  talk: {
+    think: require("../../assets/dibby/motion/talk-think.webp"),
+    phone: require("../../assets/dibby/motion/talk-phone.webp"),
+    point: require("../../assets/dibby/motion/talk-point.webp"),
+    look: require("../../assets/dibby/motion/talk-look.webp"),
+    hi: require("../../assets/dibby/motion/talk-hi.webp"),
+  },
   rest: {
     think: DIBBY.thinking,
     phone: require("../../assets/dibby/motion/phone.webp"),
@@ -280,7 +286,7 @@ export function Hopscotch({ squares, at, pose, rest, talk = 0 }: { squares: Squa
             accessible={false}
           />
         ) : (
-          <Image key={`${pose}-${clip ? "clip" : "still"}`} source={clip ?? DIBBY[pose]} style={{ width: DIBBY_SIZE, height: DIBBY_SIZE }} contentFit="contain" transition={fade} accessible={false} />
+          <Image key={`${pose}-${phase}-${clip ? "clip" : "still"}`} source={clip ?? DIBBY[pose]} style={{ width: DIBBY_SIZE, height: DIBBY_SIZE }} contentFit="contain" transition={fade} accessible={false} />
         )}
       </Animated.View>
     </View>
