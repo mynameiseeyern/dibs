@@ -103,23 +103,24 @@ function MyPlans({ signedIn }: { signedIn: boolean }) {
   );
 
   return (
-    <SafeAreaView className="flex-1" edges={["bottom"]}>
-      <Stack.Screen
-        options={{
-          headerTitle: "",
-          headerLeft: () => <Text className="font-display text-[28px] leading-[32px] text-primary-base">dibby</Text>,
-          headerRight: () =>
-            signedIn ? (
-              <Pressable accessibilityRole="button" accessibilityLabel="Your account" hitSlop={12} onPress={() => router.push("/account")}>
-                <Icon name="user-3-line" className="text-[24px] leading-[24px] text-text-strong-950" />
-              </Pressable>
-            ) : (
-              <LinkButton.Root variant="primary" onPress={() => router.push("/sign-in")}>
-                Keep my plans
-              </LinkButton.Root>
-            ),
-        }}
-      />
+    <SafeAreaView className="flex-1" edges={["top", "bottom"]}>
+      {/* Our own top bar, not the native header: on iOS 26 the header puts a grey glass bubble
+          behind anything in it, which isn't the design (TestFlight, Nov 2026). */}
+      <Stack.Screen options={{ headerShown: false }} />
+      <View className="h-14 flex-row items-center justify-between px-4">
+        <Text accessibilityRole="header" className="font-display text-[28px] leading-[32px] text-primary-base">
+          dibby
+        </Text>
+        {signedIn ? (
+          <Pressable accessibilityRole="button" accessibilityLabel="Your account" hitSlop={12} onPress={() => router.push("/account")}>
+            <Icon name="user-3-line" className="text-[24px] leading-[24px] text-text-strong-950" />
+          </Pressable>
+        ) : (
+          <LinkButton.Root variant="primary" onPress={() => router.push("/sign-in")}>
+            Keep my plans
+          </LinkButton.Root>
+        )}
+      </View>
       <ScrollView
         contentContainerClassName="gap-4 p-4"
         refreshControl={
