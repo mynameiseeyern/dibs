@@ -1,5 +1,5 @@
 // The moment someone taps "Make plans": the screen dims, Dibby climbs out from behind the button,
-// waves and says hi, then hops up onto the first hopscotch square, where the questions start
+// waves and says hi, then hops up to the top of the form, where he asks the first question
 // (app/new.tsx). Skip, top right, goes straight to the first question. With Reduce Motion or a
 // screen reader on there's no moment at all.
 //
@@ -22,15 +22,13 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { DIBBY, useScreenReader } from "./flow";
-import { DIBBY_SIZE, squareX } from "./hopscotch";
+import { HERO_SIZE, HERO_TOP } from "./hero";
 import { useColour, useShadow } from "@/lib/theme";
 
 /** Swap for the Runway clip when it exists. */
 const HELLO_CLIP = DIBBY.wave;
 
 const SIZE = 176;
-/** The hopscotch's top on the form: under its 8px gap and 48px top bar (app/new.tsx). */
-const HOPSCOTCH_TOP = 56;
 
 const T = { scrim: 260, rise: 220, wave: 760, say: 900, leave: 2700, fly: 420 };
 
@@ -39,11 +37,8 @@ export type Anchor = { x: number; y: number; width: number; height: number };
 export function DibbyHello({
   anchor,
   label,
-  squares,
   onDone,
 }: {
-  /** How many squares the form will have, so he lands on the first one. */
-  squares: number;
   /** The button's place on screen (measureInWindow), so Dibby comes out from behind it. */
   anchor: Anchor | null;
   /** The button's text, drawn again over Dibby so it hides him till he climbs out. */
@@ -104,16 +99,17 @@ export function DibbyHello({
   const floor = anchor ? anchor.y + anchor.height / 2 : 0;
   const startLeft = width / 2 - SIZE / 2;
   const startTop = floor - SIZE;
-  const landTop = insets.top + HOPSCOTCH_TOP;
-  const landLeft = squareX(width, squares, 0);
-  const scale = DIBBY_SIZE / SIZE;
+  // Centred under the top bar, where he asks the first question (hero.tsx).
+  const landTop = insets.top + HERO_TOP;
+  const landLeft = width / 2 - HERO_SIZE / 2;
+  const scale = HERO_SIZE / SIZE;
 
   const scrimStyle = useAnimatedStyle(() => ({ opacity: scrim.value }));
   const sayStyle = useAnimatedStyle(() => ({ opacity: say.value, transform: [{ translateY: (1 - say.value) * 8 }] }));
   const dibbyStyle = useAnimatedStyle(() => {
     // Hopping up onto the first square, shrinking on the way. He scales from his feet, so line up feet.
-    const dx = (landLeft + DIBBY_SIZE / 2 - (startLeft + SIZE / 2)) * fly.value;
-    const dy = (landTop + DIBBY_SIZE - (startTop + SIZE)) * fly.value - Math.sin(fly.value * Math.PI) * 60;
+    const dx = (landLeft + HERO_SIZE / 2 - (startLeft + SIZE / 2)) * fly.value;
+    const dy = (landTop + HERO_SIZE - (startTop + SIZE)) * fly.value - Math.sin(fly.value * Math.PI) * 60;
     const s = 1 + (scale - 1) * fly.value;
     return { transform: [{ translateX: dx }, { translateY: dy + rise.value * (1 - fly.value) }, { scale: s }, { rotate: `${tilt.value}deg` }] };
   });

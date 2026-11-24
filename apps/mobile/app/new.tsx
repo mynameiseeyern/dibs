@@ -14,7 +14,7 @@ import { Choice, DIBBY, Option, usePace, type Pose } from "@/components/dibby/fl
 import { DayStrip } from "@/components/dibby/day-strip";
 import * as Datepicker from "@/components/ui/datepicker";
 import { PushAsk } from "@/components/dibby/push-ask";
-import { Hopscotch, type Square } from "@/components/dibby/hopscotch";
+import { DibbyHero, HERO_SIZE, StepBar } from "@/components/dibby/hero";
 import { KeyboardRoot, KeyboardSpacer } from "@/components/dibby/keyboard-spacer";
 import * as Button from "@/components/ui/button";
 import * as Hint from "@/components/ui/hint";
@@ -29,9 +29,10 @@ import { useSession } from "@/lib/session";
 import { useColour } from "@/lib/theme";
 
 /**
- * Making a plan: one question a screen, full screen, minimal. A big question, one thing to answer,
- * and the button pinned at the bottom (it rides up with the keyboard). The hopscotch along the top
- * is the progress: Dibby hops a square forward as you go (components/dibby/hopscotch.tsx).
+ * Making a plan: one question a screen, full screen, minimal. Dibby asks it, centred, the question in
+ * his speech bubble, and jumps on the spot to the next one (components/dibby/hero.tsx); one thing to
+ * answer under him, and the button pinned at the bottom (it rides up with the keyboard). A slim bar
+ * beside the back button shows how far through you are.
  * The first screen takes the whole plan as a sentence ("dumplings fri arvo near Newtown" fills in
  * the name, day and time with readPlanText, no AI) and skips what's already answered.
  * What, when, where (and what Dibby's after, if Dibby's finding spots), then your name if we
@@ -228,23 +229,19 @@ function PlanFlow() {
     }
   }
 
-  // The squares: what, when, where (Dibby's brief shares it), you.
-  const square = (s: Step): Step => (s === "dibby" ? "where" : s);
+  // The progress: what, when, where (Dibby's brief shares it), you.
+  const stage = (s: Step): Step => (s === "dibby" ? "where" : s);
   const order: Step[] = needName ? ["what", "when", "where", "who"] : ["what", "when", "where"];
-  const at = Math.max(0, order.indexOf(square(step)));
-  const squares: Square[] = order.map((s, i) => ({
-    key: s,
-    label: { what: "What", when: "When", where: "Where", who: "You" }[s as "what"],
-    onPress: i < at ? () => go(s) : undefined,
-  }));
+  const at = Math.max(0, order.indexOf(stage(step)));
 
   const err = error && error.step === step ? error.msg : null;
 
   if (step === "making") return <Making dibby={where === "dibby"} />;
   if (step === "done" && made) return <Done slug={made.slug} plan={made.plan} title={title} />;
 
-  // His pose on each square.
+  // His pose on each question, and a smaller Dibby where the answers need the room.
   const pose: Pose = step === "what" ? "think" : step === "when" ? "phone" : step === "where" ? "point" : step === "dibby" ? "look" : "hi";
+  const heroSize = step === "when" || step === "who" ? 88 : HERO_SIZE;
   const back = () => {
     if (step === "what") return router.back();
     const i = path.indexOf(step);
@@ -262,22 +259,23 @@ function PlanFlow() {
   return (
     <View className="flex-1 bg-bg-white-0" style={{ paddingTop: insets.top }}>
       <Stack.Screen options={{ headerShown: false }} />
-      <View className="mt-2 h-12 flex-row items-center px-2">
+      <View className="mt-2 h-12 flex-row items-center gap-3 px-2">
         <Button.Root variant="neutral" mode="ghost" iconOnly accessibilityLabel={step === "what" ? "Close" : "Back"} onPress={back}>
           <Button.Icon name={step === "what" ? "close-line" : "arrow-left-line"} />
         </Button.Root>
+        <StepBar count={order.length} at={at} />
+        {/* Balances the back button, so the bar sits centred. */}
+        <View className="w-10" />
       </View>
-      <Hopscotch squares={squares} at={at} pose={pose} />
+      {/* Dibby asks: centred, the question in his bubble. He jumps on the spot between questions. */}
+      <View className="px-4 pt-2">
+        <DibbyHero pose={pose} question={QUESTION[step as keyof typeof QUESTION]} size={heroSize} />
+      </View>
 
-      <ScrollView className="flex-1" contentContainerClassName="px-4 pb-6 pt-8" keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+      <ScrollView className="flex-1" contentContainerClassName="px-4 pb-6 pt-6" keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
         <Animated.View key={step} entering={enter} className="gap-6">
-          <View className="gap-2">
-            <Text accessibilityRole="header" className={QUESTION_TEXT}>
-              {QUESTION[step as keyof typeof QUESTION]}
-            </Text>
-            {step === "when" && line ? <Text className="font-title text-[22px] leading-[28px] text-primary-dark">{line}</Text> : null}
-            {step === "who" ? <Text className="text-paragraph-md text-text-sub-600">So the crew knows who&rsquo;s organising. No account needed.</Text> : null}
-          </View>
+          {step === "when" && line ? <Text className="text-center font-title text-[22px] leading-[28px] text-primary-dark">{line}</Text> : null}
+          {step === "who" ? <Text className="text-center text-paragraph-md text-text-sub-600">So the crew knows who&rsquo;s organising. No account needed.</Text> : null}
 
           {step === "what" ? (
             <>
@@ -426,8 +424,6 @@ function PlanFlow() {
   );
 }
 
-/** The question: Bricolage, the narrow title cut, 30/36 (the web's `.pf-q`). */
-const QUESTION_TEXT = "font-title text-[30px] leading-[36px] text-text-strong-950";
 
 /** The web's `.pf-big` name field: big Bricolage on a violet underline, its label muted above. */
 function BigField({ label, caret, ...rest }: { label: string; caret: string } & ComponentProps<typeof TextInput>) {
