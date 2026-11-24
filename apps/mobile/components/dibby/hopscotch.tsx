@@ -32,15 +32,36 @@ import { DIBBY, PACE, usePace, WORD_MS, type Pose } from "./flow";
 
 type Clip = number | ImageSource;
 
-/** Runway clips, once they exist. Leave a phase out and the code stand-in plays. */
+/**
+ * Runway clips (made from Dibby's 3D stills, magenta keyed out to transparent WebP, Nov 2026).
+ * Leave a phase out and the code stand-in plays.
+ */
 const CLIPS: {
-  /** Hopping from one square to the next, in place (the app moves him across). */
+  /** Hopping from one square to the next, in place (the app moves him across). Drawn taller than
+   *  Dibby (HOP_CLIP) so the jump has room; he's the same size as in the other clips. */
   hop?: Clip;
-  /** Mouth moving, per pose. */
+  /** Mouth moving, per pose. None yet: the resting loop plays, with the talking bob on top. */
   talk: Partial<Record<Pose, Clip>>;
-  /** The resting loop, per pose: blinks, a sway. */
+  /** The resting loop, per pose: blinks, a tilt of the head, taps, waves; feet planted. */
   rest: Partial<Record<Pose, Clip>>;
-} = { talk: {}, rest: {} };
+} = {
+  hop: require("../../assets/dibby/motion/hop.webp"),
+  talk: {},
+  rest: {
+    think: DIBBY.thinking,
+    phone: require("../../assets/dibby/motion/phone.webp"),
+    point: require("../../assets/dibby/motion/point.webp"),
+    look: require("../../assets/dibby/motion/look.webp"),
+    hi: require("../../assets/dibby/motion/hi.webp"),
+  },
+};
+
+/** The hop clip: 339×612 at 3x, so 113×204pt with Dibby's feet at the bottom like the rest. */
+const HOP_CLIP = { width: 113, height: 204 };
+/** In the hop clip (18 fps): the crouch, then in the air until he lands. */
+const CLIP_CROUCH_MS = 330;
+const CLIP_AIR_MS = 620;
+const CLIP_MS = 1280;
 
 /** How the code stand-in rests: swaying side to side, or breathing. */
 export type Rest = "sway" | "breathe";
@@ -83,6 +104,10 @@ export function Hopscotch({ squares, at, pose, rest, talk = 0 }: { squares: Squa
   const sway = useSharedValue(0);
   const breathe = useSharedValue(0);
   const chat = useSharedValue(0);
+  /** The shadow's own height when the hop clip does the jumping. */
+  const shadowLift = useSharedValue(0);
+  /** Counts hops, so the hop clip starts from its first frame every time. */
+  const [hops, setHops] = useState(0);
   const first = useRef(true);
   // No crossfade for the first pose: he's just landed from the hello moment, so no blink.
   const [fade, setFade] = useState(0);
@@ -111,9 +136,22 @@ export function Hopscotch({ squares, at, pose, rest, talk = 0 }: { squares: Squa
     // 1 · hop. The first square has no hop: he's already there (the hello moment lands him).
     // He crouches first (anticipation), then the jump: stretched going up, round at the top,
     // squashed when his feet hit the square, then a little settle. Feet stay the pivot throughout.
-    const hopMs = arrived ? 0 : CROUCH_MS + HOP_MS;
+    const clipHop = Boolean(CLIPS.hop);
+    const crouch = clipHop ? CLIP_CROUCH_MS : CROUCH_MS;
+    const air = clipHop ? CLIP_AIR_MS : HOP_MS;
+    const hopMs = arrived ? 0 : clipHop ? CLIP_MS : CROUCH_MS + HOP_MS;
     if (hopMs) {
-      after(0, () => setPhase("hop"));
+      after(0, () => {
+        setHops((h) => h + 1);
+        setPhase("hop");
+      });
+      // The clip jumps on the spot; the shadow follows his height, and we carry him across.
+      if (clipHop) {
+        shadowLift.value = withDelay(
+          crouch,
+          withSequence(withTiming(-52, { duration: air / 2, easing: Easing.out(Easing.quad) }), withTiming(0, { duration: air / 2, easing: Easing.in(Easing.quad) }))
+        );
+      }
       if (!CLIPS.hop) {
         squash.value = withSequence(
           withTiming(0.7, { duration: CROUCH_MS, easing: Easing.out(Easing.quad) }),
@@ -128,8 +166,8 @@ export function Hopscotch({ squares, at, pose, rest, talk = 0 }: { squares: Squa
           withSequence(withTiming(-52, { duration: HOP_MS / 2, easing: Easing.out(Easing.quad) }), withTiming(0, { duration: HOP_MS / 2, easing: Easing.in(Easing.quad) }))
         );
       }
-      x.value = withDelay(CROUCH_MS, withTiming(to, { duration: HOP_MS, easing: Easing.inOut(Easing.sin) }));
-      after(CROUCH_MS + HOP_MS, () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light));
+      x.value = withDelay(crouch, withTiming(to, { duration: air, easing: Easing.inOut(Easing.sin) }));
+      after(crouch + air, () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light));
     } else {
       x.value = to;
     }
@@ -180,14 +218,17 @@ export function Hopscotch({ squares, at, pose, rest, talk = 0 }: { squares: Squa
   }));
   // His shadow on the square: smaller and fainter the higher he is, wider when he squashes.
   const shadowStyle = useAnimatedStyle(() => {
-    const up = Math.min(1, -lift.value / 52);
+    const up = Math.min(1, -Math.min(lift.value, shadowLift.value) / 52);
     return {
       opacity: 0.45 - up * 0.3,
       transform: [{ translateX: x.value + DIBBY_SIZE / 2 - SHADOW_W / 2 + sway.value * 2 }, { scaleX: 1 - up * 0.45 + Math.max(0, squash.value) * 0.15 }, { scaleY: 1 - up * 0.3 }],
     };
   });
 
-  const clip = phase === "hop" ? CLIPS.hop : phase === "talk" ? CLIPS.talk[pose] : CLIPS.rest[pose];
+  const restClip = CLIPS.rest[pose];
+  const hopping = phase === "hop" && Boolean(CLIPS.hop);
+  // Talking with no talk clip: his resting loop, with the talking bob on top.
+  const clip = phase === "talk" ? (CLIPS.talk[pose] ?? restClip) : phase === "rest" ? restClip : undefined;
   const sq = (width - GUTTER * 2) / count;
 
   return (
@@ -230,7 +271,17 @@ export function Hopscotch({ squares, at, pose, rest, talk = 0 }: { squares: Squa
         pointerEvents="none"
         style={[{ position: "absolute", left: 0, top: 0, width: DIBBY_SIZE, height: DIBBY_SIZE, transformOrigin: "50% 100%" }, dibbyStyle]}
       >
-        <Image source={clip ?? DIBBY[pose]} style={{ width: DIBBY_SIZE, height: DIBBY_SIZE }} contentFit="contain" transition={fade} accessible={false} />
+        {hopping ? (
+          <Image
+            key={`hop-${hops}`}
+            source={CLIPS.hop}
+            style={{ position: "absolute", width: HOP_CLIP.width, height: HOP_CLIP.height, left: (DIBBY_SIZE - HOP_CLIP.width) / 2, top: DIBBY_SIZE - HOP_CLIP.height }}
+            contentFit="contain"
+            accessible={false}
+          />
+        ) : (
+          <Image key={`${pose}-${clip ? "clip" : "still"}`} source={clip ?? DIBBY[pose]} style={{ width: DIBBY_SIZE, height: DIBBY_SIZE }} contentFit="contain" transition={fade} accessible={false} />
+        )}
       </Animated.View>
     </View>
   );
