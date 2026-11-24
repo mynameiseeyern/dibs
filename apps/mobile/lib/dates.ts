@@ -63,3 +63,8 @@ export function countdown(iso: string | null, now = Date.now()): string | null {
   if (days === 1) return "Tomorrow";
   return `${days} days to go`;
 }
+
+/** "Fri 6:42 pm", Sydney time: the stamp between chat bursts (the web's Thread). */
+export function chatStamp(iso: string): string {
+  return new Intl.DateTimeFormat("en-AU", { timeZone: TZ, weekday: "short", hour: "numeric", minute: "2-digit" }).format(new Date(iso));
+}

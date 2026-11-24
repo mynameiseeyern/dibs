@@ -15,7 +15,7 @@ const bubble = tv({
   slots: {
     row: "max-w-[85%] flex-row items-end gap-2",
     body: "rounded-lg px-3.5 py-2.5",
-    text: "text-paragraph-md text-text-strong-950",
+    text: "font-sans text-[16px] leading-[22px] text-text-strong-950",
     name: "mb-0.5 text-label-xs text-text-sub-600",
   },
   variants: {
@@ -34,22 +34,24 @@ export function ChatThread({ className, ...rest }: ViewProps & { className?: str
 type MessageProps = {
   from: "me" | "them" | "dibby";
   children: ReactNode;
-  /** Others: their first name, shown on the first message of a burst. */
+  /** Others: their name ("Sam B"): initials on the monogram, first name above the burst. */
   name?: string;
   colour?: MonogramColour;
   /** First message of a burst: shows the name (and, for others, the monogram). */
   first?: boolean;
+  /** Under the bubble, beside the avatar (reactions), like the web's `.db-msg` column. */
+  below?: ReactNode;
 };
 
-export function ChatMessage({ from, children, name, colour = "violet", first = true }: MessageProps) {
+export function ChatMessage({ from, children, name, colour = "violet", first = true, below }: MessageProps) {
   const s = bubble({ from });
-  const label = from === "dibby" ? "Dibby" : from === "them" ? name : undefined;
+  const label = from === "dibby" ? "Dibby" : from === "them" ? name?.split(" ")[0] : undefined;
   return (
     <View className={s.row()}>
       {from === "them" ? (
-        first && name ? <Monogram name={name} colour={colour} /> : <View className="size-7" />
+        first && name ? <Monogram name={name} colour={colour} size={32} /> : <View className="size-8" />
       ) : from === "dibby" ? (
-        first ? <Image source={DIBBY_FACE} accessibilityIgnoresInvertColors style={{ width: 28, height: 28, borderRadius: 14 }} /> : <View className="size-7" />
+        first ? <Image source={DIBBY_FACE} accessibilityIgnoresInvertColors style={{ width: 32, height: 32, borderRadius: 16 }} /> : <View className="size-8" />
       ) : null}
       <View className="shrink">
         {first && label ? (
@@ -63,6 +65,7 @@ export function ChatMessage({ from, children, name, colour = "violet", first = t
           </View>
         ) : null}
         <View className={s.body()}>{typeof children === "string" ? <Text className={s.text()}>{children}</Text> : children}</View>
+        {below}
       </View>
     </View>
   );

@@ -1,45 +1,56 @@
-import { useMemo, useState } from "react";
-import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, Text, TextInput, View } from "react-native";
+import { useMemo, useRef, useState, type ComponentRef } from "react";
+import { ActivityIndicator, FlatList, Image, KeyboardAvoidingView, Platform, Pressable, Text, TextInput, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { PlanDetail } from "@dibs/shared/api";
-import { ChatMessage, ChatSystem } from "@/components/dibby/chat";
-import { Thinking } from "@/components/dibby/flow";
+import { ChatMessage, ChatSystem, ChatTime } from "@/components/dibby/chat";
+import { DIBBY, Thinking } from "@/components/dibby/flow";
 import * as Button from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
+import * as Input from "@/components/ui/input";
 import { toast } from "@/components/ui/toast";
-import { sendMessage } from "@/lib/api";
-import { Placeholder } from "@/components/ui/placeholder";
+import { reactTo, sendMessage, toggleDibbyMute } from "@/lib/api";
+import { chatStamp } from "@/lib/dates";
 import { useColour } from "@/lib/theme";
 import { usePlan } from "@/lib/use-plan";
-import { TOP_BAR, TopBar } from "@/components/dibby/top-bar";
 
-type Msg = NonNullable<PlanDetail["chat"]>["messages"][number];
+type Chat = NonNullable<PlanDetail["chat"]>;
+type Msg = Chat["messages"][number];
+
+const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+/** A gap this long between messages gets a time stamp, like the web thread. */
+const STAMP_GAP_MS = 15 * 60 * 1000;
 
 /**
- * The plan's chat. Anyone going reads it; posting needs an account (guests add their email,
- * one code). Tag @dibby and Dibby replies in a few seconds: it only reads messages it's tagged in.
+ * The plan's chat, laid out like the web's /p/[slug]/chat: a bar with the plan's name and the bell,
+ * the pinned line (what, when, where, how many), the messages, and the composer at the bottom.
+ * Anyone going reads it; posting needs an account (guests add their email right here).
+ * Tag @dibby and Dibby replies in a few seconds: it only reads messages it's tagged in.
  */
 export default function PlanChat() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const insets = useSafeAreaInsets();
   const spinner = useColour("primary-base");
-  const caret = useColour("primary-base");
   const { state, apply } = usePlan(slug);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState<string | null>(null);
 
   const detail = state.kind === "ok" ? state.detail : null;
   const messages = useMemo(() => detail?.chat?.messages ?? [], [detail]);
-  // Newest first for the inverted list, with "first of a burst" worked out oldest first.
+  // Newest first for the inverted list; bursts and time stamps worked out oldest first.
   const rows = useMemo(() => {
-    const out = messages.map((m, i) => ({ m, first: i === 0 || messages[i - 1].author !== m.author || messages[i - 1].kind !== m.kind }));
+    const out = messages.map((m, i) => {
+      const prev = messages[i - 1];
+      const stamp = !prev || Date.parse(m.at) - Date.parse(prev.at) > STAMP_GAP_MS ? chatStamp(m.at) : null;
+      return { m, stamp, first: Boolean(stamp) || !prev || prev.author !== m.author || prev.kind !== m.kind };
+    });
     return out.reverse();
   }, [messages]);
 
   if (!detail) return <ActivityIndicator className="flex-1" color={spinner} />;
   const { me, chat } = detail;
+  const canPost = Boolean(me?.canPost && me.access === "full");
 
   async function send() {
     const body = draft.trim();
@@ -57,65 +68,64 @@ export default function PlanChat() {
     }
   }
 
+  async function mute() {
+    Haptics.selectionAsync();
+    try {
+      apply(await toggleDibbyMute(slug));
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  }
+
+  async function react(id: string, emoji: string) {
+    Haptics.selectionAsync();
+    try {
+      apply(await reactTo(slug, id, emoji));
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  }
+
   const footer = !chat ? (
-    <Text className="text-center text-paragraph-sm text-text-sub-600">{me?.note ?? "Join the plan to see the chat."}</Text>
+    <Text className="text-paragraph-sm text-text-sub-600">{me?.note ?? "Join the plan to see the chat."}</Text>
+  ) : me?.access === "read" ? (
+    <ReadOnly note={me.note ?? "Say you're in to chat."} />
   ) : me?.access !== "full" ? (
-    <Text className="text-center text-paragraph-sm text-text-sub-600">{me?.note ?? "Say you're in to chat."}</Text>
+    <Text className="text-paragraph-sm text-text-sub-600">{me?.note ?? "Say you're in to chat."}</Text>
   ) : !me.canPost ? (
-    <View className="gap-2">
-      <Text className="text-center text-paragraph-sm text-text-sub-600">Add your email to chat. One code, no password.</Text>
-      <Button.Root size="large" block onPress={() => router.push("/sign-in")}>
-        Add my email
-      </Button.Root>
-    </View>
+    <EmailGate slug={slug} />
   ) : (
-    <View className="flex-row items-end gap-2">
-      <View className="relative flex-1">
-        <Placeholder show={!draft} ink="faint" className="inset-x-0 top-0 border border-transparent px-4 py-2.5 text-paragraph-md">
-          Message, or tag @dibby for ideas
-        </Placeholder>
-        <TextInput
-          value={draft}
-          onChangeText={setDraft}
-          placeholder="Message, or tag @dibby for ideas"
-          placeholderTextColor="transparent"
-          selectionColor={caret}
-          multiline
-          maxLength={2000}
-          accessibilityLabel="Message"
-          className="max-h-32 min-h-11 w-full rounded-lg border border-stroke-soft-200 bg-bg-white-0 px-4 py-2.5 text-paragraph-md text-text-strong-950"
-        />
-      </View>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Send"
-        disabled={!draft.trim() || Boolean(sending)}
-        onPress={send}
-        className={draft.trim() ? "h-11 w-11 items-center justify-center rounded-full bg-primary-base" : "h-11 w-11 items-center justify-center rounded-full bg-bg-soft-200"}
-      >
-        <Icon name="send-plane-fill" className="text-[20px] leading-[20px] text-static-white" />
-      </Pressable>
-    </View>
+    <Composer value={draft} onChange={setDraft} onSend={send} busy={Boolean(sending)} />
   );
 
+  const empty = rows.length === 0 && !sending;
   return (
     <View className="flex-1 bg-bg-white-0">
-      <TopBar title={detail.plan.title} />
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={Platform.OS === "ios" ? insets.top + TOP_BAR : 0} className="flex-1">
-        {rows.length === 0 && !sending ? (
+      <ChatBar title={detail.plan.title} muted={chat?.muted ?? null} onMute={mute} />
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={Platform.OS === "ios" ? insets.top + 61 : 0} className="flex-1">
+        {chat?.summary ? (
+          <View className="flex-row items-center gap-2 border-b border-stroke-soft-200 bg-bg-weak-50 px-4 py-2">
+            <Icon name="pushpin-2-line" className="text-[20px] leading-[20px] text-primary-base" />
+            <Text className="flex-1 font-sans-medium text-[14px] leading-[20px] text-text-sub-600">{chat.summary}</Text>
+          </View>
+        ) : null}
+        {empty ? (
           // Outside the list: an inverted FlatList draws its empty state upside down on some versions.
-          <View className="flex-1 items-center justify-center p-6">
-            <Text className="text-center text-paragraph-sm text-text-sub-600">
-              {chat ? "Nothing yet. Try “@dibby find us somewhere cheap”." : ""}
+          <View className="flex-1 items-center px-4 py-8">
+            <Image source={DIBBY.look} accessibilityIgnoresInvertColors style={{ width: 80, height: 80 }} resizeMode="contain" />
+            <Text className="mt-2 text-center text-paragraph-sm text-text-sub-600">
+              Nothing yet. {canPost ? "Try “@dibby find us somewhere cheap”." : ""}
             </Text>
           </View>
         ) : null}
         <FlatList
-          style={rows.length === 0 && !sending ? { flexGrow: 0 } : undefined}
+          style={empty ? { flexGrow: 0 } : undefined}
           inverted
           data={rows}
           keyExtractor={(r) => r.m.id}
           contentContainerClassName="gap-2 p-4"
+          // Inverted: flex-end is the top, so a short chat starts under the pinned line like the web.
+          contentContainerStyle={{ flexGrow: 1, justifyContent: "flex-end" }}
           keyboardShouldPersistTaps="handled"
           ListHeaderComponent={
             sending ? (
@@ -130,9 +140,14 @@ export default function PlanChat() {
               </View>
             ) : undefined
           }
-          renderItem={({ item: { m, first } }) => <Row m={m} first={first} />}
+          renderItem={({ item: { m, first, stamp } }) => (
+            <View className="gap-2">
+              {stamp ? <ChatTime>{stamp}</ChatTime> : null}
+              <Row m={m} first={first} options={chat?.react ?? []} onReact={(e) => react(m.id, e)} />
+            </View>
+          )}
         />
-        <View className="border-t border-stroke-soft-200 bg-bg-white-0 px-4 pt-3" style={{ paddingBottom: Math.max(insets.bottom, 12) }}>
+        <View className="gap-2 border-t border-stroke-soft-200 bg-bg-white-0 px-4 pt-3" style={{ paddingBottom: Math.max(insets.bottom, 12) }}>
           {footer}
         </View>
       </KeyboardAvoidingView>
@@ -140,11 +155,191 @@ export default function PlanChat() {
   );
 }
 
-function Row({ m, first }: { m: Msg; first: boolean }) {
-  if (m.kind === "system") return <ChatSystem>{m.body}</ChatSystem>;
+/** The web's chat topbar: round back button, the plan's name with "Chat" under it, and the bell. */
+function ChatBar({ title, muted, onMute }: { title: string; muted: boolean | null; onMute: () => void }) {
+  const insets = useSafeAreaInsets();
+  const back = () => (router.canGoBack() ? router.back() : router.replace("/"));
   return (
-    <ChatMessage from={m.kind === "dibby" ? "dibby" : m.mine ? "me" : "them"} name={m.author?.split(" ")[0]} colour={m.colour ?? undefined} first={first}>
+    <View style={{ paddingTop: insets.top + 8 }} className="flex-row items-center gap-3 border-b border-stroke-soft-200 bg-bg-white-0 px-3 pb-2">
+      <Button.Root variant="neutral" mode="lighter" iconOnly accessibilityLabel={`Back to ${title}`} onPress={back}>
+        <Button.Icon name="arrow-left-line" />
+      </Button.Root>
+      <View className="min-w-0 flex-1">
+        <Text numberOfLines={1} accessibilityRole="header" className="text-label-lg text-text-strong-950">
+          {title}
+        </Text>
+        <Text className="text-paragraph-xs text-text-sub-600">Chat</Text>
+      </View>
+      {muted !== null ? (
+        <Button.Root
+          variant="neutral"
+          mode="ghost"
+          iconOnly
+          accessibilityLabel={muted ? "Show Dibby's nudges" : "Mute Dibby's nudges"}
+          accessibilityState={{ checked: muted }}
+          onPress={onMute}
+        >
+          <Button.Icon name={muted ? "notification-off-line" : "notification-3-line"} />
+        </Button.Root>
+      ) : null}
+    </View>
+  );
+}
+
+/** The web's Composer: Ask Dibby above the input (where a thumb finds it), then the input and send. */
+function Composer({ value, onChange, onSend, busy }: { value: string; onChange: (t: string) => void; onSend: () => void; busy: boolean }) {
+  const tagging = /(^|\s)@dibby\b/i.test(value);
+  const input = useRef<ComponentRef<typeof TextInput>>(null);
+  return (
+    <>
+      {!tagging ? (
+        <Button.Root
+          variant="primary"
+          mode="lighter"
+          size="small"
+          onPress={() => {
+            onChange(`@dibby ${value}`);
+            input.current?.focus();
+          }}
+        >
+          <Button.Icon name="sparkling-line" />
+          Ask Dibby
+        </Button.Root>
+      ) : null}
+      <View className="flex-row gap-2">
+        <Input.Root className="min-w-0 flex-1">
+          <Input.Wrapper>
+            <Input.Input
+              ref={input}
+              value={value}
+              onChangeText={onChange}
+              placeholder="Message, or @dibby…"
+              accessibilityLabel="Message"
+              maxLength={2000}
+              returnKeyType="send"
+              submitBehavior="submit"
+              onSubmitEditing={onSend}
+            />
+          </Input.Wrapper>
+        </Input.Root>
+        <Button.Root iconOnly accessibilityLabel="Send" disabled={busy || !value.trim()} onPress={onSend}>
+          <Button.Icon name="send-plane-2-fill" />
+        </Button.Root>
+      </View>
+      {tagging ? (
+        <View className="flex-row items-center gap-1">
+          <Icon name="map-pin-line" className="text-[14px] leading-[14px] text-text-sub-600" />
+          <Text className="flex-1 text-paragraph-xs text-text-sub-600">Name a place, like &ldquo;in Newtown&rdquo;, and Dibby looks there.</Text>
+        </View>
+      ) : null}
+    </>
+  );
+}
+
+/** Where a guest's composer would be: an email is all it takes to chat (the web's ChatEmailGate). */
+function EmailGate({ slug }: { slug: string }) {
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  function go() {
+    const e = email.trim().toLowerCase();
+    if (!EMAIL.test(e)) return setError("That email doesn't look right.");
+    setError(null);
+    router.push({ pathname: "/sign-in", params: { email: e, next: `/p/${slug}/chat` } });
+  }
+  return (
+    <>
+      <View>
+        <Text accessibilityRole="header" className="text-label-sm text-text-strong-950">
+          Want to say something?
+        </Text>
+        <Text className="text-paragraph-sm text-text-sub-600">Add your email to chat. One sign-in link, no password.</Text>
+      </View>
+      <View className="flex-row gap-2">
+        <Input.Root hasError={Boolean(error)} className="min-w-0 flex-1">
+          <Input.Wrapper>
+            <Input.Input
+              value={email}
+              onChangeText={setEmail}
+              placeholder="you@example.com"
+              accessibilityLabel="Email"
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="email"
+              keyboardType="email-address"
+              textContentType="emailAddress"
+              returnKeyType="send"
+              onSubmitEditing={go}
+            />
+          </Input.Wrapper>
+        </Input.Root>
+        <Button.Root onPress={go}>Send</Button.Root>
+      </View>
+      {error ? <Text className="text-paragraph-xs text-error-base">{error}</Text> : null}
+    </>
+  );
+}
+
+/** Maybe, not replied or waitlisted: a lock chip and why (the web's ReadOnlyComposer). */
+function ReadOnly({ note }: { note: string }) {
+  return (
+    <>
+      <Pressable accessibilityRole="button" onPress={() => toast.info(note)} className="min-h-11 flex-row items-center gap-2 self-start rounded-full bg-bg-weak-50 px-4">
+        <Icon name="lock-line" className="text-[18px] leading-[18px] text-text-sub-600" />
+        <Text className="text-label-sm text-text-sub-600">Read only</Text>
+      </Pressable>
+      <Text className="text-paragraph-xs text-text-sub-600">{note}</Text>
+    </>
+  );
+}
+
+function Row({ m, first, options, onReact }: { m: Msg; first: boolean; options: string[]; onReact: (emoji: string) => void }) {
+  if (m.kind === "system") return <ChatSystem>{m.body}</ChatSystem>;
+  const from = m.kind === "dibby" ? "dibby" : m.mine ? "me" : "them";
+  return (
+    <ChatMessage from={from} name={m.author ?? undefined} colour={m.colour ?? undefined} first={first} below={<Reactions all={m.reactions ?? []} options={options} onReact={onReact} />}>
       {m.body}
     </ChatMessage>
   );
 }
+
+/** Reaction chips under a message, and the picker for people who can react (the web's Reactions). */
+function Reactions({ all, options, onReact }: { all: NonNullable<Msg["reactions"]>; options: string[]; onReact: (emoji: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const can = options.length > 0;
+  if (all.length === 0 && !can) return null;
+  return (
+    <View className="mt-1 flex-row flex-wrap gap-1">
+      {all.map((r) => (
+        <Pressable
+          key={r.emoji}
+          disabled={!can}
+          accessibilityRole="button"
+          accessibilityLabel={`${r.emoji} ${r.count}${r.mine ? ", including you" : ""}`}
+          accessibilityState={{ selected: r.mine }}
+          onPress={() => onReact(r.emoji)}
+          className={chip(r.mine)}
+        >
+          <Text className="font-sans-medium text-[14px] leading-[20px] text-text-sub-600">
+            {r.emoji} {r.count}
+          </Text>
+        </Pressable>
+      ))}
+      {can ? (
+        open ? (
+          options.map((e) => (
+            <Pressable key={e} accessibilityRole="button" accessibilityLabel={`React ${e}`} onPress={() => (setOpen(false), onReact(e))} className={chip(false)}>
+              <Text className="text-[14px] leading-[20px]">{e}</Text>
+            </Pressable>
+          ))
+        ) : (
+          <Pressable accessibilityRole="button" accessibilityLabel="React" onPress={() => setOpen(true)} className={chip(false)}>
+            <Icon name="emotion-line" className="text-[18px] leading-[18px] text-text-sub-600" />
+          </Pressable>
+        )
+      ) : null}
+    </View>
+  );
+}
+
+const chip = (mine: boolean) =>
+  `min-h-11 min-w-11 flex-row items-center justify-center gap-1 rounded-full border px-2 ${mine ? "border-primary-base bg-primary-lighter" : "border-stroke-soft-200 bg-bg-white-0"}`;

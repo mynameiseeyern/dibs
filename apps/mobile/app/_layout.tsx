@@ -6,6 +6,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { useDibbyFonts } from "@/lib/fonts";
 import { usePushSetup } from "@/lib/push";
+import { useLatestVersion } from "@/lib/updates";
 import { SessionProvider, useSession } from "@/lib/session";
 import { ThemeRoot, useColour, useMode } from "@/lib/theme";
 import { Toaster } from "@/components/ui/toast";
@@ -40,7 +41,10 @@ function Screens() {
 }
 
 export default function RootLayout() {
-  const [loaded] = useDibbyFonts();
+  const [fonts] = useDibbyFonts();
+  // Starts straight into a new version if one's out, so one launch is enough (lib/updates.ts).
+  const latest = useLatestVersion();
+  const loaded = fonts && latest;
   useEffect(() => {
     if (loaded) SplashScreen.hideAsync();
   }, [loaded]);
