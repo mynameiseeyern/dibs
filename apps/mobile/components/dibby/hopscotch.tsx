@@ -10,7 +10,7 @@
 // The Runway clips (assets/dibby/motion) aren't played here: decoding a new 500KB clip on every
 // hop and every phase is what made the old version stutter.
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Pressable, Text, useWindowDimensions, View } from "react-native";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
@@ -55,16 +55,15 @@ export function Hopscotch({ squares, at, pose }: { squares: Square[]; at: number
   const squash = useSharedValue(0);
   const breathe = useSharedValue(0);
   /** Which pose shows: switched when he lands, so he takes off as one pose and lands as the next. */
-  const shown = useSharedValue(POSES.indexOf(pose));
+  const [shown, setShown] = useState<Pose>(pose);
   const first = useRef(true);
 
   useEffect(() => {
     const to = squareX(width, count, at);
-    const target = POSES.indexOf(pose);
     if (first.current || reduce) {
       first.current = false;
       x.value = to;
-      shown.value = target;
+      setShown(pose);
       if (!reduce) breathe.value = withRepeat(withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.sin) }), -1, true);
       return;
     }
@@ -84,11 +83,13 @@ export function Hopscotch({ squares, at, pose }: { squares: Square[]; at: number
       withSequence(withTiming(-HOP_HEIGHT, { duration: HOP_MS / 2, easing: Easing.out(Easing.quad) }), withTiming(0, { duration: HOP_MS / 2, easing: Easing.in(Easing.quad) }))
     );
     x.value = withDelay(CROUCH_MS, withTiming(to, { duration: HOP_MS, easing: Easing.inOut(Easing.sin) }));
-    shown.value = withDelay(land, withTiming(target, { duration: 0 }));
     breathe.value = withDelay(land + SETTLE_MS, withRepeat(withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.sin) }), -1, true));
-    const t = setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light), land);
+    const t = setTimeout(() => {
+      setShown(pose);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }, land);
     return () => clearTimeout(t);
-  }, [at, count, width, pose, reduce, x, lift, squash, breathe, shown]);
+  }, [at, count, width, pose, reduce, x, lift, squash, breathe]);
 
   // Squash > 0 is squashed, < 0 stretched; he scales from his feet.
   const dibbyStyle = useAnimatedStyle(() => ({
@@ -143,8 +144,11 @@ export function Hopscotch({ squares, at, pose }: { squares: Square[]; at: number
       />
 
       <Animated.View pointerEvents="none" style={[{ position: "absolute", left: 0, top: 0, width: DIBBY_SIZE, height: DIBBY_SIZE, transformOrigin: "50% 100%" }, dibbyStyle]}>
-        {POSES.map((p, i) => (
-          <PoseStill key={p} pose={p} index={i} shown={shown} />
+        {/* Every pose mounted (so it's loaded), one showing. Explicitly pinned on top of each other. */}
+        {POSES.map((p) => (
+          <View key={p} style={{ position: "absolute", top: 0, left: 0, width: DIBBY_SIZE, height: DIBBY_SIZE, opacity: p === shown ? 1 : 0 }}>
+            <Image source={DIBBY[p]} style={{ width: DIBBY_SIZE, height: DIBBY_SIZE }} contentFit="contain" accessible={false} />
+          </View>
         ))}
       </Animated.View>
     </View>
@@ -152,12 +156,3 @@ export function Hopscotch({ squares, at, pose }: { squares: Square[]; at: number
 }
 
 const SHADOW_W = 34;
-
-function PoseStill({ pose, index, shown }: { pose: Pose; index: number; shown: { value: number } }) {
-  const style = useAnimatedStyle(() => ({ opacity: Math.round(shown.value) === index ? 1 : 0 }));
-  return (
-    <Animated.View style={[{ position: "absolute", inset: 0 }, style]}>
-      <Image source={DIBBY[pose]} style={{ width: DIBBY_SIZE, height: DIBBY_SIZE }} contentFit="contain" accessible={false} />
-    </Animated.View>
-  );
-}
