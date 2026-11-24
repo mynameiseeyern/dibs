@@ -2,7 +2,7 @@
 // <Input.Root hasError><Input.Wrapper><Input.Icon name="search-line" /><Input.Input placeholder="…" /></Input.Wrapper></Input.Root>
 // 44px, radius-md, a 1.5px border that turns violet with a soft halo while focused.
 
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useState, type ComponentRef, type ReactNode, type Ref } from "react";
 import { Text, TextInput, View, type TextInputProps, type ViewProps } from "react-native";
 import { tv, type VariantProps } from "@/utils/tv";
 import { wrapText } from "@/utils/wrap-text";
@@ -61,7 +61,7 @@ function InputWrapper({ className, ...rest }: ViewProps & { className?: string }
   return <View className={wrapper({ class: className })} {...rest} />;
 }
 
-function InputInput({ className, onFocus, onBlur, onChangeText, placeholder, ...rest }: TextInputProps & { className?: string }) {
+function InputInput({ className, onFocus, onBlur, onChangeText, placeholder, ref, ...rest }: TextInputProps & { className?: string; ref?: Ref<ComponentRef<typeof TextInput>> }) {
   const ctx = useContext(InputContext);
   const { field, input, placeholder: placeholderClass } = inputVariants(ctx);
   const hint = useColour(ctx.disabled ? "text-disabled-300" : "text-soft-400");
@@ -83,6 +83,7 @@ function InputInput({ className, onFocus, onBlur, onChangeText, placeholder, ...
         </Text>
       ) : null}
       <TextInput
+        ref={ref}
         editable={!ctx.disabled}
         // Kept for screen readers, but invisible: the Text above is what people see.
         placeholder={placeholder}

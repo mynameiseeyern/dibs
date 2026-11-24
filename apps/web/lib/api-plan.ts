@@ -1,14 +1,15 @@
 import "server-only";
 import { toPlanSummary, type PlanDetail } from "@dibs/shared/api";
-import { extraOn, planAccess, READ_ONLY_NOTE, unreadCount } from "@dibs/shared/plans";
+import { countIn, extraOn, planAccess, READ_ONLY_NOTE, unreadCount } from "@dibs/shared/plans";
 import { picksAllowed } from "@dibs/shared/votes";
 import { apiGuest, apiOrganiser } from "./api-auth";
 import { asViewer } from "./api-viewer";
 import { store } from "./store";
+import { REACTIONS } from "./store/types";
 import { canAddToCalendar } from "./calendar";
 import { mapsLink } from "./places";
 import { siteUrl } from "./site";
-import { formatShort } from "./time";
+import { formatShort, formatWhen } from "./time";
 import { loadPlan } from "./viewer";
 
 /** Runs `fn` as the app's person (sign-in, guest pass, or nobody yet), so plan actions see them. */
@@ -28,11 +29,14 @@ export async function planDetail(slug: string): Promise<PlanDetail | null> {
   const sees = !me || Boolean(access && access.level !== "hidden");
   const inChat = Boolean(me && access && access.level !== "hidden");
 
-  const [options, votes, messages] = await Promise.all([
+  const [options, votes, messages, reactions] = await Promise.all([
     store.listOptions(plan.id),
     store.listVotes(plan.id),
     sees && extraOn(plan, "chat") ? store.listMessages(plan.id, 50) : Promise.resolve([]),
+    inChat && extraOn(plan, "chat") ? store.listReactions(plan.id) : Promise.resolve([]),
   ]);
+  // Same rule as the web thread: an account that isn't read only can react.
+  const canReact = Boolean(me?.user_id && access?.level === "full");
   const byId = new Map(members.map((m) => [m.id, m]));
   const host = members.find((m) => m.role === "organiser");
   // The web's Directions button: a place from the map, or a typed-in address for people in the plan.
@@ -98,7 +102,15 @@ export async function planDetail(slug: string): Promise<PlanDetail | null> {
                 colour: m.member_id ? (byId.get(m.member_id)?.colour ?? null) : null,
                 mine: m.member_id === me!.id,
                 at: m.created_at,
+                reactions: REACTIONS.map((e) => {
+                  const here = reactions.filter((r) => r.message_id === m.id && r.emoji === e);
+                  return { emoji: e as string, count: here.length, mine: here.some((r) => r.member_id === me!.id) };
+                }).filter((r) => r.count > 0),
               })),
+            // The web's pinned line (chat/page.tsx).
+            summary: [plan.title, formatWhen(plan.starts_at), plan.venue_name ?? plan.area, `${countIn(members)} going`].filter(Boolean).join(" · "),
+            muted: plan.status === "wrapped" ? null : Boolean(me!.dibby_muted),
+            react: canReact ? [...REACTIONS] : [],
           }
         : null,
   };

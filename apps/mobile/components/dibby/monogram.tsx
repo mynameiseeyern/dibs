@@ -1,7 +1,8 @@
-// A small crew monogram (initial on the person's colour), for the Dibby pieces. The full Avatar
-// lives in components/ui; this is the 28px version chat and bills use inline.
+// A small crew monogram (initials on the person's colour), for the Dibby pieces. The full Avatar
+// lives in components/ui; this is the inline version chat (32px, like the web) and bills use.
 
 import { Text, View } from "react-native";
+import { monogram } from "@dibs/shared/plans";
 import type { MonogramColour } from "@dibs/shared/types";
 import { cn } from "@/utils/cn";
 
@@ -19,13 +20,14 @@ const BG: Record<MonogramColour, string> = {
   ivory: "bg-crew-ivory",
 };
 
-export function Monogram({ name, colour, size = 28, className }: { name: string; colour: MonogramColour; size?: 28 | 36; className?: string }) {
+export function Monogram({ name, colour, size = 28, className }: { name: string; colour: MonogramColour; size?: 28 | 32 | 36; className?: string }) {
   return (
     <View
       accessible={false}
-      className={cn("items-center justify-center rounded-full", size === 28 ? "size-7" : "size-9", BG[colour], className)}
+      className={cn("items-center justify-center rounded-full", size === 28 ? "size-7" : size === 32 ? "size-8" : "size-9", BG[colour], className)}
     >
-      <Text className={cn("text-static-black", size === 28 ? "text-label-xs" : "text-label-sm")}>{name.trim().charAt(0).toUpperCase()}</Text>
+      {/* "SB", the web's initials (shared `monogram`). */}
+      <Text className={cn("text-static-black", size === 28 ? "text-label-xs" : "text-label-sm")}>{monogram(name)}</Text>
     </View>
   );
 }

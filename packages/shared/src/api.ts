@@ -70,6 +70,21 @@ export interface Me {
   name: { first: string; last: string } | null;
 }
 
+/** `GET /api/v1/me/account`: what the web's /account shows, for whoever's on this phone. */
+export interface AccountInfo {
+  /** account: signed in. guest: made or joined plans without one. none: neither yet. */
+  kind: "account" | "guest" | "none";
+  /** "Ee Ng", or null before the name step / for nobody. */
+  name: string | null;
+  email: string | null;
+  /** Lifetime card roulette record, across every plan; null if they've never been in a spin. */
+  record: { played: number; lost: number; paid: string } | null;
+  /** Accounts only: beta update emails on or off. Change with `PUT { beta_updates }`. */
+  beta_updates: boolean | null;
+  /** Accounts only: the private calendar subscription link. Reset with `POST /api/v1/me/calendar`. */
+  calendar_url: string | null;
+}
+
 /** A row on the phone's home screen (`GET /api/v1/me/plans`): your plans, with your answer. */
 export interface MyPlan extends PlanSummary {
   /** Your answer on this plan. */
@@ -182,7 +197,23 @@ export interface PlanDetail {
     closes?: string | null;
   } | null;
   chat: {
-    messages: { id: string; kind: "text" | "dibby" | "system"; body: string; author: string | null; colour: MonogramColour | null; mine: boolean; at: string }[];
+    messages: {
+      id: string;
+      kind: "text" | "dibby" | "system";
+      body: string;
+      author: string | null;
+      colour: MonogramColour | null;
+      mine: boolean;
+      at: string;
+      /** Reactions on it, in the web's order (👍 ❤️ 😂 🎉), only the ones someone's used. */
+      reactions?: { emoji: string; count: number; mine: boolean }[];
+    }[];
+    /** The line pinned at the top: "Housewarming · Sat, 28 Nov · 11:00 am · Unit 23 · 7 going". */
+    summary?: string;
+    /** This person muted Dibby's nudges in this chat (the bell). Null once the plan's wrapped (no bell). */
+    muted?: boolean | null;
+    /** The reactions anyone can add, when this person can react (an account, not read only). */
+    react?: string[];
   } | null;
 }
 

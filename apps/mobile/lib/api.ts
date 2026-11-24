@@ -1,5 +1,5 @@
 import Constants from "expo-constants";
-import type { AuthSession, JoinResponse, Me, MyPlans, NewPlanRequest, NewPlanResponse, PlaceHit, PlaceInfo, PlanDetail, PlanSummary } from "@dibs/shared/api";
+import type { AccountInfo, AuthSession, JoinResponse, Me, MyPlans, NewPlanRequest, NewPlanResponse, PlaceHit, PlaceInfo, PlanDetail, PlanSummary } from "@dibs/shared/api";
 
 /** The web app is the backend: the phone never talks to the database directly. */
 export const API_URL: string = process.env.EXPO_PUBLIC_API_URL ?? Constants.expoConfig?.extra?.apiUrl ?? "https://dibby.social";
@@ -129,3 +129,17 @@ export function slugFrom(input: string): string | null {
   const m = s.match(/\/p\/([a-z0-9]{4,32})/i) ?? s.match(/^([a-z0-9]{4,32})$/i);
   return m ? m[1].toLowerCase() : null;
 }
+
+/** The bell on the chat: mute or unmute Dibby's nudges for you on this plan. */
+export const toggleDibbyMute = (slug: string) => call<PlanDetail>(plan(slug, "/mute"), { method: "POST" });
+
+/** Add or take back a reaction (👍 ❤️ 😂 🎉) on a chat message. */
+export const reactTo = (slug: string, messageId: string, emoji: string) =>
+  call<PlanDetail>(plan(slug, `/messages/${encodeURIComponent(messageId)}/react`), { method: "POST", body: { emoji } });
+
+/** What the web's /account shows, for whoever's on this phone. */
+export const getAccount = () => call<AccountInfo>("/api/v1/me/account");
+/** Beta update emails on or off. */
+export const setBetaUpdates = (on: boolean) => call<AccountInfo>("/api/v1/me/account", { method: "PUT", body: { beta_updates: on } });
+/** A new calendar subscription link; the old one stops working. */
+export const resetCalendarLink = () => call<AccountInfo>("/api/v1/me/calendar", { method: "POST" });
