@@ -5,6 +5,7 @@ import { picksAllowed } from "@dibs/shared/votes";
 import { apiGuest, apiOrganiser } from "./api-auth";
 import { asViewer } from "./api-viewer";
 import { store } from "./store";
+import { mapsLink } from "./places";
 import { formatShort } from "./time";
 import { loadPlan } from "./viewer";
 
@@ -28,9 +29,14 @@ export async function planDetail(slug: string): Promise<PlanDetail | null> {
     sees && extraOn(plan, "chat") ? store.listMessages(plan.id, 50) : Promise.resolve([]),
   ]);
   const byId = new Map(members.map((m) => [m.id, m]));
+  const host = members.find((m) => m.role === "organiser");
+  // The web's Directions button: a place from the map, or a typed-in address for people in the plan.
+  const directions = plan.venue_place_id && plan.venue_name ? mapsLink(plan.venue_place_id, plan.venue_name) : me && plan.venue_address ? mapsLink(null, plan.venue_address) : null;
 
   return {
     plan: toPlanSummary(plan, members, formatShort(plan.starts_at)),
+    host_name: host ? host.display_name.split(" ")[0] : null,
+    directions,
     me:
       me && access
         ? {
@@ -60,7 +66,11 @@ export async function planDetail(slug: string): Promise<PlanDetail | null> {
               note: o.note,
               votes: votes.filter((v) => v.option_id === o.id).length,
               mine: votes.some((v) => v.option_id === o.id && v.member_id === me!.id),
+              place_id: o.place_id && !o.place_id.startsWith("demo:") ? o.place_id : null,
             })),
+            voters: new Set(votes.map((v) => v.member_id)).size,
+            members: members.length,
+            closes: plan.status === "voting" ? formatShort(plan.vote_deadline) : null,
           }
         : null,
     chat:

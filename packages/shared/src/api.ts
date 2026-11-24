@@ -107,7 +107,8 @@ export interface NewPlanRequest {
   date?: string | null;
   time?: string | null;
   where: "vote" | "place" | "dibby";
-  place?: { name: string; address?: string | null } | null;
+  /** Typed in (name, optional address), or picked from the map (place_id, which the server checks). */
+  place?: { name: string; address?: string | null; place_id?: string | null } | null;
   ask?: string;
   spend?: 1 | 2 | 3 | null;
   /** Only for someone with no account and no guest pass yet. */
@@ -128,6 +129,10 @@ export interface NewPlanResponse {
  */
 export interface PlanDetail {
   plan: PlanSummary;
+  /** The organiser's first name, for "Hosted by Ee". */
+  host_name?: string | null;
+  /** Google Maps directions to the set place (a typed-in address only for people in the plan). */
+  directions?: string | null;
   /** Null: not in the plan yet (show join). */
   me: {
     name: string;
@@ -145,11 +150,50 @@ export interface PlanDetail {
   vote: {
     open: boolean;
     maxPicks: number;
-    options: { id: string; label: string; note: string | null; votes: number; mine: boolean }[];
+    options: {
+      id: string;
+      label: string;
+      note: string | null;
+      votes: number;
+      mine: boolean;
+      /** Google's ID for a business picked on the map; null for one typed in. Load its card from `GET /api/v1/places/:id`. */
+      place_id?: string | null;
+    }[];
+    /** How many have voted, out of how many can ("2 of 4 voted"). */
+    voters?: number;
+    members?: number;
+    /** "Thu 7pm", when the vote closes on its own; null when there's no deadline. */
+    closes?: string | null;
   } | null;
   chat: {
     messages: { id: string; kind: "text" | "dibby" | "system"; body: string; author: string | null; colour: MonogramColour | null; mine: boolean; at: string }[];
   } | null;
+}
+
+/** `GET /api/v1/places/:id`: a business's card, the app's version of the web's PlaceCard. */
+export interface PlaceInfo {
+  place_id: string;
+  name: string;
+  address: string | null;
+  /** "Thai restaurant". */
+  kind: string | null;
+  rating: number | null;
+  ratings: number | null;
+  /** 1 to 4 ($ to $$$$), when Google knows it. */
+  price: number | null;
+  open_now: boolean | null;
+  /** A short-lived photo URL from Google (no key in it), and who took it: show "Photo: <name>". */
+  photo: { uri: string; by: string | null } | null;
+  maps_url: string;
+}
+
+/** `GET /api/v1/places?q=` (with `lat`/`lng` or `area`): businesses to pick from, like the web's map picker. */
+export interface PlaceHit {
+  place_id: string;
+  name: string;
+  address: string | null;
+  kind: string | null;
+  rating: number | null;
 }
 
 /** `POST /api/v1/plans/:slug/join` → maybe a new guest pass, like making a plan. */
