@@ -1,39 +1,39 @@
 import { useMemo, useState, type ComponentProps } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Share, Text, TextInput, View } from "react-native";
+import { Platform, Pressable, ScrollView, Share, Text, TextInput, View } from "react-native";
 import { router, Stack } from "expo-router";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import Animated, { Easing, FadeIn, FadeInDown, FadeInLeft, FadeInRight } from "react-native-reanimated";
 import type { NewPlanRequest, PlanSummary } from "@dibs/shared/api";
 import { TIME_PRESETS } from "@dibs/shared/daypart";
-import { readPlanText, saysLater } from "@dibs/shared/plan-text";
+import { readPlanText } from "@dibs/shared/plan-text";
 import { shareText } from "@dibs/shared/plans";
 import { PlanCard, type PlanFact } from "@/components/dibby/plan-card";
-import { Answers, Choice, DIBBY, DibbyAsks, Option, Stagger, talkMs, usePace, type Pose } from "@/components/dibby/flow";
+import { Choice, DIBBY, Option, usePace, type Pose } from "@/components/dibby/flow";
 import { DayStrip } from "@/components/dibby/day-strip";
-import { NavMenu } from "@/components/dibby/app-bar";
 import * as Datepicker from "@/components/ui/datepicker";
 import { PushAsk } from "@/components/dibby/push-ask";
-import { Hopscotch, type Rest, type Square } from "@/components/dibby/hopscotch";
+import { Hopscotch, type Square } from "@/components/dibby/hopscotch";
+import { KeyboardRoot, KeyboardSpacer } from "@/components/dibby/keyboard-spacer";
 import * as Button from "@/components/ui/button";
 import * as Hint from "@/components/ui/hint";
 import { Icon } from "@/components/ui/icon";
-import * as Input from "@/components/ui/input";
-import * as Label from "@/components/ui/label";
 import * as LinkButton from "@/components/ui/link-button";
+import { Placeholder } from "@/components/ui/placeholder";
 import { PlacePicker } from "@/components/dibby/place";
 import { API_URL, ApiError, createPlan, getPlan } from "@/lib/api";
 import { sydneyToday, whenLong } from "@/lib/dates";
-import { lc, pick, sydneyHhmm, sydneyInstant, timeLabel, whenLine } from "@/lib/when-words";
+import { lc, sydneyHhmm, sydneyInstant, timeLabel, whenLine } from "@/lib/when-words";
 import { useSession } from "@/lib/session";
 import { useColour } from "@/lib/theme";
 
 /**
- * Making a plan, as hopscotch: one question a square, Dibby hopping forward a square per answer.
- * What's in each square is the web's chat (app/new/PlanChat.tsx): the same questions, replies,
- * chips, day strip and choices, and the same box at the bottom to type the answer instead
- * ("dumplings fri arvo near Newtown" fills in the name, day and time with readPlanText, no AI).
+ * Making a plan: one question a screen, full screen, minimal. A big question, one thing to answer,
+ * and the button pinned at the bottom (it rides up with the keyboard). The hopscotch along the top
+ * is the progress: Dibby hops a square forward as you go (components/dibby/hopscotch.tsx).
+ * The first screen takes the whole plan as a sentence ("dumplings fri arvo near Newtown" fills in
+ * the name, day and time with readPlanText, no AI) and skips what's already answered.
  * What, when, where (and what Dibby's after, if Dibby's finding spots), then your name if we
  * don't know it yet; then it's on, ready to drop in the group chat.
  */
@@ -64,16 +64,17 @@ const QUESTION = {
   who: "Last thing, what’s your name?",
 } as const;
 
-const PLACEHOLDER = {
-  what: "Dumplings fri arvo near Newtown",
-  when: "Sat 7pm, or tap below",
-  where: "Type what you’re after, or tap one",
-  dibby: "Dumplings in Chatswood",
-} as const;
-
 const FIELD_STEP: Record<string, Step> = { title: "what", place: "where", where: "where", area: "where", ask: "dibby", first: "who", last: "who", first_name: "who", last_name: "who" };
 
 export default function NewPlan() {
+  return (
+    <KeyboardRoot>
+      <PlanFlow />
+    </KeyboardRoot>
+  );
+}
+
+function PlanFlow() {
   const insets = useSafeAreaInsets();
   const pace = usePace();
   const caret = useColour("primary-base");
@@ -82,9 +83,10 @@ export default function NewPlan() {
   const needName = !signedIn && !hasGuestPass;
 
   const [step, setStep] = useState<Step>("what");
-  const [acks, setAcks] = useState<Partial<Record<Step, string>>>({});
-  /** Dibby's aside on this turn: "Didn't catch a day there…", "Hey Sam! And your last name?". */
-  const [aside, setAside] = useState<string | null>(null);
+  /** 1 going forward, -1 going back: which side the next screen slides in from. */
+  const [dir, setDir] = useState<1 | -1>(1);
+  /** A word from Dibby on the first screen when the typed plan didn't say what it is. */
+  const [nudge, setNudge] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<string | null>(null);
@@ -119,17 +121,16 @@ export default function NewPlan() {
   ];
   const lastStep = path[path.length - 1];
 
-  const go = (s: Step, ack?: string) => {
+  const go = (s: Step) => {
     setError(null);
-    setAside(null);
-    setDraft("");
-    if (ack !== undefined) setAcks((a) => ({ ...a, [s]: ack }));
+    setNudge(null);
+    const order: Step[] = ["what", "when", "where", "dibby", "who"];
+    setDir(order.indexOf(s) >= order.indexOf(step) ? 1 : -1);
     setStep(s);
   };
-  /** On to the next turn on the path, with Dibby's reply to this one. */
-  const forward = (from: Step, ack?: string) => {
-    const next = path[path.indexOf(from) + 1];
-    if (next) go(next, ack);
+  const forward = (from: Step) => {
+    const nextStep = path[path.indexOf(from) + 1];
+    if (nextStep) go(nextStep);
     else submit();
   };
 
@@ -143,11 +144,11 @@ export default function NewPlan() {
       // Only a day or time, no name: keep them, and ask for the name.
       if (r.date) setDate(r.date);
       if (r.time) setTime(r.time);
-      setDraft("");
-      setAside(r.date || r.time ? `Got it, ${lc(whenLine(r.date, r.time, today) ?? "")}. And what are we doing?` : "Give it a name, like “Friday dinner”.");
+      setNudge(r.date || r.time ? `Got ${lc(whenLine(r.date, r.time, today) ?? "")}. What are we doing?` : "Give it a name, like “Friday dinner”.");
       return;
     }
     setTitle(name);
+    setDraft(text);
     setCategory(r.category ?? IDEAS.find((i) => i.label === name)?.category ?? null);
     if (r.date) setDate(r.date);
     if (r.time) setTime(r.time);
@@ -158,90 +159,31 @@ export default function NewPlan() {
       setWhere(null);
       setViaDibby(false);
     }
-    const love = pick(["love it", "keen", "yes", "big fan"], name);
     // Day and time both said: skip "when".
-    if (r.date && r.time) return go("where", `${name}, ${whenLine(r.date, r.time, today)}. ${love[0].toUpperCase()}${love.slice(1)}.`);
-    go("when", `${name}, ${love}.`);
-  }
-
-  function leaveWhen(d: string | null, t: string | null) {
-    const said = whenLine(d, t, today);
-    forward("when", said ? `${said}, locked in.` : "No stress, sort the day out later.");
+    go(r.date && r.time ? "where" : "when");
   }
 
   function decideLater() {
     setDate(null);
     setTime(null);
     setExact(false);
-    forward("when", "No stress, sort the day out later.");
+    forward("when");
   }
 
-  function answerWhen(text: string) {
-    if (saysLater(text)) return decideLater();
-    const r = readPlanText(text);
-    if (!r.date && !r.time) {
-      setAside("Didn’t catch a day there. Try “Sat 7pm”, or tap one.");
-      return;
-    }
-    const d = r.date ?? date;
-    const t = r.time ?? time;
-    setDate(d);
-    setTime(t);
-    leaveWhen(d, t);
-  }
-
-  /** Typed on "where": "vote", "you pick", or what you're after (Dibby finds spots for it). */
-  function answerWhere(text: string) {
-    const lower = text.toLowerCase();
-    if (/\b(vote|poll|crew|everyone)\b/.test(lower)) {
-      setWhere("vote");
-      return needName ? go("who", "The crew can vote then.") : submit("vote");
-    }
-    setWhere("dibby");
-    if (!/^(you pick|dibby|idk|not sure|dunno|anywhere|ask dibby)\b/.test(lower)) setAsk(text);
-    go("dibby", "On it.");
-  }
-
-  /** "Actually, make it Saturday": a day or time typed on a later turn moves it. */
-  function correction(text: string): boolean {
-    if (step === "what" || step === "when") return false;
-    const r = readPlanText(text);
-    if (!r.date && !r.time) return false;
-    if (r.title && !/^(actually|make it|change|move)/i.test(text)) return false;
-    const d = r.date ?? date;
-    const t = r.time ?? time;
-    setDate(d);
-    setTime(t);
-    setDraft("");
-    setAside(`Done, moved it to ${lc(whenLine(d, t, today) ?? "")}.`);
-    return true;
-  }
-
-  /** The send arrow on the box at the bottom. */
-  function send() {
-    const text = step === "dibby" ? ask : draft;
-    if (step !== "dibby" && !text.trim()) return;
-    if (step !== "dibby" && correction(text)) return;
-    if (step === "what") answerWhat(text);
-    else if (step === "when") answerWhen(text);
-    else if (step === "where") answerWhere(text);
-    else if (step === "dibby") next();
-  }
-
-  /** The big button: the same checks as the web's. */
+  /** The big button. */
   function next() {
     setError(null);
-    if (step === "when") return leaveWhen(date, time);
+    if (step === "what") return answerWhat(draft);
+    if (step === "when") return date || time ? forward("when") : decideLater();
     if (step === "where") {
       if (!where) return setError({ step, msg: "Pick one to keep going." });
-      if (where === "dibby") return go("dibby", "On it.");
+      if (where === "dibby") return go("dibby");
       if (where === "place" && !placeName.trim()) return setError({ step, msg: "Pick the place, or let the crew vote." });
-      const ack = where === "place" ? `${placeName.trim()}, nice.` : "The crew can vote then.";
-      return needName ? go("who", ack) : submit();
+      return needName ? go("who") : submit();
     }
     if (step === "dibby") {
       if (!ask.trim() && !spend) return setError({ step, msg: "Tell Dibby what you're after, like “dumplings” or “bowling”." });
-      return needName ? go("who", "Sweet, I’ll find three spots.") : submit();
+      return needName ? go("who") : submit();
     }
     if (step === "who") {
       if (!first.trim()) return setError({ step, msg: "Add your first name." });
@@ -290,108 +232,92 @@ export default function NewPlan() {
   const square = (s: Step): Step => (s === "dibby" ? "where" : s);
   const order: Step[] = needName ? ["what", "when", "where", "who"] : ["what", "when", "where"];
   const at = Math.max(0, order.indexOf(square(step)));
-  const whereLabel = where === "place" ? placeName.trim() || "Got a spot" : where === "vote" ? "Crew votes" : where === "dibby" ? "Dibby's on it" : "Where";
-  const squares: Square[] = order.map((s, i) => {
-    const answered = i < at;
-    const label = !answered
-      ? { what: "What", when: "When", where: "Where", who: "You" }[s as "what"]
-      : { what: title.trim() || (viaDibby ? "Dibby plans it" : "What"), when: line ?? "Decide later", where: whereLabel, who: first.trim() }[s as "what"];
-    return { key: s, label, onPress: answered ? () => go(s) : undefined };
-  });
+  const squares: Square[] = order.map((s, i) => ({
+    key: s,
+    label: { what: "What", when: "When", where: "Where", who: "You" }[s as "what"],
+    onPress: i < at ? () => go(s) : undefined,
+  }));
 
   const err = error && error.step === step ? error.msg : null;
 
   if (step === "making") return <Making dibby={where === "dibby"} />;
   if (step === "done" && made) return <Done slug={made.slug} plan={made.plan} title={title} />;
 
-  // Each square: its own pose, and how he rests there (hopscotch.tsx has the Runway clip slots).
+  // His pose on each square.
   const pose: Pose = step === "what" ? "think" : step === "when" ? "phone" : step === "where" ? "point" : step === "dibby" ? "look" : "hi";
-  const rest: Rest = step === "when" || step === "who" ? "breathe" : "sway";
   const back = () => {
     if (step === "what") return router.back();
     const i = path.indexOf(step);
     go(i > 0 ? path[i - 1] : "what");
   };
 
-  const placeReady = where && where !== "dibby" && (where !== "place" || placeName.trim());
-  const make = (
-    <Button.Root variant="dibs" size="large" block onPress={next}>
-      Make the plan
-    </Button.Root>
-  );
-  const nextButton = (
-    <Button.Root size="large" block onPress={next}>
-      Next
-    </Button.Root>
-  );
-  const bigButton =
-    step === "when" ? nextButton : step === "where" && placeReady ? (needName ? nextButton : make) : step === "where" && where === "dibby" ? nextButton : step === lastStep && (step === "dibby" || step === "who") ? make : step === "dibby" ? nextButton : null;
+  const isLast = step === lastStep && step !== "what" && step !== "when" && !(step === "where" && where === "dibby");
+  const ready =
+    step === "what" ? Boolean(draft.trim()) : step === "where" ? Boolean(where && (where !== "place" || placeName.trim())) : step === "dibby" ? Boolean(ask.trim() || spend) : true;
+  const label = isLast ? "Make the plan" : step === "when" && !date && !time ? "Decide later" : "Continue";
+  const bottom = Math.max(insets.bottom, 16);
+  // The screen slides in from the side it's coming from; nothing waits on anything.
+  const enter = pace.reduce ? undefined : (dir === 1 ? FadeInRight : FadeInLeft).duration(260).easing(Easing.out(Easing.cubic));
 
   return (
     <View className="flex-1 bg-bg-white-0" style={{ paddingTop: insets.top }}>
       <Stack.Screen options={{ headerShown: false }} />
       <View className="mt-2 h-12 flex-row items-center px-2">
-        <Button.Root variant="neutral" mode="ghost" iconOnly accessibilityLabel="Back" onPress={back}>
+        <Button.Root variant="neutral" mode="ghost" iconOnly accessibilityLabel={step === "what" ? "Close" : "Back"} onPress={back}>
           <Button.Icon name={step === "what" ? "close-line" : "arrow-left-line"} />
         </Button.Root>
-        <View className="flex-1" />
-        {/* The web's menu, top right, like every top bar. */}
-        <View className="pr-2">
-          <NavMenu />
-        </View>
       </View>
-      <Hopscotch squares={squares} at={at} pose={pose} rest={rest} talk={talkMs(QUESTION[step as keyof typeof QUESTION] ?? "")} />
+      <Hopscotch squares={squares} at={at} pose={pose} />
 
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} className="flex-1">
-        <ScrollView contentContainerClassName="gap-5 px-4 pb-6 pt-1" keyboardShouldPersistTaps="handled">
-          <DibbyAsks
-            stepKey={step}
-            ack={acks[step] ?? null}
-            question={QUESTION[step as keyof typeof QUESTION]}
-            hint={step === "who" ? "So the crew knows who’s organising. No account needed." : undefined}
-            extra={
-              step === "when" ? (
-                <Text accessibilityLiveRegion="polite" className={line ? "font-title text-[24px] leading-[30px] text-primary-dark" : "font-title text-[24px] leading-[30px] text-text-sub-600"}>
-                  {line ?? "Pick a day and a time"}
-                </Text>
-              ) : undefined
-            }
-          />
+      <ScrollView className="flex-1" contentContainerClassName="px-4 pb-6 pt-8" keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
+        <Animated.View key={step} entering={enter} className="gap-6">
+          <View className="gap-2">
+            <Text accessibilityRole="header" className={QUESTION_TEXT}>
+              {QUESTION[step as keyof typeof QUESTION]}
+            </Text>
+            {step === "when" && line ? <Text className="font-title text-[22px] leading-[28px] text-primary-dark">{line}</Text> : null}
+            {step === "who" ? <Text className="text-paragraph-md text-text-sub-600">So the crew knows who&rsquo;s organising. No account needed.</Text> : null}
+          </View>
 
           {step === "what" ? (
-            <Answers stepKey="what" after={talkMs(QUESTION.what)} className="gap-5">
-              <View className="gap-2">
-                <Text className="text-label-sm text-text-sub-600">Or tap one</Text>
-                <View className="flex-row flex-wrap gap-2">
-                  {IDEAS.map((i, n) => (
-                    <Stagger key={i.label} index={n}>
-                      <Choice label={i.label} selected={title === i.label} onPress={() => answerWhat(i.label)} />
-                    </Stagger>
-                  ))}
-                </View>
+            <>
+              <BigInput
+                value={draft}
+                onChangeText={(t) => (setDraft(t), setNudge(null))}
+                placeholder="Dumplings fri arvo"
+                accessibilityLabel={QUESTION.what}
+                maxLength={120}
+                caret={caret}
+                returnKeyType="next"
+                submitBehavior="submit"
+                onSubmitEditing={() => answerWhat(draft)}
+              />
+              {nudge ? <Text className="text-paragraph-md text-text-sub-600">{nudge}</Text> : null}
+              <View className="flex-row flex-wrap gap-2">
+                {IDEAS.map((i) => (
+                  <Choice key={i.label} label={i.label} selected={title === i.label} onPress={() => answerWhat(i.label)} />
+                ))}
               </View>
               <Pressable
                 accessibilityRole="button"
                 onPress={() => {
                   setWhere("dibby");
                   setViaDibby(true);
-                  go("when", "No worries, I’ll find spots once we’ve got a day.");
+                  go("when");
                 }}
-                className="min-h-11 flex-row items-center gap-3 self-start active:opacity-70"
+                className="min-h-11 flex-row items-center gap-2 self-start active:opacity-70"
               >
-                <Image source={DIBBY.face} style={{ width: 32, height: 32, borderRadius: 16 }} contentFit="cover" accessible={false} />
+                <Image source={DIBBY.face} style={{ width: 28, height: 28, borderRadius: 14 }} contentFit="cover" accessible={false} />
                 <Text className="text-label-md text-primary-dark">Not sure? Let Dibby plan it</Text>
               </Pressable>
-              <Problem msg={err} />
-            </Answers>
+            </>
           ) : null}
 
           {step === "when" ? (
-            <Answers stepKey="when" after={talkMs(QUESTION.when)} className="gap-5">
+            <>
               <DayStrip value={date} onChange={setDate} />
               {exact ? (
                 <View className="gap-3">
-                  <Text className="text-label-sm text-text-sub-600">Pick a time</Text>
                   <Datepicker.Root
                     mode="time"
                     value={sydneyInstant(date ?? today, time ?? "19:00")}
@@ -404,17 +330,11 @@ export default function NewPlan() {
                 </View>
               ) : (
                 <View className="gap-3">
-                  <Text className="text-label-sm text-text-sub-600">What time?</Text>
                   <View className="flex-row flex-wrap gap-2">
-                    {TIME_PRESETS.map((t, n) => (
-                      <Stagger key={t.at} index={n}>
-                        <Choice label={t.label} sub={timeLabel(t.at)} selected={time === t.at} onPress={() => setTime(time === t.at ? null : t.at)} />
-                      </Stagger>
+                    {TIME_PRESETS.map((t) => (
+                      <Choice key={t.at} label={t.label} sub={timeLabel(t.at)} selected={time === t.at} onPress={() => setTime(time === t.at ? null : t.at)} />
                     ))}
-                    {time && !TIME_PRESETS.some((t) => t.at === time) ? (
-                      // A time typed or picked exactly ("7:30pm"), shown so it can be kept or tapped off.
-                      <Choice label={timeLabel(time)} selected onPress={() => setTime(null)} />
-                    ) : null}
+                    {time && !TIME_PRESETS.some((t) => t.at === time) ? <Choice label={timeLabel(time)} selected onPress={() => setTime(null)} /> : null}
                   </View>
                   <LinkButton.Root
                     variant="primary"
@@ -428,155 +348,86 @@ export default function NewPlan() {
                   </LinkButton.Root>
                 </View>
               )}
-              <Button.Root variant="neutral" mode="stroke" onPress={decideLater}>
-                Decide later
-              </Button.Root>
-            </Answers>
+            </>
           ) : null}
 
           {step === "where" ? (
-            <Answers stepKey="where" after={talkMs(QUESTION.where)}>
-              <Stagger index={0}>
-                <Option
-                  icon="map-pin-2-line"
-                  title="I've got a spot"
-                  body="Already know where? Find it on the map"
-                  selected={where === "place"}
-                  onPress={() => {
-                    setWhere("place");
-                    setError(null);
-                    if (!placeName.trim()) setPicking(true);
-                  }}
-                />
-              </Stagger>
-              <Stagger index={1}>
-                <Option icon="bar-chart-2-line" title="Let the crew vote" body="Everyone chucks in ideas. Most votes wins" selected={where === "vote"} onPress={() => (setWhere("vote"), setError(null))} />
-              </Stagger>
-              <Stagger index={2}>
-                <Option dibby title="Ask Dibby" body="Dibby digs up three real spots for the crew to vote on" selected={where === "dibby"} onPress={() => (setWhere("dibby"), setError(null))} />
-              </Stagger>
-              <Problem msg={err} />
-              {where === "place" && placeName.trim() ? (
-                // The spot they picked (from the map, or typed in), with a way to change it.
-                <Animated.View entering={pace.reduce ? undefined : FadeInDown.duration(240)} className="flex-row items-center gap-3 rounded-lg border border-stroke-soft-200 p-3">
-                  <Icon name="map-pin-2-fill" className="text-[20px] leading-[20px] text-primary-base" />
-                  <View className="flex-1 gap-0.5">
-                    <Text numberOfLines={1} className="text-label-md text-text-strong-950">
-                      {placeName.trim()}
-                    </Text>
-                    {placeAddress.trim() ? (
-                      <Text numberOfLines={2} className="text-paragraph-xs text-text-sub-600">
-                        {placeId ? placeAddress.trim() : `${placeAddress.trim()} · only people in the plan see this`}
-                      </Text>
-                    ) : null}
-                  </View>
-                  <LinkButton.Root variant="primary" onPress={() => setPicking(true)}>
-                    Change
-                  </LinkButton.Root>
-                </Animated.View>
-              ) : null}
-              {where === "vote" ? (
-                <Animated.View entering={pace.reduce ? undefined : FadeInDown.duration(240)} className="gap-2">
-                  <Label.Root>Roughly where? (optional)</Label.Root>
-                  <Input.Root>
-                    <Input.Wrapper>
-                      <Input.Icon name="map-pin-line" />
-                      <Input.Input value={area} onChangeText={setArea} placeholder="Surry Hills" maxLength={80} autoCorrect={false} />
-                    </Input.Wrapper>
-                  </Input.Root>
-                </Animated.View>
-              ) : null}
+            <View className="gap-3">
+              <Option
+                icon="map-pin-2-line"
+                title={where === "place" && placeName.trim() ? placeName.trim() : "I've got a spot"}
+                body={where === "place" && placeName.trim() ? "Tap to change it" : "Find it on the map"}
+                selected={where === "place"}
+                onPress={() => {
+                  setWhere("place");
+                  setError(null);
+                  setPicking(true);
+                }}
+              />
+              <Option icon="bar-chart-2-line" title="Let the crew vote" body="Everyone chucks in ideas. Most votes wins" selected={where === "vote"} onPress={() => (setWhere("vote"), setError(null))} />
+              <Option dibby title="Ask Dibby" body="Three real spots for the crew to vote on" selected={where === "dibby"} onPress={() => (setWhere("dibby"), setError(null))} />
               <PlacePicker
                 open={picking}
                 onOpenChange={setPicking}
                 title="Where's it at?"
-                onPick={(pick) => {
-                  if (pick.kind === "map") {
-                    setPlaceId(pick.place.place_id);
-                    setPlaceName(pick.place.name);
-                    setPlaceAddress(pick.place.address ?? "");
+                onPick={(p) => {
+                  if (p.kind === "map") {
+                    setPlaceId(p.place.place_id);
+                    setPlaceName(p.place.name);
+                    setPlaceAddress(p.place.address ?? "");
                   } else {
                     setPlaceId(null);
-                    setPlaceName(pick.name);
-                    setPlaceAddress(pick.address);
+                    setPlaceName(p.name);
+                    setPlaceAddress(p.address);
                   }
                   setWhere("place");
                   setPicking(false);
                 }}
               />
-            </Answers>
+            </View>
           ) : null}
 
           {step === "dibby" ? (
-            <Answers stepKey="dibby" after={talkMs(QUESTION.dibby)}>
-              <Problem msg={err} />
-              <View className="gap-2">
-                <Text className="text-label-sm text-text-strong-950">The damage</Text>
-                <View className="flex-row flex-wrap gap-2">
-                  {SPENDS.map((x) => (
-                    <Choice key={x.id} label={x.label} selected={spend === x.id} onPress={() => setSpend(spend === x.id ? null : x.id)} />
-                  ))}
-                </View>
+            <>
+              <BigInput value={ask} onChangeText={setAsk} placeholder="Dumplings in Chatswood" accessibilityLabel={QUESTION.dibby} maxLength={500} caret={caret} />
+              <View className="flex-row flex-wrap gap-2">
+                {SPENDS.map((x) => (
+                  <Choice key={x.id} label={x.label} selected={spend === x.id} onPress={() => setSpend(spend === x.id ? null : x.id)} />
+                ))}
               </View>
-              <Text className="text-paragraph-sm text-text-sub-600">
-                Dibby picks three real spots to vote on, and the crew can add more. It won&rsquo;t pick a day or time for you. What you type goes to an AI provider.
-              </Text>
-            </Answers>
+              <Text className="text-paragraph-xs text-text-soft-400">Dibby finds spots, not a day or time. What you type goes to an AI provider.</Text>
+            </>
           ) : null}
 
           {step === "who" ? (
-            <Answers stepKey="who" after={talkMs(QUESTION.who)} className="gap-5">
+            <>
               <BigField label="First name" value={first} onChangeText={setFirst} autoComplete="given-name" textContentType="givenName" caret={caret} autoFocus />
               <BigField label="Last name" value={last} onChangeText={setLast} autoComplete="family-name" textContentType="familyName" caret={caret} />
-              <Problem msg={err} />
               <View className="flex-row flex-wrap items-center">
                 <Text className="text-paragraph-sm text-text-sub-600">Got an account? </Text>
                 <LinkButton.Root variant="primary" onPress={() => router.push({ pathname: "/sign-in", params: { next: "/new" } })}>
                   Sign in
                 </LinkButton.Root>
               </View>
-            </Answers>
+            </>
           ) : null}
 
-          {aside ? (
-            // Dibby's aside, in its lime bubble (the web's pc-dibby--aside).
-            <Animated.View entering={pace.reduce ? undefined : FadeIn.duration(240)} className="flex-row items-start gap-2">
-              <Image source={DIBBY.face} style={{ width: 32, height: 32, borderRadius: 16 }} contentFit="cover" accessible={false} />
-              <View className="shrink rounded-lg rounded-bl-[6px] border-[1.5px] border-accent-light bg-accent-lighter px-3.5 py-2.5">
-                <Text className="font-sans text-[16px] leading-[22px] text-text-strong-950">{aside}</Text>
-              </View>
-            </Animated.View>
-          ) : null}
-        </ScrollView>
+          <Problem msg={err} />
+        </Animated.View>
+      </ScrollView>
 
-        <View className="gap-3 border-t border-stroke-soft-200 px-4 pt-3" style={{ paddingBottom: Math.max(insets.bottom, 16) }}>
-          {bigButton}
-          {step !== "who" ? (
-            <View className="flex-row gap-2">
-              <Input.Root hasError={Boolean(err) && (step === "what" || step === "dibby")} className="min-w-0 flex-1">
-                <Input.Wrapper>
-                  <Input.Input
-                    value={step === "dibby" ? ask : draft}
-                    onChangeText={step === "dibby" ? setAsk : setDraft}
-                    placeholder={PLACEHOLDER[step as keyof typeof PLACEHOLDER]}
-                    accessibilityLabel={step === "dibby" ? QUESTION.dibby : "Message Dibby"}
-                    maxLength={step === "dibby" ? 500 : 120}
-                    returnKeyType="send"
-                    submitBehavior="submit"
-                    onSubmitEditing={send}
-                  />
-                </Input.Wrapper>
-              </Input.Root>
-              <Button.Root iconOnly accessibilityLabel="Send" disabled={step !== "dibby" && !draft.trim()} onPress={send}>
-                <Button.Icon name="arrow-up-line" />
-              </Button.Root>
-            </View>
-          ) : null}
-        </View>
-      </KeyboardAvoidingView>
+      <View className="px-4 pt-3" style={{ paddingBottom: bottom }}>
+        <Button.Root variant={isLast ? "dibs" : "primary"} size="large" block disabled={!ready} onPress={next}>
+          {label}
+        </Button.Root>
+      </View>
+      <KeyboardSpacer less={bottom - 12} />
     </View>
   );
 }
+
+/** The question: Bricolage, the narrow title cut, 30/36 (the web's `.pf-q`). */
+const QUESTION_TEXT = "font-title text-[30px] leading-[36px] text-text-strong-950";
 
 /** The web's `.pf-big` name field: big Bricolage on a violet underline, its label muted above. */
 function BigField({ label, caret, ...rest }: { label: string; caret: string } & ComponentProps<typeof TextInput>) {
@@ -588,6 +439,25 @@ function BigField({ label, caret, ...rest }: { label: string; caret: string } & 
         maxLength={40}
         selectionColor={caret}
         className="border-b-2 border-primary-base py-2 font-title text-[30px] leading-[36px] text-text-strong-950"
+        {...rest}
+      />
+    </View>
+  );
+}
+
+/** A big answer on a violet underline, for the screens you type on. Placeholder drawn by us (components/ui/placeholder.tsx). */
+function BigInput({ caret, placeholder, value, ...rest }: { caret: string } & ComponentProps<typeof TextInput>) {
+  return (
+    <View className="relative">
+      <Placeholder show={!value} ink="faint" className="inset-x-0 top-0 py-2 font-title text-[26px] leading-[32px]">
+        {placeholder}
+      </Placeholder>
+      <TextInput
+        value={value}
+        placeholder={placeholder}
+        placeholderTextColor="transparent"
+        selectionColor={caret}
+        className="border-b-2 border-primary-base py-2 font-title text-[26px] leading-[32px] text-text-strong-950"
         {...rest}
       />
     </View>
