@@ -1,5 +1,5 @@
 import Constants from "expo-constants";
-import type { AuthSession, JoinResponse, Me, MyPlans, NewPlanRequest, NewPlanResponse, PlanDetail, PlanSummary } from "@dibs/shared/api";
+import type { AuthSession, JoinResponse, Me, MyPlans, NewPlanRequest, NewPlanResponse, PlaceHit, PlaceInfo, PlanDetail, PlanSummary } from "@dibs/shared/api";
 
 /** The web app is the backend: the phone never talks to the database directly. */
 export const API_URL: string = process.env.EXPO_PUBLIC_API_URL ?? Constants.expoConfig?.extra?.apiUrl ?? "https://dibby.social";
@@ -95,6 +95,32 @@ export const joinPlan = (slug: string, rsvp: "in" | "maybe", name?: { first: str
 export const setRsvp = (slug: string, rsvp: "in" | "maybe" | "out") => call<PlanDetail>(plan(slug, "/rsvp"), { method: "POST", body: { rsvp } });
 export const castVote = (slug: string, optionId: string) => call<PlanDetail>(plan(slug, "/vote"), { method: "POST", body: { option_id: optionId } });
 export const addPlace = (slug: string, name: string, address: string) => call<PlanDetail>(plan(slug, "/options"), { method: "POST", body: { name, address } });
+/** A business picked from the place search (the server checks it with Google). */
+export const addMapPlace = (slug: string, placeId: string) => call<PlanDetail>(plan(slug, "/options"), { method: "POST", body: { place_id: placeId } });
+/** A host closes the vote now and locks in the leader. */
+export const lockPlan = (slug: string) => call<PlanDetail>(plan(slug, "/lock"), { method: "POST" });
+
+// Places: the web's map picker and place cards, through the server (the Google key stays there).
+let pass: { value: string; at: number } | null = null;
+/** Someone with no account or guest pass yet (making a first plan) searches with a short-lived pass. */
+async function placesPass(): Promise<string> {
+  if (pass && Date.now() - pass.at < 10 * 60_000) return pass.value;
+  const { pass: value } = await call<{ pass: string }>("/api/v1/places/pass", { auth: false });
+  pass = { value, at: Date.now() };
+  return value;
+}
+const placesQuery = async (params: Record<string, string>) => {
+  const p = new URLSearchParams(params);
+  if (!guestSource() && !(await tokenSource())) p.set("pass", await placesPass());
+  return p.toString();
+};
+export async function searchPlaces(q: string, near?: { area?: string | null }): Promise<PlaceHit[]> {
+  const res = await call<{ places: PlaceHit[] }>(`/api/v1/places?${await placesQuery({ q, ...(near?.area ? { area: near.area } : {}) })}`);
+  return res.places;
+}
+export async function getPlaceInfo(placeId: string): Promise<PlaceInfo> {
+  return call<PlaceInfo>(`/api/v1/places/${encodeURIComponent(placeId)}?${await placesQuery({})}`);
+}
 export const sendMessage = (slug: string, body: string) => call<PlanDetail>(plan(slug, "/messages"), { method: "POST", body: { body } });
 
 /** "https://dibby.social/p/k7m2qx9a", "dibby.social/p/k7m2qx9a" or just "k7m2qx9a". */

@@ -1,13 +1,14 @@
-import { useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Share, Text, View } from "react-native";
+import { useState, type ReactNode } from "react";
+import { ActivityIndicator, Linking, Pressable, ScrollView, Share, Text, View } from "react-native";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { PlanDetail } from "@dibs/shared/api";
 import { RSVP_LABEL, shareText } from "@dibs/shared/plans";
+import { splitLeaders, voteStep } from "@dibs/shared/votes";
 import * as Card from "@/components/dibby/card";
+import { PlacePhoto, PlacePicker, PlaceSheet, placeLine, type PlacePick } from "@/components/dibby/place";
 import { PlanCard, type PlanFact } from "@/components/dibby/plan-card";
-import { VoteOption } from "@/components/dibby/vote-option";
 import * as Avatar from "@/components/ui/avatar";
 import * as Button from "@/components/ui/button";
 import * as Hint from "@/components/ui/hint";
@@ -17,9 +18,11 @@ import * as Label from "@/components/ui/label";
 import * as LinkButton from "@/components/ui/link-button";
 import * as Modal from "@/components/ui/modal";
 import { toast } from "@/components/ui/toast";
-import { addPlace, API_URL, castVote, joinPlan, setRsvp } from "@/lib/api";
+import { addMapPlace, addPlace, API_URL, castVote, joinPlan, lockPlan, setRsvp } from "@/lib/api";
+import { usePlace } from "@/lib/places";
 import { useSession } from "@/lib/session";
-import { useColour } from "@/lib/theme";
+import { useColour, useShadow } from "@/lib/theme";
+import { cn } from "@/utils/cn";
 import { whenLong } from "@/lib/dates";
 import { usePlan } from "@/lib/use-plan";
 
@@ -72,6 +75,7 @@ function Plan({ slug, detail, apply }: { slug: string; detail: PlanDetail; apply
           title={plan.title}
           status={plan.status}
           category={plan.category}
+          byline={me?.host ? "Hosted by you" : detail.host_name ? `Hosted by ${detail.host_name}` : null}
           facts={facts}
           footer={
             plan.description || (!off && (me || chat)) ? (
@@ -81,6 +85,7 @@ function Plan({ slug, detail, apply }: { slug: string; detail: PlanDetail; apply
                   // The web's round actions under the plan (.plan-actions).
                   <View className="flex-row flex-wrap gap-2" accessibilityRole="toolbar" accessibilityLabel="Plan actions">
                     <CircleAction icon="share-forward-line" label="Share" onPress={share} />
+                    {detail.directions ? <CircleAction icon="direction-line" label="Directions" onPress={() => Linking.openURL(detail.directions!)} /> : null}
                     {chat ? <CircleAction icon="chat-3-line" label="Chat" onPress={() => router.push(`/p/${slug}/chat`)} /> : null}
                   </View>
                 ) : null}
@@ -196,47 +201,106 @@ function WhoRow({ going, me, going_count, capacity }: { going: NonNullable<PlanD
   );
 }
 
-/** Where are we going: tap to vote (picks, swaps and the limit are the web's), and add a place. */
+/**
+ * The vote, laid out like the web's (app/p/[slug]/Vote.tsx): the leaders as big place cards (two
+ * side by side when tied or nobody's voted), everyone else as compact rows under "Also in the
+ * running", and Add a place as the last row. Hosts get who's ahead and Lock it in at the top.
+ */
 function Vote({ slug, detail, apply }: { slug: string; detail: PlanDetail; apply: (d: PlanDetail) => void }) {
   const { me, vote, plan } = detail;
+  const [picking, setPicking] = useState(false);
   const [adding, setAdding] = useState(false);
-  const [name, setName] = useState("");
-  const [address, setAddress] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const canAdd = Boolean(me && me.access === "full" && plan.status === "voting" && (vote?.options.length ?? 0) < 8);
+  const [addError, setAddError] = useState<string | null>(null);
+  const [viewing, setViewing] = useState<VoteRow | null>(null);
+  const [locking, setLocking] = useState(false);
+  const [lockBusy, setLockBusy] = useState(false);
+  const rows: VoteRow[] = vote?.options ?? [];
+  const open = Boolean(vote?.open ?? plan.status === "voting");
+  const full = me?.access === "full";
+  const canAdd = Boolean(me && full && plan.status === "voting" && rows.length < 8);
 
   if (!me || me.access === "hidden") return null;
   if (!vote && !(plan.voting && canAdd)) return null;
 
-  const total = vote ? vote.options.reduce((n, o) => n + o.votes, 0) : 0;
-  const top = vote ? Math.max(0, ...vote.options.map((o) => o.votes)) : 0;
+  const maxPicks = vote?.maxPicks ?? 1;
+  const mineIds = rows.filter((r) => r.mine).map((r) => r.id);
+  const order = rows.some((r) => r.votes > 0) ? [...rows].sort((a, b) => b.votes - a.votes) : rows;
+  const split = splitLeaders(order.map((r) => r.votes));
+  const big = order.slice(0, split.big);
+  const rest = order.slice(split.big);
+  const paired = split.big === 2 && split.eyebrow !== null;
+  const total = rows.reduce((n, r) => n + r.votes, 0);
+  const top = Math.max(0, ...rows.map((r) => r.votes));
+  const leader = top > 0 ? order[0] : null;
+  const tied = top > 0 && rows.filter((r) => r.votes === top).length > 1;
+  const readOnly = full ? null : (me.note ?? "You can't vote on this one.");
 
-  async function tap(id: string) {
+  async function tap(r: VoteRow) {
+    if (readOnly) return toast.info(readOnly);
+    const step = voteStep(mineIds, r.id, maxPicks);
+    if (step.kind === "none") return;
+    if (step.kind === "full") return toast.info(`That's your ${step.max} picks. Untick one to swap it.`);
+    Haptics.selectionAsync();
     try {
-      apply(await castVote(slug, id));
+      apply(await castVote(slug, r.id));
     } catch (e) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       toast.error((e as Error).message);
     }
   }
 
-  async function add() {
-    if (!name.trim()) return setError("Give the place a name.");
-    setBusy(true);
-    setError(null);
+  async function add(pick: PlacePick) {
+    setAdding(true);
+    setAddError(null);
     try {
-      apply(await addPlace(slug, name.trim(), address.trim()));
-      setName("");
-      setAddress("");
-      setAdding(false);
+      apply(pick.kind === "map" ? await addMapPlace(slug, pick.place.place_id) : await addPlace(slug, pick.name, pick.address));
+      setPicking(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (e) {
-      setError((e as Error).message);
+      setAddError((e as Error).message);
     } finally {
-      setBusy(false);
+      setAdding(false);
     }
   }
+
+  async function lock() {
+    setLockBusy(true);
+    try {
+      apply(await lockPlan(slug));
+      setLocking(false);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setLockBusy(false);
+    }
+  }
+
+  const voteButton = (r: VoteRow) =>
+    open ? (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ selected: r.mine }}
+        accessibilityLabel={r.mine ? (maxPicks > 1 ? `Untick ${r.label}` : `Your pick: ${r.label}`) : `Vote for ${r.label}`}
+        hitSlop={6}
+        onPress={() => tap(r)}
+        className={r.mine ? "size-10 items-center justify-center rounded-full bg-primary-base active:opacity-80" : "size-10 items-center justify-center rounded-full border-[1.5px] border-stroke-sub-300 bg-bg-white-0 active:opacity-70"}
+      >
+        <Icon name="check-line" className={r.mine ? "text-[20px] leading-[20px] text-static-white" : "text-[20px] leading-[20px] text-text-sub-600"} />
+      </Pressable>
+    ) : null;
+
+  const addRow = canAdd ? (
+    <Pressable accessibilityRole="button" onPress={() => (setAddError(null), setPicking(true))} className="min-h-14 flex-row items-center gap-2 active:opacity-70">
+      <Icon name="add-line" className="text-[20px] leading-[20px] text-primary-dark" />
+      <Text className="text-label-md text-primary-dark">Add a place</Text>
+    </Pressable>
+  ) : open && rows.length < 8 && readOnly ? (
+    <View className="min-h-14 flex-row items-center gap-2">
+      <Icon name="add-circle-line" className="text-[20px] leading-[20px] text-text-soft-400" />
+      <Text className="flex-1 text-paragraph-sm text-text-sub-600">{readOnly}</Text>
+    </View>
+  ) : null;
 
   return (
     <View className="gap-3">
@@ -244,70 +308,164 @@ function Vote({ slug, detail, apply }: { slug: string; detail: PlanDetail; apply
         <Text accessibilityRole="header" className="font-display text-title-h5 text-text-strong-950">
           Where to?
         </Text>
-        {vote?.open && vote.options.length > 1 ? (
-          <Text className="text-paragraph-sm text-text-sub-600">{vote.maxPicks > 1 ? `Pick up to ${vote.maxPicks}.` : "Pick one."} Tap again to untick.</Text>
+        {vote?.voters !== undefined && vote.members ? (
+          <Text className="text-paragraph-sm text-text-sub-600">
+            {vote.voters} of {vote.members} voted{vote.closes ? ` · closes ${vote.closes}` : ""}
+          </Text>
         ) : null}
       </View>
-      {vote?.options.length ? (
-        vote.options.map((o) => (
-          <VoteOption
-            key={o.id}
-            title={o.label}
-            meta={o.note ?? undefined}
-            votes={o.votes}
-            share={total ? o.votes / total : 0}
-            mine={o.mine}
-            winning={o.votes > 0 && o.votes === top}
-            disabled={!vote.open}
-            readOnlyReason={me.access === "full" ? undefined : (me.note ?? undefined)}
-            onPress={() => tap(o.id)}
-          />
-        ))
-      ) : (
-        <Text className="text-paragraph-sm text-text-sub-600">No places yet. Add one and the vote gets going.</Text>
-      )}
 
-      {canAdd && !adding ? (
-        <LinkButton.Root variant="primary" className="self-start" onPress={() => setAdding(true)}>
-          + Add a place
-        </LinkButton.Root>
+      {open && me.host && rows.length > 0 ? (
+        <Card.Root>
+          <View className="flex-row items-center gap-3">
+            <View className="flex-1 gap-0.5">
+              <Text className="text-label-md text-text-strong-950">
+                {leader ? (tied ? `It's a tie at ${top} ${top === 1 ? "vote" : "votes"}` : `${leader.label} is ahead with ${top} ${top === 1 ? "vote" : "votes"}`) : "No votes yet"}
+              </Text>
+              <Text className="text-paragraph-xs text-text-sub-600">{vote?.closes ? "When voting closes, the top pick locks in on its own." : "Lock it in whenever you're ready."}</Text>
+            </View>
+            {leader ? (
+              <Button.Root size="small" disabled={lockBusy} onPress={() => setLocking(true)}>
+                <Button.Icon name="lock-2-line" />
+                {lockBusy ? "Locking…" : "Lock it in"}
+              </Button.Root>
+            ) : null}
+          </View>
+        </Card.Root>
       ) : null}
-      {adding ? (
-        <View className="gap-3 rounded-lg border border-stroke-soft-200 p-3">
-          <View className="gap-1">
-            <Label.Root>Place</Label.Root>
-            <Input.Root>
-              <Input.Wrapper>
-                <Input.Icon name="map-pin-line" />
-                <Input.Input value={name} onChangeText={setName} placeholder="Mr Wong, or Jess's place" maxLength={60} autoFocus />
-              </Input.Wrapper>
-            </Input.Root>
+
+      {rows.length === 0 ? <Text className="text-paragraph-sm text-text-sub-600">No options yet. Add a place and the vote gets going.</Text> : null}
+      {open && full && maxPicks > 1 && rows.length > 1 ? (
+        <Text className="text-paragraph-xs text-text-sub-600">
+          {mineIds.length === 0 ? `Pick up to ${maxPicks}.` : mineIds.length >= maxPicks ? `That's your ${maxPicks} picks. Tap one to untick it.` : `${maxPicks - mineIds.length} more ${maxPicks - mineIds.length === 1 ? "pick" : "picks"} if you want.`}
+        </Text>
+      ) : null}
+
+      {split.eyebrow ? <Text className="pt-1 text-subheading-xs uppercase text-text-soft-400">{split.eyebrow}</Text> : null}
+      <View className={paired ? "flex-row gap-2" : "gap-2"}>
+        {big.map((r) => (
+          <BigVoteCard key={r.id} row={r} tile={paired} total={total} winning={top > 0 && r.votes === top} onOpen={() => setViewing(r)} button={voteButton(r)} />
+        ))}
+      </View>
+
+      {rest.length > 0 ? (
+        <>
+          <View className="flex-row items-baseline justify-between pt-1">
+            <Text className="text-subheading-xs uppercase text-text-soft-400">Also in the running</Text>
+            {rest.some((r) => r.place_id) ? <Text className="text-paragraph-xs text-text-soft-400">Photos from Google Maps</Text> : null}
           </View>
-          <View className="gap-1">
-            <Label.Root>Address (optional)</Label.Root>
-            <Input.Root>
-              <Input.Wrapper>
-                <Input.Input value={address} onChangeText={setAddress} placeholder="3 Bridge Lane, Sydney" maxLength={160} />
-              </Input.Wrapper>
-            </Input.Root>
-            <Text className="text-paragraph-xs text-text-soft-400">Only people in the plan see the address.</Text>
-          </View>
-          {error ? (
-            <Hint.Root hasError>
-              <Hint.Icon name="error-warning-fill" />
-              {error}
-            </Hint.Root>
+          <Card.Root className="gap-0 px-3 py-0">
+            {rest.map((r, i) => (
+              <View key={r.id} className={i > 0 ? "border-t border-stroke-soft-200" : undefined}>
+                <RestVoteRow row={r} tied={split.tiedAt !== null && r.votes === split.tiedAt} onOpen={() => setViewing(r)} button={voteButton(r)} />
+              </View>
+            ))}
+            {addRow ? <View className="border-t border-stroke-soft-200">{addRow}</View> : null}
+          </Card.Root>
+        </>
+      ) : canAdd ? (
+        <Button.Root variant="neutral" mode="stroke" onPress={() => (setAddError(null), setPicking(true))}>
+          <Button.Icon name="add-line" />
+          Add a place
+        </Button.Root>
+      ) : addRow}
+
+      <PlacePicker open={picking} onOpenChange={setPicking} onPick={add} area={plan.area} busy={adding} error={addError} />
+      <PlaceSheet
+        open={viewing !== null}
+        onOpenChange={(o) => !o && setViewing(null)}
+        placeId={viewing?.place_id ?? null}
+        name={viewing?.label ?? ""}
+        address={viewing?.note ?? null}
+        action={viewing && open && full ? { label: viewing.mine ? "Untick it" : "Vote for this", onPress: () => (tap(viewing), setViewing(null)) } : null}
+      />
+      <Modal.Root open={locking} onOpenChange={setLocking}>
+        <Modal.Content>
+          <Modal.Header title={tied ? "Lock it in?" : `Lock in ${leader?.label ?? "it"}?`} description={tied ? "It's a tie, so it spins for it. Everyone hears in the chat." : "Voting closes and everyone hears in the chat."} />
+          <Modal.Footer>
+            <Button.Root size="large" block disabled={lockBusy} onPress={lock}>
+              {lockBusy ? "Locking it in…" : tied ? "Spin for it" : `Lock in ${leader?.label ?? "it"}`}
+            </Button.Root>
+            <Modal.Close>
+              <Button.Root variant="neutral" mode="stroke" size="large" block>
+                Not yet
+              </Button.Root>
+            </Modal.Close>
+          </Modal.Footer>
+        </Modal.Content>
+      </Modal.Root>
+    </View>
+  );
+}
+
+type VoteRow = NonNullable<PlanDetail["vote"]>["options"][number];
+
+/** A leader: the place's photo, name and stars (or a typed-in name and address), then the tally and the tick. */
+function BigVoteCard({ row, tile, total, winning, onOpen, button }: { row: VoteRow; tile: boolean; total: number; winning: boolean; onOpen: () => void; button: ReactNode }) {
+  const place = usePlace(row.place_id);
+  const clay = useShadow(winning ? "clay" : null);
+  const share = total ? Math.round((row.votes / total) * 100) : 0;
+  const line = placeLine(place) ?? row.note;
+  return (
+    <View
+      className={cn(
+        "overflow-hidden rounded-md border-[1.5px]",
+        tile && "flex-1",
+        winning ? "border-stroke-sticker bg-bg-sticker" : row.mine ? "border-primary-base bg-bg-white-0" : "border-stroke-soft-200 bg-bg-white-0"
+      )}
+      style={clay}
+    >
+      <Pressable accessibilityRole="button" accessibilityLabel={`Photos and details for ${row.label}`} onPress={onOpen} className={tile ? "active:opacity-80" : "flex-row items-center gap-3 p-3 active:opacity-80"}>
+        {row.place_id || tile ? <PlacePhoto place={place} className={tile ? "h-24 w-full" : "size-16 rounded-md"} /> : null}
+        <View className={tile ? "gap-0.5 px-3 pt-2" : "flex-1 gap-0.5"}>
+          <Text numberOfLines={tile ? 2 : 1} className="text-label-md text-text-strong-950">
+            {row.label}
+          </Text>
+          {line ? (
+            <Text numberOfLines={1} className="text-paragraph-xs text-text-sub-600">
+              {line}
+            </Text>
           ) : null}
-          <View className="flex-row gap-2">
-            <Button.Root className="flex-1" disabled={busy} onPress={add}>
-              {busy ? "Adding…" : "Add it"}
-            </Button.Root>
-            <Button.Root className="flex-1" variant="neutral" mode="stroke" onPress={() => (setAdding(false), setError(null))}>
-              Cancel
-            </Button.Root>
-          </View>
         </View>
-      ) : null}
+      </Pressable>
+      <View className={tile ? "flex-row items-center gap-1 p-2" : "flex-row items-center gap-2 px-3 pb-3"}>
+        <View className="flex-1 gap-1">
+          {total > 0 ? (
+            <>
+              <View className="h-1.5 overflow-hidden rounded-full bg-bg-soft-200">
+                <View className={winning ? "h-full rounded-full bg-accent-base" : "h-full rounded-full bg-primary-bar"} style={{ width: `${share}%` }} />
+              </View>
+              <Text className="text-paragraph-xs text-text-sub-600">
+                {row.votes} {row.votes === 1 ? "vote" : "votes"}
+                {winning && !tile ? " · in front" : ""}
+              </Text>
+            </>
+          ) : null}
+        </View>
+        {button}
+      </View>
+    </View>
+  );
+}
+
+/** Everyone else: a small photo, the name and the count, then the tick. Tap for the place's details. */
+function RestVoteRow({ row, tied, onOpen, button }: { row: VoteRow; tied: boolean; onOpen: () => void; button: ReactNode }) {
+  const place = usePlace(row.place_id);
+  return (
+    <View className="min-h-[72px] flex-row items-center gap-2">
+      <Pressable accessibilityRole="button" accessibilityLabel={`Photos and details for ${row.label}`} onPress={onOpen} className="flex-1 flex-row items-center gap-3 py-2 active:opacity-70">
+        <PlacePhoto place={place} className={row.mine ? "size-12 rounded-md bg-primary-lighter" : "size-12 rounded-md"} />
+        <View className="flex-1 gap-0.5">
+          <Text numberOfLines={1} className="text-label-md text-text-strong-950">
+            {row.label}
+          </Text>
+          <Text numberOfLines={1} className="text-paragraph-xs text-text-sub-600">
+            {row.votes === 0 ? "No votes yet" : `${row.votes} ${row.votes === 1 ? "vote" : "votes"}`}
+            {tied ? " · also tied" : ""}
+          </Text>
+        </View>
+      </Pressable>
+      {button}
     </View>
   );
 }

@@ -20,6 +20,7 @@ import * as Input from "@/components/ui/input";
 import { Placeholder } from "@/components/ui/placeholder";
 import * as Label from "@/components/ui/label";
 import * as LinkButton from "@/components/ui/link-button";
+import { PlacePicker } from "@/components/dibby/place";
 import { API_URL, ApiError, createPlan, getPlan } from "@/lib/api";
 import { addDays, dayLabel, dayWord, sydneyToday, whenLong } from "@/lib/dates";
 import { useSession } from "@/lib/session";
@@ -79,6 +80,9 @@ export default function NewPlan() {
   const [where, setWhere] = useState<Where | null>(null);
   const [placeName, setPlaceName] = useState("");
   const [placeAddress, setPlaceAddress] = useState("");
+  /** Set when the spot was picked from the map: the server checks it with Google and uses Google's name. */
+  const [placeId, setPlaceId] = useState<string | null>(null);
+  const [picking, setPicking] = useState(false);
   const [ask, setAsk] = useState("");
   const [spend, setSpend] = useState<1 | 2 | 3 | null>(null);
   const [first, setFirst] = useState("");
@@ -128,7 +132,7 @@ export default function NewPlan() {
       date,
       time,
       where: where ?? "vote",
-      place: where === "place" ? { name: placeName.trim(), address: placeAddress.trim() || null } : null,
+      place: where === "place" ? (placeId ? { name: placeName.trim(), place_id: placeId } : { name: placeName.trim(), address: placeAddress.trim() || null }) : null,
       ask: where === "dibby" ? ask.trim() : undefined,
       spend: where === "dibby" ? spend : null,
       ...(needName ? { first: first.trim(), last: last.trim() } : {}),
@@ -283,31 +287,45 @@ export default function NewPlan() {
               <DibbyAsks stepKey="where" ack={whereAck} question={QUESTION.where} />
               <Answers stepKey="where" after={talkMs(QUESTION.where)}>
                 <Stagger index={0}>
-                  <Option icon="map-pin-2-line" title="I've got a spot" body="Already know where? Type it in" selected={where === "place"} onPress={() => setWhere("place")} />
+                  <Option icon="map-pin-2-line" title="I've got a spot" body="Already know where? Find it on the map" selected={where === "place"} onPress={() => (setWhere("place"), placeName.trim() ? null : setPicking(true))} />
                 </Stagger>
-                {where === "place" ? (
-                  <Animated.View entering={pace.reduce ? undefined : FadeInDown.duration(240)} className="gap-3">
-                    <View className="gap-1">
-                      <Label.Root>Place</Label.Root>
-                      <Input.Root size="large">
-                        <Input.Wrapper>
-                          <Input.Icon name="map-pin-line" />
-                          <Input.Input value={placeName} onChangeText={setPlaceName} placeholder="Mr Wong, or Jess's place" maxLength={80} autoFocus />
-                        </Input.Wrapper>
-                      </Input.Root>
-                      <Text className="text-paragraph-xs text-text-soft-400">Anyone with the link sees the name.</Text>
+                {where === "place" && placeName.trim() ? (
+                  // The spot they picked (from the map, or typed in), with a way to change it.
+                  <Animated.View entering={pace.reduce ? undefined : FadeInDown.duration(240)} className="flex-row items-center gap-3 rounded-lg bg-bg-weak-50 p-3">
+                    <Icon name="map-pin-2-fill" className="text-[20px] leading-[20px] text-primary-base" />
+                    <View className="flex-1 gap-0.5">
+                      <Text numberOfLines={1} className="text-label-md text-text-strong-950">
+                        {placeName.trim()}
+                      </Text>
+                      {placeAddress.trim() ? (
+                        <Text numberOfLines={1} className="text-paragraph-xs text-text-sub-600">
+                          {placeAddress.trim()}
+                        </Text>
+                      ) : null}
                     </View>
-                    <View className="gap-1">
-                      <Label.Root>Address (optional)</Label.Root>
-                      <Input.Root size="large">
-                        <Input.Wrapper>
-                          <Input.Input value={placeAddress} onChangeText={setPlaceAddress} placeholder="3 Bridge Lane, Sydney" maxLength={160} />
-                        </Input.Wrapper>
-                      </Input.Root>
-                      <Text className="text-paragraph-xs text-text-soft-400">Only people in the plan see this.</Text>
-                    </View>
+                    <LinkButton.Root variant="primary" onPress={() => setPicking(true)}>
+                      Change
+                    </LinkButton.Root>
                   </Animated.View>
                 ) : null}
+                <PlacePicker
+                  open={picking}
+                  onOpenChange={setPicking}
+                  title="Where's it at?"
+                  onPick={(pick) => {
+                    if (pick.kind === "map") {
+                      setPlaceId(pick.place.place_id);
+                      setPlaceName(pick.place.name);
+                      setPlaceAddress(pick.place.address ?? "");
+                    } else {
+                      setPlaceId(null);
+                      setPlaceName(pick.name);
+                      setPlaceAddress(pick.address);
+                    }
+                    setWhere("place");
+                    setPicking(false);
+                  }}
+                />
                 <Stagger index={1}>
                   <Option icon="bar-chart-2-line" title="Let the crew vote" body="Everyone chucks in ideas. Most votes wins" selected={where === "vote"} onPress={() => setWhere("vote")} />
                 </Stagger>
