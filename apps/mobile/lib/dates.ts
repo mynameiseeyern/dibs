@@ -29,3 +29,12 @@ export function dayWord(ymd: string, today = sydneyToday()): string {
   if (ymd === addDays(today, 1)) return "Tomorrow";
   return new Intl.DateTimeFormat("en-AU", { timeZone: "UTC", weekday: "long" }).format(new Date(`${ymd}T00:00:00Z`));
 }
+
+/** "Fri 28 Nov · 3:00 pm", Sydney time: the web's formatWhen (apps/web/lib/time.ts). */
+export function whenLong(iso: string | null): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  const day = new Intl.DateTimeFormat("en-AU", { timeZone: "Australia/Sydney", weekday: "short", day: "numeric", month: "short" }).format(d);
+  const time = new Intl.DateTimeFormat("en-AU", { timeZone: "Australia/Sydney", hour: "numeric", minute: "2-digit" }).format(d);
+  return `${day} · ${time}`;
+}

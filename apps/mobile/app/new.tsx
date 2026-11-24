@@ -20,7 +20,7 @@ import * as Input from "@/components/ui/input";
 import * as Label from "@/components/ui/label";
 import * as LinkButton from "@/components/ui/link-button";
 import { API_URL, ApiError, createPlan, getPlan } from "@/lib/api";
-import { addDays, dayLabel, dayWord, sydneyToday } from "@/lib/dates";
+import { addDays, dayLabel, dayWord, sydneyToday, whenLong } from "@/lib/dates";
 import { useSession } from "@/lib/session";
 import { useColour } from "@/lib/theme";
 
@@ -422,7 +422,8 @@ function Done({ slug, plan, title }: { slug: string; plan: PlanSummary | null; t
   const url = `${API_URL}/p/${slug}`;
 
   const facts: PlanFact[] = [];
-  if (plan?.when) facts.push({ icon: "calendar-line", text: plan.when });
+  const when = whenLong(plan?.starts_at ?? null) ?? plan?.when;
+  if (when) facts.push({ icon: "calendar-line", text: when });
   const place = plan?.voting ? `Up for a vote${plan.area ? ` around ${plan.area}` : ""}` : (plan?.place ?? plan?.area);
   if (place) facts.push({ icon: "map-pin-line", text: place });
 
@@ -446,7 +447,7 @@ function Done({ slug, plan, title }: { slug: string; plan: PlanSummary | null; t
         </View>
 
         <Animated.View entering={pace.reduce ? undefined : FadeInDown.duration(380).delay(650)}>
-          <PlanCard eyebrow={plan?.when ?? null} title={plan?.title ?? title} status={plan?.status ?? "voting"} facts={facts} />
+          <PlanCard title={plan?.title ?? title} status={plan?.status ?? "voting"} category={plan?.category} facts={facts} />
         </Animated.View>
 
         <PushAsk delay={pace.reduce ? 0 : 1100} />

@@ -11,6 +11,7 @@ import { Icon } from "@/components/ui/icon";
 import * as LinkButton from "@/components/ui/link-button";
 import { getMyPlans } from "@/lib/api";
 import { useSession } from "@/lib/session";
+import { whenLong } from "@/lib/dates";
 import { useColour } from "@/lib/theme";
 
 /**
@@ -144,20 +145,22 @@ function MyPlans({ signedIn }: { signedIn: boolean }) {
           <Text className="text-paragraph-md text-text-sub-600">{load.message}</Text>
         ) : load.upcoming.length === 0 && load.past.length === 0 ? (
           <View className="gap-2 py-8">
-            <Text className="text-title-h4 text-text-strong-950">No plans yet</Text>
-            <Text className="text-paragraph-md text-text-sub-600">Make one, or open a link someone dropped in the chat.</Text>
+            <Text accessibilityRole="header" className="font-display text-title-h3 text-text-strong-950">
+              Nothing on. Suss.
+            </Text>
+            <Text className="text-paragraph-md text-text-sub-600">Start something and drop it in the group chat.</Text>
           </View>
         ) : (
           <>
-            {load.upcoming.length > 0 ? <Section title="Coming up" plans={load.upcoming} /> : null}
-            {load.past.length > 0 ? <Section title="Been and done" plans={load.past} /> : null}
+            {load.upcoming.length > 0 ? <Section title="Up next" lead plans={load.upcoming} /> : null}
+            {load.past.length > 0 ? <Section title="Been and done" plans={load.past} quiet /> : null}
           </>
         )}
       </ScrollView>
       <View className="gap-3 p-4">
-        <Button.Root size="large" block onPress={() => router.push("/new")}>
+        <Button.Root variant="dibs" size="large" block onPress={() => router.push("/new")}>
           <Button.Icon name="add-line" />
-          Make a plan
+          Start a plan
         </Button.Root>
         <LinkButton.Root variant="gray" className="self-center" onPress={() => router.push("/open")}>
           Got a plan link? Open it
@@ -167,34 +170,54 @@ function MyPlans({ signedIn }: { signedIn: boolean }) {
   );
 }
 
-function Section({ title, plans }: { title: string; plans: MyPlan[] }) {
+/** "Up next" leads the screen (title-h3); later sections are small eyebrows, like the web's /home. */
+function Section({ title, plans, lead, quiet }: { title: string; plans: MyPlan[]; lead?: boolean; quiet?: boolean }) {
   return (
     <View className="gap-3">
-      <Text accessibilityRole="header" className="text-label-md text-text-sub-600">
+      <Text accessibilityRole="header" className={lead ? "font-display text-title-h3 text-text-strong-950" : "pt-2 text-subheading-sm uppercase text-text-soft-400"}>
         {title}
       </Text>
-      {plans.map((p) => (
-        <Pressable key={p.slug} accessibilityRole="button" accessibilityLabel={p.title} disabled={p.status === "cancelled"} onPress={() => router.push(`/p/${p.slug}`)}>
-          <PlanCard eyebrow={p.when} title={p.title} status={p.status} facts={facts(p)} footer={<Text className="text-label-sm text-text-sub-600">{answer(p)}</Text>} />
-        </Pressable>
-      ))}
+      {plans.map((p) => {
+        const nudge = nudgeFor(p);
+        return (
+          <Pressable key={p.slug} accessibilityRole="button" accessibilityLabel={p.title} disabled={p.status === "cancelled"} onPress={() => router.push(`/p/${p.slug}`)} className={quiet ? "opacity-80" : undefined}>
+            <PlanCard
+              title={p.title}
+              status={p.status}
+              category={p.category}
+              meta={p.host ? "Hosting" : p.rsvp === "in" ? (p.waitlisted ? "Waitlist" : "Going") : p.rsvp === "maybe" ? "Maybe" : null}
+              facts={facts(p)}
+              footer={
+                <View className="w-full gap-2">
+                  <Text className="text-paragraph-sm text-text-sub-600">{p.going} in</Text>
+                  {nudge ? (
+                    <View className="flex-row items-center gap-1.5">
+                      <Icon name="arrow-right-line" className="text-[16px] leading-[16px] text-primary-base" />
+                      <Text className="text-label-sm text-primary-base">{nudge}</Text>
+                    </View>
+                  ) : null}
+                </View>
+              }
+            />
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
 
+/** The web's row facts: the day and time (only once there is one), then the place or the area. */
 function facts(p: MyPlan): PlanFact[] {
   const out: PlanFact[] = [];
-  const where = p.voting ? "Place is up for a vote" : (p.place ?? p.area);
+  const when = whenLong(p.starts_at);
+  if (when) out.push({ icon: "calendar-line", text: when });
+  const where = p.place ?? p.area;
   if (where) out.push({ icon: "map-pin-line", text: where });
-  out.push({ icon: "group-line", text: p.capacity ? `${p.going} of ${p.capacity} going` : `${p.going} going` });
   return out;
 }
 
-function answer(p: MyPlan): string {
-  if (p.host) return "You're hosting";
-  if (p.waitlisted) return "You're on the waitlist";
-  if (p.rsvp === "in") return "You're in";
-  if (p.rsvp === "maybe") return "You said maybe";
-  if (p.rsvp === "out") return "You can't make it";
-  return "You haven't replied";
+/** The one thing to do next on this plan, if there is one (the money and wrap-up nudges need bills). */
+function nudgeFor(p: MyPlan): string | null {
+  if (!p.host && !p.rsvp && p.status !== "cancelled" && p.status !== "wrapped") return "You haven't said if you're in";
+  return null;
 }
