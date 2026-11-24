@@ -10,6 +10,7 @@ import * as Button from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { toast } from "@/components/ui/toast";
 import { sendMessage } from "@/lib/api";
+import { Placeholder } from "@/components/ui/placeholder";
 import { useColour } from "@/lib/theme";
 import { usePlan } from "@/lib/use-plan";
 
@@ -23,7 +24,6 @@ export default function PlanChat() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const insets = useSafeAreaInsets();
   const spinner = useColour("primary-base");
-  const hint = useColour("text-disabled-300");
   const caret = useColour("primary-base");
   const { state, apply } = usePlan(slug);
   const [draft, setDraft] = useState("");
@@ -69,17 +69,22 @@ export default function PlanChat() {
     </View>
   ) : (
     <View className="flex-row items-end gap-2">
-      <TextInput
-        value={draft}
-        onChangeText={setDraft}
-        placeholder="Message, or tag @dibby for ideas"
-        placeholderTextColor={hint}
-        selectionColor={caret}
-        multiline
-        maxLength={2000}
-        accessibilityLabel="Message"
-        className="max-h-32 min-h-11 flex-1 rounded-lg border border-stroke-soft-200 bg-bg-white-0 px-4 py-2.5 text-paragraph-md text-text-strong-950"
-      />
+      <View className="relative flex-1">
+        <Placeholder show={!draft} ink="faint" className="inset-x-0 top-0 border border-transparent px-4 py-2.5 text-paragraph-md">
+          Message, or tag @dibby for ideas
+        </Placeholder>
+        <TextInput
+          value={draft}
+          onChangeText={setDraft}
+          placeholder="Message, or tag @dibby for ideas"
+          placeholderTextColor="transparent"
+          selectionColor={caret}
+          multiline
+          maxLength={2000}
+          accessibilityLabel="Message"
+          className="max-h-32 min-h-11 w-full rounded-lg border border-stroke-soft-200 bg-bg-white-0 px-4 py-2.5 text-paragraph-md text-text-strong-950"
+        />
+      </View>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Send"

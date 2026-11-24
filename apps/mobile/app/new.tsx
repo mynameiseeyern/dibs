@@ -17,6 +17,7 @@ import * as Button from "@/components/ui/button";
 import * as Hint from "@/components/ui/hint";
 import { Icon } from "@/components/ui/icon";
 import * as Input from "@/components/ui/input";
+import { Placeholder } from "@/components/ui/placeholder";
 import * as Label from "@/components/ui/label";
 import * as LinkButton from "@/components/ui/link-button";
 import { API_URL, ApiError, createPlan, getPlan } from "@/lib/api";
@@ -65,7 +66,6 @@ const timeLabel = (t: string) => TIME_PRESETS.find((p) => p.at === t)?.label ?? 
 export default function NewPlan() {
   const insets = useSafeAreaInsets();
   const pace = usePace();
-  const hintInk = useColour("text-disabled-300");
   const caret = useColour("primary-base");
   const { state, hasGuestPass, setGuestPass } = useSession();
   const signedIn = state.status === "signedIn";
@@ -200,22 +200,27 @@ export default function NewPlan() {
             <>
               <DibbyAsks stepKey="what" ack={whatAck} question={QUESTION.what} hint={whatAck ? undefined : "Say the day and time too, if you know it."} />
               <Answers stepKey="what" after={talkMs(QUESTION.what)}>
-                <TextInput
-                  value={title}
-                  onChangeText={(t) => {
-                    setTitle(t);
-                    setCategory(IDEAS.find((i) => i.label === t)?.category ?? null);
-                  }}
-                  placeholder="Dumplings fri arvo"
-                  maxLength={80}
-                  autoFocus={pace.reduce}
-                  returnKeyType="next"
-                  onSubmitEditing={answerWhat}
-                  accessibilityLabel="What are we doing?"
-                  className="border-b-2 border-stroke-soft-200 py-2 font-display text-title-h3 text-text-strong-950"
-                  placeholderTextColor={hintInk}
-                  selectionColor={caret}
-                />
+                <View className="relative">
+                  <Placeholder show={!title} ink="faint" className="inset-x-0 top-0 border-b-2 border-transparent py-2 font-display text-title-h3">
+                    Dumplings fri arvo
+                  </Placeholder>
+                  <TextInput
+                    value={title}
+                    onChangeText={(t) => {
+                      setTitle(t);
+                      setCategory(IDEAS.find((i) => i.label === t)?.category ?? null);
+                    }}
+                    placeholder="Dumplings fri arvo"
+                    maxLength={80}
+                    autoFocus={pace.reduce}
+                    returnKeyType="next"
+                    onSubmitEditing={answerWhat}
+                    accessibilityLabel="What are we doing?"
+                    className="border-b-2 border-stroke-soft-200 py-2 font-display text-title-h3 text-text-strong-950"
+                    placeholderTextColor="transparent"
+                    selectionColor={caret}
+                  />
+                </View>
                 <Text className="text-label-sm text-text-sub-600">Or tap one</Text>
                 <View className="flex-row flex-wrap gap-2">
                   {IDEAS.map((i, n) => (

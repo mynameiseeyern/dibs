@@ -8,12 +8,14 @@ import { useState, type ReactNode } from "react";
 import { Text, TextInput, View, type TextInputProps } from "react-native";
 import { tv } from "@/utils/tv";
 import { useColour, useShadow } from "@/lib/theme";
+import { Placeholder } from "./placeholder";
 
 export const textareaVariants = tv({
   slots: {
     root: "w-full rounded-md border-[1.5px] border-stroke-sub-300 bg-bg-white-0 pb-2.5",
     input: "min-h-[82px] px-3 pt-2.5 font-sans text-[16px] leading-[24px] text-text-strong-950",
     counter: "self-end px-3 text-label-xs text-text-soft-400",
+    placeholder: "inset-x-0 top-0 px-3 pt-2.5 font-sans text-[16px] leading-[24px]",
   },
   variants: {
     focused: { true: { root: "border-primary-base" } },
@@ -32,22 +34,32 @@ type TextareaProps = TextInputProps & {
   children?: ReactNode;
 };
 
-function TextareaRoot({ hasError, disabled, rows = 3, className, inputClassName, children, onFocus, onBlur, style, ...rest }: TextareaProps) {
+function TextareaRoot({ hasError, disabled, rows = 3, className, inputClassName, children, onFocus, onBlur, onChangeText, placeholder, style, ...rest }: TextareaProps) {
   const [focused, setFocused] = useState(false);
-  const { root, input } = textareaVariants({ focused, hasError, disabled });
+  const { root, input, placeholder: placeholderClass } = textareaVariants({ focused, hasError, disabled });
+  const [typed, setTyped] = useState(rest.defaultValue ?? "");
+  const empty = (rest.value ?? typed) === "";
   const halo = useColour(hasError ? "error-lighter" : "primary-lighter");
-  const placeholder = useColour(disabled ? "text-disabled-300" : "text-soft-400");
   const caret = useColour("primary-base");
   const shadow = useShadow("xs");
   return (
     <View className={root({ class: className })} style={[focused && !disabled ? { boxShadow: `0 0 0 4px ${halo}` } : shadow, style]}>
+      <Placeholder show={empty} disabled={disabled} className={placeholderClass()}>
+        {placeholder}
+      </Placeholder>
       <TextInput
         multiline
         textAlignVertical="top"
         editable={!disabled}
-        placeholderTextColor={placeholder}
+        // Kept for screen readers, but invisible: the Placeholder above is what people see.
+        placeholder={placeholder}
+        placeholderTextColor="transparent"
         selectionColor={caret}
         className={input({ class: inputClassName })}
+        onChangeText={(t) => {
+          setTyped(t);
+          onChangeText?.(t);
+        }}
         style={{ minHeight: Math.max(82, rows * 24 + 10) }}
         onFocus={(e) => {
           setFocused(true);
