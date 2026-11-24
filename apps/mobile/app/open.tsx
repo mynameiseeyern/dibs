@@ -5,6 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import * as Button from "@/components/ui/button";
 import * as Input from "@/components/ui/input";
 import { slugFrom } from "@/lib/api";
+import { TopBar } from "@/components/dibby/top-bar";
 
 /** Open a plan from a link someone pasted in the group chat (links also open the app directly). */
 export default function OpenLink() {
@@ -13,6 +14,7 @@ export default function OpenLink() {
 
   return (
     <SafeAreaView className="flex-1" edges={["bottom"]}>
+      <TopBar />
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} className="flex-1 gap-4 p-4">
         <Text accessibilityRole="header" className="text-title-h3 text-text-strong-950">
           Open a plan

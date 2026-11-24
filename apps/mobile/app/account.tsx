@@ -9,6 +9,7 @@ import * as Modal from "@/components/ui/modal";
 import { toast } from "@/components/ui/toast";
 import { API_URL, deleteAccount } from "@/lib/api";
 import { useSession } from "@/lib/session";
+import { TopBar } from "@/components/dibby/top-bar";
 
 /** Who you're signed in as, the legal pages, signing out and deleting your account (Apple wants it in-app). */
 export default function Account() {
@@ -31,6 +32,7 @@ export default function Account() {
 
   return (
     <SafeAreaView className="flex-1" edges={["bottom"]}>
+      <TopBar />
       <ScrollView contentContainerClassName="gap-4 p-4">
         <Text accessibilityRole="header" className="text-title-h3 text-text-strong-950">
           {me?.name ? `${me.name.first} ${me.name.last}` : "Your account"}

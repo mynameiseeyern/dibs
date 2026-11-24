@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, Text, TextInput, View } from "react-native";
-import { router, Stack, useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { PlanDetail } from "@dibs/shared/api";
@@ -13,6 +13,7 @@ import { sendMessage } from "@/lib/api";
 import { Placeholder } from "@/components/ui/placeholder";
 import { useColour } from "@/lib/theme";
 import { usePlan } from "@/lib/use-plan";
+import { TOP_BAR, TopBar } from "@/components/dibby/top-bar";
 
 type Msg = NonNullable<PlanDetail["chat"]>["messages"][number];
 
@@ -99,8 +100,8 @@ export default function PlanChat() {
 
   return (
     <View className="flex-1 bg-bg-white-0">
-      <Stack.Screen options={{ title: detail.plan.title }} />
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={Platform.OS === "ios" ? insets.top + 44 : 0} className="flex-1">
+      <TopBar title={detail.plan.title} />
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={Platform.OS === "ios" ? insets.top + TOP_BAR : 0} className="flex-1">
         {rows.length === 0 && !sending ? (
           // Outside the list: an inverted FlatList draws its empty state upside down on some versions.
           <View className="flex-1 items-center justify-center p-6">

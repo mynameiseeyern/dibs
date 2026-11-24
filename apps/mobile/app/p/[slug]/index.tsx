@@ -1,18 +1,19 @@
 import { useState, type ReactNode } from "react";
 import { ActivityIndicator, Linking, Pressable, ScrollView, Share, Text, View } from "react-native";
-import { router, Stack, useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { PlanDetail } from "@dibs/shared/api";
 import { RSVP_LABEL, shareText } from "@dibs/shared/plans";
 import { splitLeaders, voteStep } from "@dibs/shared/votes";
 import * as Card from "@/components/dibby/card";
+import { CircleAction, PlanFacts, PlanHero, type HeroFact } from "@/components/dibby/plan-hero";
 import { PlacePhoto, PlacePicker, PlaceSheet, placeLine, type PlacePick } from "@/components/dibby/place";
 import { PlanCard, type PlanFact } from "@/components/dibby/plan-card";
 import * as Avatar from "@/components/ui/avatar";
 import * as Button from "@/components/ui/button";
 import * as Hint from "@/components/ui/hint";
-import { Icon, type IconName } from "@/components/ui/icon";
+import { Icon } from "@/components/ui/icon";
 import * as Input from "@/components/ui/input";
 import * as Label from "@/components/ui/label";
 import * as LinkButton from "@/components/ui/link-button";
@@ -23,8 +24,9 @@ import { usePlace } from "@/lib/places";
 import { useSession } from "@/lib/session";
 import { useColour, useShadow } from "@/lib/theme";
 import { cn } from "@/utils/cn";
-import { whenLong } from "@/lib/dates";
+import { countdown, whenLong, whenParts } from "@/lib/dates";
 import { usePlan } from "@/lib/use-plan";
+import { TopBar } from "@/components/dibby/top-bar";
 
 /**
  * A plan, opened from its link (same path as the web, /p/:slug, so dibby.social links open here).
@@ -36,12 +38,21 @@ export default function PlanScreen() {
   const spinner = useColour("primary-base");
   const { state, apply } = usePlan(slug);
 
-  if (state.kind === "loading") return <ActivityIndicator className="flex-1" color={spinner} />;
+  if (state.kind === "loading")
+    return (
+      <View className="flex-1">
+        <TopBar />
+        <ActivityIndicator className="flex-1" color={spinner} />
+      </View>
+    );
   if (state.kind !== "ok")
     return (
-      <View className="gap-2 p-4">
-        <Text className="text-title-h4 text-text-strong-950">{state.kind === "missing" ? "Can't find that plan" : "Couldn't load it"}</Text>
-        <Text className="text-paragraph-md text-text-sub-600">{state.kind === "missing" ? "It might have been called off, or the link's run out." : state.message}</Text>
+      <View className="flex-1">
+        <TopBar />
+        <View className="gap-2 p-4">
+          <Text className="text-title-h4 text-text-strong-950">{state.kind === "missing" ? "Can't find that plan" : "Couldn't load it"}</Text>
+          <Text className="text-paragraph-md text-text-sub-600">{state.kind === "missing" ? "It might have been called off, or the link's run out." : state.message}</Text>
+        </View>
       </View>
     );
 
@@ -51,14 +62,10 @@ export default function PlanScreen() {
 function Plan({ slug, detail, apply }: { slug: string; detail: PlanDetail; apply: (d: PlanDetail) => void }) {
   const { plan, me, going, chat } = detail;
   const off = plan.status === "cancelled";
-
-  // The web's plan card facts: the day and time (or "to be decided"), then the place.
-  const facts: PlanFact[] = [];
-  const when = whenLong(plan.starts_at);
-  facts.push(when ? { icon: "calendar-line", text: when } : { icon: "calendar-line", text: "Time to be decided", muted: true });
-  if (plan.place) facts.push({ icon: "map-pin-line", text: plan.place });
-  else if (plan.voting) facts.push({ icon: "map-pin-line", text: `Up for a vote${plan.area ? ` around ${plan.area}` : ""}`, muted: true });
-  else facts.push(plan.area ? { icon: "map-pin-line", text: plan.area } : { icon: "map-pin-line", text: "Place to be decided", muted: true });
+  const locked = plan.status === "locked";
+  // Voting and locked in share the web's one-page layout; wrapped and called off keep the card.
+  const onePage = locked || plan.status === "voting";
+  const hostedBy = me?.host ? "Hosted by you" : detail.host_name ? `Hosted by ${detail.host_name}` : null;
 
   const share = () => {
     const url = `${API_URL}/p/${slug}`;
@@ -66,33 +73,90 @@ function Plan({ slug, detail, apply }: { slug: string; detail: PlanDetail; apply
     Share.share({ message }).catch(() => {});
   };
 
+  // The round buttons (.plan-actions). Share is one of them once it's locked in; while it's still
+  // coming together it's the pinned button instead, like the web.
+  const actions =
+    !off && me ? (
+      <View className={onePage ? "flex-row justify-around" : "flex-row flex-wrap gap-2"} accessibilityRole="toolbar" accessibilityLabel="Plan actions">
+        {locked ? <CircleAction dibs icon="whatsapp-line" label="Share" onPress={share} /> : null}
+        {detail.directions ? <CircleAction icon="direction-line" label="Directions" onPress={() => Linking.openURL(detail.directions!)} /> : null}
+        {chat ? <CircleAction icon="chat-3-line" label="Chat" onPress={() => router.push(`/p/${slug}/chat`)} /> : null}
+      </View>
+    ) : null;
+
+  // The crew for the hero: who's in (not the waitlist), you raised in the middle if you're in, else the host.
+  const crew = (going ?? []).filter((g) => !g.waitlisted).map((g) => ({ name: g.name, colour: g.colour, host: g.host }));
+  const iAmIn = Boolean(me && !me.waitlisted && (me.rsvp === "in" || me.host));
+  const raised = (iAmIn ? crew.find((c) => c.name === me!.name) : null) ?? crew.find((c) => c.host) ?? null;
+
+  // When / Where / Going, as the web words them.
+  const parts = whenParts(plan.starts_at);
+  const left = countdown(plan.starts_at);
+  const soon = left === "Tonight" || left === "Tomorrow";
+  const heroFacts: HeroFact[] = [
+    {
+      label: "When",
+      main: parts ? (soon ? left! : parts.day) : "To be decided",
+      sub: parts ? (soon ? `${parts.day} · ${parts.time}` : [parts.time, left?.toLowerCase()].filter(Boolean).join(" · ")) : null,
+    },
+    {
+      label: "Where",
+      main: plan.place ?? (plan.voting ? "Up for a vote" : (plan.area ?? "To be decided")),
+      sub: !plan.place && plan.voting ? (plan.area ? `Around ${plan.area}` : null) : plan.place && plan.area && !plan.place.toLowerCase().includes(plan.area.toLowerCase()) ? plan.area : null,
+    },
+    {
+      label: "Going",
+      main: plan.capacity !== null ? `${plan.going} of ${plan.capacity}` : `${plan.going} ${plan.going === 1 ? "person" : "people"}`,
+      sub:
+        plan.capacity !== null
+          ? plan.going >= plan.capacity
+            ? "Full, waitlist's open"
+            : `${plan.capacity - plan.going} ${plan.capacity - plan.going === 1 ? "spot" : "spots"} left`
+          : null,
+    },
+  ];
+
+  // The card, for a wrapped or called-off plan.
+  const facts: PlanFact[] = [];
+  const when = whenLong(plan.starts_at);
+  facts.push(when ? { icon: "calendar-line", text: when } : { icon: "calendar-line", text: "Time to be decided", muted: true });
+  facts.push(plan.place ? { icon: "map-pin-line", text: plan.place } : plan.area ? { icon: "map-pin-line", text: plan.area } : { icon: "map-pin-line", text: "Place to be decided", muted: true });
+
   return (
     <SafeAreaView className="flex-1" edges={["bottom"]}>
-      <Stack.Screen options={{ title: "" }} />
-      <ScrollView contentContainerClassName="gap-5 p-4">
-        <PlanCard
-          size="page"
-          title={plan.title}
-          status={plan.status}
-          category={plan.category}
-          byline={me?.host ? "Hosted by you" : detail.host_name ? `Hosted by ${detail.host_name}` : null}
-          facts={facts}
-          footer={
-            plan.description || (!off && (me || chat)) ? (
-              <View className="w-full gap-4">
-                {plan.description ? <Text className="text-paragraph-sm text-text-sub-600">{plan.description}</Text> : null}
-                {!off && me ? (
-                  // The web's round actions under the plan (.plan-actions).
-                  <View className="flex-row flex-wrap gap-2" accessibilityRole="toolbar" accessibilityLabel="Plan actions">
-                    <CircleAction icon="share-forward-line" label="Share" onPress={share} />
-                    {detail.directions ? <CircleAction icon="direction-line" label="Directions" onPress={() => Linking.openURL(detail.directions!)} /> : null}
-                    {chat ? <CircleAction icon="chat-3-line" label="Chat" onPress={() => router.push(`/p/${slug}/chat`)} /> : null}
-                  </View>
-                ) : null}
-              </View>
-            ) : undefined
-          }
-        />
+      <TopBar />
+      <ScrollView contentContainerClassName="gap-6 p-4 pb-8">
+        {onePage ? (
+          <View className="gap-6">
+            <PlanHero going={crew} raised={raised} isYou={iAmIn} />
+            <View className="items-center gap-1">
+              <Text accessibilityRole="header" className="text-center font-display text-title-h2 text-text-strong-950">
+                {plan.title}
+              </Text>
+              {hostedBy ? <Text className="text-center text-paragraph-md text-text-sub-600">{hostedBy}</Text> : null}
+              {plan.description ? <Text className="pt-1 text-center text-paragraph-sm text-text-strong-950">{plan.description}</Text> : null}
+            </View>
+            <PlanFacts facts={heroFacts} />
+            {actions}
+          </View>
+        ) : (
+          <PlanCard
+            size="page"
+            title={plan.title}
+            status={plan.status}
+            category={plan.category}
+            byline={hostedBy}
+            facts={facts}
+            footer={
+              plan.description || actions ? (
+                <View className="w-full gap-4">
+                  {plan.description ? <Text className="text-paragraph-sm text-text-sub-600">{plan.description}</Text> : null}
+                  {actions}
+                </View>
+              ) : undefined
+            }
+          />
+        )}
 
         {/* Your one job: strangers join, people in the plan answer, hosts are already going. */}
         {!off && !me ? <Join slug={slug} apply={apply} /> : null}
@@ -103,8 +167,8 @@ function Plan({ slug, detail, apply }: { slug: string; detail: PlanDetail; apply
         <Vote slug={slug} detail={detail} apply={apply} />
       </ScrollView>
 
-      {/* Pinned, like the web's dock: share the plan once you're in it. */}
-      {off || !me ? null : (
+      {/* Pinned while it's still coming together, like the web's dock; once locked, Share is a round button. */}
+      {off || !me || locked || plan.status === "wrapped" ? null : (
         <View className="border-t border-stroke-soft-200 bg-bg-white-0 p-4">
           <Button.Root variant={me.host ? "dibs" : "primary"} size="large" block onPress={share}>
             <Button.Icon name="share-forward-line" />
@@ -113,18 +177,6 @@ function Plan({ slug, detail, apply }: { slug: string; detail: PlanDetail; apply
         </View>
       )}
     </SafeAreaView>
-  );
-}
-
-/** A round button with a label under it (the web's .circle-action): 48px, soft background. */
-function CircleAction({ icon, label, onPress }: { icon: IconName; label: string; onPress: () => void }) {
-  return (
-    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} className="min-w-16 items-center gap-1.5 active:opacity-70">
-      <View className="size-12 items-center justify-center rounded-full bg-bg-soft-200">
-        <Icon name={icon} className="text-[22px] leading-[22px] text-text-strong-950" />
-      </View>
-      <Text className="text-label-xs text-text-sub-600">{label}</Text>
-    </Pressable>
   );
 }
 

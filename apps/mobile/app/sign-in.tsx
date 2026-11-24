@@ -11,6 +11,7 @@ import * as Label from "@/components/ui/label";
 import * as LinkButton from "@/components/ui/link-button";
 import { sendCode } from "@/lib/api";
 import { useSession } from "@/lib/session";
+import { TopBar } from "@/components/dibby/top-bar";
 
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
@@ -58,6 +59,7 @@ export default function SignIn() {
 
   return (
     <SafeAreaView className="flex-1" edges={["bottom"]}>
+      <TopBar />
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} className="flex-1">
         <ScrollView contentContainerClassName="gap-4 p-4" keyboardShouldPersistTaps="handled">
           {sentTo ? (

@@ -38,3 +38,28 @@ export function whenLong(iso: string | null): string | null {
   const time = new Intl.DateTimeFormat("en-AU", { timeZone: "Australia/Sydney", hour: "numeric", minute: "2-digit" }).format(d);
   return `${day} · ${time}`;
 }
+
+/** "Sat, 7 Nov" and "11:00 am", Sydney time: the two lines of the web's When fact. */
+export function whenParts(iso: string | null): { day: string; time: string } | null {
+  if (!iso) return null;
+  const parts = whenLong(iso)!.split(" · ");
+  return { day: parts[0], time: parts[1] };
+}
+
+/** "Starting soon", "Tonight", "In 3 hours", "Tomorrow", "4 days to go": the web's countdown (apps/web/lib/time.ts). */
+export function countdown(iso: string | null, now = Date.now()): string | null {
+  if (!iso) return null;
+  const start = Date.parse(iso);
+  const ms = start - now;
+  if (ms <= 0) return null;
+  if (ms < 60 * 60 * 1000) return "Starting soon";
+  const day = (t: number) => Date.parse(`${sydneyToday(new Date(t))}T00:00:00Z`) / 86_400_000;
+  const days = day(start) - day(now);
+  if (days === 0) {
+    const hours = Math.round(ms / 3_600_000);
+    const hour = Number(new Intl.DateTimeFormat("en-AU", { timeZone: "Australia/Sydney", hour: "numeric", hourCycle: "h23" }).format(new Date(start)));
+    return hour >= 17 ? "Tonight" : `In ${hours} ${hours === 1 ? "hour" : "hours"}`;
+  }
+  if (days === 1) return "Tomorrow";
+  return `${days} days to go`;
+}
