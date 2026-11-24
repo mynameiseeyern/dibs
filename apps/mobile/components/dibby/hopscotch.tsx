@@ -1,91 +1,38 @@
-// Making a plan as hopscotch: each question is a chalk square, and the squares are the progress.
-// Dibby goes through three phases on every square:
+// Making a plan as hopscotch, kept small: the squares are the progress bar at the top of the
+// screen, and Dibby stands on the one you're up to. Answer, and he hops a square forward (back,
+// and he hops back). Tap a square you've done to go back to it.
 //
-//   1. hop   — travels from the last square to this one (a transition)
-//   2. talk  — reads the question out: it's the heading underneath, coming in word by word
-//   3. rest  — a resting loop while you answer (blinking, swaying left to right)
+// Smooth on purpose: the hop is drawn in code on the UI thread (crouch, arc, land, settle), and
+// every pose is a still that's already loaded and stacked, so landing on a new pose is just an
+// opacity switch with nothing to decode. While you answer he only breathes. Reduce Motion: he
+// moves without hopping or breathing.
 //
-// Each phase plays a Runway clip when there is one (transparent animated WebP in assets/dibby),
-// and a stand-in made in code until then. To add a clip, put it in CLIPS: the code stand-in for
-// that phase switches itself off (the hop keeps its sideways travel, since the clip hops in place).
-//
-// Pose per square (app/new.tsx): what → thinking, when → on his phone, where → pointing (looking
-// around when Dibby's finding spots), who → saying hi.
+// The Runway clips (assets/dibby/motion) aren't played here: decoding a new 500KB clip on every
+// hop and every phase is what made the old version stutter.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Pressable, Text, useWindowDimensions, View } from "react-native";
-import { Image, type ImageSource } from "expo-image";
+import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
-import Animated, {
-  cancelAnimation,
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withDelay,
-  withRepeat,
-  withSequence,
-  withTiming,
-} from "react-native-reanimated";
+import Animated, { cancelAnimation, Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from "react-native-reanimated";
 import { cn } from "@/utils/cn";
 import { Icon } from "@/components/ui/icon";
-import { DIBBY, PACE, usePace, WORD_MS, type Pose } from "./flow";
+import { DIBBY, type Pose } from "./flow";
 
-type Clip = number | ImageSource;
-
-/**
- * Runway clips (made from Dibby's 3D stills, magenta keyed out to transparent WebP, Nov 2026).
- * Leave a phase out and the code stand-in plays.
- */
-const CLIPS: {
-  /** Hopping from one square to the next, in place (the app moves him across). Drawn taller than
-   *  Dibby (HOP_CLIP) so the jump has room; he's the same size as in the other clips. */
-  hop?: Clip;
-  /** Mouth moving as he asks the question, per pose (with a pose that has none, the resting loop plays with the talking bob on top). */
-  talk: Partial<Record<Pose, Clip>>;
-  /** The resting loop, per pose: blinks, a tilt of the head, taps, waves; feet planted. */
-  rest: Partial<Record<Pose, Clip>>;
-} = {
-  hop: require("../../assets/dibby/motion/hop.webp"),
-  talk: {
-    think: require("../../assets/dibby/motion/talk-think.webp"),
-    phone: require("../../assets/dibby/motion/talk-phone.webp"),
-    point: require("../../assets/dibby/motion/talk-point.webp"),
-    look: require("../../assets/dibby/motion/talk-look.webp"),
-    hi: require("../../assets/dibby/motion/talk-hi.webp"),
-  },
-  rest: {
-    think: DIBBY.thinking,
-    phone: require("../../assets/dibby/motion/phone.webp"),
-    point: require("../../assets/dibby/motion/point.webp"),
-    look: require("../../assets/dibby/motion/look.webp"),
-    hi: require("../../assets/dibby/motion/hi.webp"),
-  },
-};
-
-/** The hop clip: 339×612 at 3x, so 113×204pt with Dibby's feet at the bottom like the rest. */
-const HOP_CLIP = { width: 113, height: 204 };
-/** In the hop clip (18 fps): the crouch, then in the air until he lands. */
-const CLIP_CROUCH_MS = 330;
-const CLIP_AIR_MS = 620;
-const CLIP_MS = 1280;
-
-/** How the code stand-in rests: swaying side to side, or breathing. */
-export type Rest = "sway" | "breathe";
-
-export type Phase = "hop" | "talk" | "rest";
-
-export const DIBBY_SIZE = 112;
-const TRACK = 44;
+/** Dibby on his square. Also where the hello moment (hello.tsx) shrinks him to as he lands. */
+export const DIBBY_SIZE = 64;
+const TRACK = 28;
 const GUTTER = 16;
 /** Dibby's feet sit this far down into the square. */
-const FEET = 14;
-/** One hop, take-off to landing. */
-export const HOP_MS = 480;
-/** The crouch before it. */
-const CROUCH_MS = 140;
-/** His shadow: as wide as his stance, sitting where his feet touch the square. */
-const SHADOW_W = 52;
-const FEET_SHADOW = 12;
+const FEET = 8;
+/** Crouch, then the hop itself (take-off to landing), then the settle. */
+const CROUCH_MS = 110;
+export const HOP_MS = 380;
+const SETTLE_MS = 240;
+const HOP_HEIGHT = 26;
+
+/** The poses he can land in; all mounted at once so switching is instant. */
+const POSES: Pose[] = ["think", "phone", "point", "look", "hi"];
 
 /** Where Dibby stands on square `index` of `count` (also where the hello moment lands him). */
 export function squareX(width: number, count: number, index: number) {
@@ -96,199 +43,121 @@ export function squareX(width: number, count: number, index: number) {
 /** Height of the hopscotch area: Dibby standing, and the squares under his feet. */
 export const AREA_HEIGHT = DIBBY_SIZE - FEET + TRACK;
 
-/** A square: the question's word, or once answered, the answer (tap it to hop back). */
+/** A square: the question's word ("When"); tap a done one to go back to it. */
 export type Square = { key: string; label: string; onPress?: () => void };
 
-export function Hopscotch({ squares, at, pose, rest, talk = 0 }: { squares: Square[]; at: number; pose: Pose; rest: Rest; talk?: number }) {
+export function Hopscotch({ squares, at, pose }: { squares: Square[]; at: number; pose: Pose }) {
   const { width } = useWindowDimensions();
-  const pace = usePace();
+  const reduce = useReducedMotion();
   const count = squares.length;
-  const [phase, setPhase] = useState<Phase>("rest");
   const x = useSharedValue(squareX(width, count, at));
   const lift = useSharedValue(0);
   const squash = useSharedValue(0);
-  const sway = useSharedValue(0);
   const breathe = useSharedValue(0);
-  const chat = useSharedValue(0);
-  /** The shadow's own height when the hop clip does the jumping. */
-  const shadowLift = useSharedValue(0);
-  /** Counts hops, so the hop clip starts from its first frame every time. */
-  const [hops, setHops] = useState(0);
+  /** Which pose shows: switched when he lands, so he takes off as one pose and lands as the next. */
+  const shown = useSharedValue(POSES.indexOf(pose));
   const first = useRef(true);
-  // No crossfade for the first pose: he's just landed from the hello moment, so no blink.
-  const [fade, setFade] = useState(0);
 
   useEffect(() => {
     const to = squareX(width, count, at);
-    const arrived = first.current;
-    first.current = false;
-
-    // Stop resting while he moves.
-    cancelAnimation(sway);
+    const target = POSES.indexOf(pose);
+    if (first.current || reduce) {
+      first.current = false;
+      x.value = to;
+      shown.value = target;
+      if (!reduce) breathe.value = withRepeat(withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.sin) }), -1, true);
+      return;
+    }
     cancelAnimation(breathe);
-    sway.value = withTiming(0, { duration: 120 });
-    breathe.value = withTiming(0, { duration: 120 });
+    breathe.value = withTiming(0, { duration: 100 });
+    const land = CROUCH_MS + HOP_MS;
+    // Squash to crouch, stretch on take-off, round in the air, squash on landing, settle.
+    squash.value = withSequence(
+      withTiming(0.6, { duration: CROUCH_MS, easing: Easing.out(Easing.quad) }),
+      withTiming(-0.5, { duration: 90, easing: Easing.out(Easing.quad) }),
+      withTiming(0, { duration: HOP_MS - 90, easing: Easing.inOut(Easing.quad) }),
+      withTiming(0.5, { duration: 70, easing: Easing.out(Easing.quad) }),
+      withTiming(0, { duration: SETTLE_MS, easing: Easing.out(Easing.back(2)) })
+    );
+    lift.value = withDelay(
+      CROUCH_MS,
+      withSequence(withTiming(-HOP_HEIGHT, { duration: HOP_MS / 2, easing: Easing.out(Easing.quad) }), withTiming(0, { duration: HOP_MS / 2, easing: Easing.in(Easing.quad) }))
+    );
+    x.value = withDelay(CROUCH_MS, withTiming(to, { duration: HOP_MS, easing: Easing.inOut(Easing.sin) }));
+    shown.value = withDelay(land, withTiming(target, { duration: 0 }));
+    breathe.value = withDelay(land + SETTLE_MS, withRepeat(withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.sin) }), -1, true));
+    const t = setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light), land);
+    return () => clearTimeout(t);
+  }, [at, count, width, pose, reduce, x, lift, squash, breathe, shown]);
 
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    const after = (ms: number, fn: () => void) => timers.push(setTimeout(fn, ms));
-
-    if (pace.reduce) {
-      x.value = to;
-      after(0, () => setPhase("rest"));
-      return () => timers.forEach(clearTimeout);
-    }
-    if (!arrived) after(0, () => setFade(160));
-
-    // 1 · hop. The first square has no hop: he's already there (the hello moment lands him).
-    // He crouches first (anticipation), then the jump: stretched going up, round at the top,
-    // squashed when his feet hit the square, then a little settle. Feet stay the pivot throughout.
-    const clipHop = Boolean(CLIPS.hop);
-    const crouch = clipHop ? CLIP_CROUCH_MS : CROUCH_MS;
-    const air = clipHop ? CLIP_AIR_MS : HOP_MS;
-    const hopMs = arrived ? 0 : clipHop ? CLIP_MS : CROUCH_MS + HOP_MS;
-    if (hopMs) {
-      after(0, () => {
-        setHops((h) => h + 1);
-        setPhase("hop");
-      });
-      // The clip jumps on the spot; the shadow follows his height, and we carry him across.
-      if (clipHop) {
-        shadowLift.value = withDelay(
-          crouch,
-          withSequence(withTiming(-52, { duration: air / 2, easing: Easing.out(Easing.quad) }), withTiming(0, { duration: air / 2, easing: Easing.in(Easing.quad) }))
-        );
-      }
-      if (!CLIPS.hop) {
-        squash.value = withSequence(
-          withTiming(0.7, { duration: CROUCH_MS, easing: Easing.out(Easing.quad) }),
-          withTiming(-0.6, { duration: 90, easing: Easing.out(Easing.quad) }),
-          withTiming(0, { duration: HOP_MS - 180, easing: Easing.inOut(Easing.quad) }),
-          withTiming(-0.3, { duration: 90 }),
-          withTiming(1, { duration: 80, easing: Easing.out(Easing.quad) }),
-          withTiming(0, { duration: 320, easing: Easing.out(Easing.back(2.4)) })
-        );
-        lift.value = withDelay(
-          CROUCH_MS,
-          withSequence(withTiming(-52, { duration: HOP_MS / 2, easing: Easing.out(Easing.quad) }), withTiming(0, { duration: HOP_MS / 2, easing: Easing.in(Easing.quad) }))
-        );
-      }
-      x.value = withDelay(crouch, withTiming(to, { duration: air, easing: Easing.inOut(Easing.sin) }));
-      after(crouch + air, () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light));
-    } else {
-      x.value = to;
-    }
-
-    // 2 · talk, in time with the heading coming in (DibbyAsks starts at PACE.think).
-    const talkAt = PACE.think;
-    if (talk > 0) {
-      after(talkAt, () => setPhase("talk"));
-      if (!CLIPS.talk[pose]) {
-        const words = Math.max(1, Math.round((talk - 200) / WORD_MS));
-        chat.value = withDelay(talkAt, withRepeat(withSequence(withTiming(1, { duration: WORD_MS / 2 }), withTiming(0, { duration: WORD_MS / 2 })), words));
-      }
-    }
-
-    // 3 · rest, looping till the next answer.
-    const restAt = talk > 0 ? talkAt + talk : Math.max(hopMs, 300);
-    after(restAt, () => {
-      setPhase("rest");
-      if (CLIPS.rest[pose]) return;
-      // Feet planted: he breathes, and shifts his weight from foot to foot ("sway"), never tilting
-      // like a pendulum (that read as floating). Now and then a small bounce on the spot.
-      breathe.value = withRepeat(withTiming(1, { duration: 1300, easing: Easing.inOut(Easing.sin) }), -1, true);
-      if (rest === "sway") {
-        sway.value = withRepeat(withSequence(withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.sin) }), withTiming(-1, { duration: 1400, easing: Easing.inOut(Easing.sin) })), -1, true);
-      }
-      const bounce = () => {
-        squash.value = withSequence(withTiming(0.45, { duration: 140, easing: Easing.out(Easing.quad) }), withTiming(-0.2, { duration: 110 }), withTiming(0, { duration: 260, easing: Easing.out(Easing.back(2)) }));
-        lift.value = withDelay(140, withSequence(withTiming(-10, { duration: 140, easing: Easing.out(Easing.quad) }), withTiming(0, { duration: 140, easing: Easing.in(Easing.quad) })));
-      };
-      const idle = setInterval(bounce, 4200 + Math.round(Math.random() * 1800));
-      timers.push(idle as unknown as ReturnType<typeof setTimeout>);
-    });
-
-    return () => timers.forEach((t) => (clearTimeout(t), clearInterval(t as unknown as ReturnType<typeof setInterval>)));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [at, count, width, pose, rest, talk, pace.reduce]);
-
-  // squash > 0: squashed (crouching, landing); < 0: stretched (taking off). Volume stays about the same.
+  // Squash > 0 is squashed, < 0 stretched; he scales from his feet.
   const dibbyStyle = useAnimatedStyle(() => ({
     transform: [
-      { translateX: x.value + sway.value * 2 },
+      { translateX: x.value },
       { translateY: lift.value },
-      { scaleX: 1 + squash.value * 0.1 - breathe.value * 0.008 },
-      { scaleY: 1 - squash.value * 0.12 + chat.value * 0.03 + breathe.value * 0.02 },
-      // A lean into the weight shift, from the feet: a degree, not a pendulum.
-      { rotate: `${sway.value * 1.2}deg` },
+      { scaleX: 1 + squash.value * 0.1 - breathe.value * 0.01 },
+      { scaleY: 1 - squash.value * 0.12 + breathe.value * 0.025 },
     ],
   }));
-  // His shadow on the square: smaller and fainter the higher he is, wider when he squashes.
   const shadowStyle = useAnimatedStyle(() => {
-    const up = Math.min(1, -Math.min(lift.value, shadowLift.value) / 52);
-    return {
-      opacity: 0.45 - up * 0.3,
-      transform: [{ translateX: x.value + DIBBY_SIZE / 2 - SHADOW_W / 2 + sway.value * 2 }, { scaleX: 1 - up * 0.45 + Math.max(0, squash.value) * 0.15 }, { scaleY: 1 - up * 0.3 }],
-    };
+    const up = -lift.value / HOP_HEIGHT;
+    return { opacity: 0.35 - up * 0.2, transform: [{ translateX: x.value + DIBBY_SIZE / 2 - SHADOW_W / 2 }, { scaleX: 1 - up * 0.4 }] };
   });
 
-  const restClip = CLIPS.rest[pose];
-  const hopping = phase === "hop" && Boolean(CLIPS.hop);
-  // Talking with no talk clip: his resting loop, with the talking bob on top.
-  const clip = phase === "talk" ? (CLIPS.talk[pose] ?? restClip) : phase === "rest" ? restClip : undefined;
   const sq = (width - GUTTER * 2) / count;
-
   return (
-    <View style={{ height: AREA_HEIGHT }} accessibilityLabel={`Question ${at + 1} of ${count}`}>
-      {/* The chalk squares */}
+    <View style={{ height: AREA_HEIGHT }} accessibilityLabel={`Step ${at + 1} of ${count}`}>
       <View className="absolute flex-row" style={{ left: GUTTER, right: GUTTER, bottom: 0, height: TRACK }}>
-        {squares.map((s, i) => (
-          <Pressable
-            key={s.key}
-            style={{ width: sq }}
-            className="px-1"
-            disabled={i >= at || !s.onPress}
-            onPress={s.onPress}
-            accessibilityRole={i < at ? "button" : undefined}
-            accessibilityLabel={i < at ? `${s.label}, change it` : s.label}
-          >
-            <View
-              className={cn(
-                "h-full flex-row items-center justify-center gap-1 rounded-sm border-2 border-dashed px-1.5",
-                i < at ? "border-primary-base bg-primary-lighter active:opacity-70" : i === at ? "border-primary-base bg-bg-white-0" : "border-stroke-soft-200 bg-bg-white-0"
-              )}
+        {squares.map((s, i) => {
+          const done = i < at;
+          return (
+            <Pressable
+              key={s.key}
+              style={{ width: sq }}
+              className="px-1"
+              disabled={!done || !s.onPress}
+              onPress={s.onPress}
+              accessibilityRole={done ? "button" : undefined}
+              accessibilityLabel={done ? `${s.label}, change it` : s.label}
             >
-              {i < at ? <Icon name="check-line" className="text-[14px] leading-[14px] text-primary-base" /> : null}
-              <Text numberOfLines={1} className={cn("shrink text-label-sm", i <= at ? "text-primary-dark" : "text-text-soft-400")}>
-                {s.label}
-              </Text>
-            </View>
-          </Pressable>
-        ))}
+              <View
+                className={cn(
+                  "h-full flex-row items-center justify-center gap-1 rounded-sm border-[1.5px] border-dashed",
+                  done ? "border-primary-base bg-primary-lighter active:opacity-70" : i === at ? "border-primary-base bg-bg-white-0" : "border-stroke-soft-200 bg-bg-white-0"
+                )}
+              >
+                {done ? <Icon name="check-line" className="text-[12px] leading-[12px] text-primary-base" /> : null}
+                <Text numberOfLines={1} className={cn("text-label-xs", i <= at ? "text-primary-dark" : "text-text-soft-400")}>
+                  {s.label}
+                </Text>
+              </View>
+            </Pressable>
+          );
+        })}
       </View>
 
-      {/* His shadow, where his feet meet the square */}
       <Animated.View
         pointerEvents="none"
-        style={[{ position: "absolute", left: 0, top: DIBBY_SIZE - FEET_SHADOW, width: SHADOW_W, height: 10, borderRadius: 999, backgroundColor: "black" }, shadowStyle]}
+        style={[{ position: "absolute", left: 0, top: DIBBY_SIZE - 10, width: SHADOW_W, height: 6, borderRadius: 999 }, shadowStyle]}
+        className="bg-static-black"
       />
 
-      {/* Dibby, on the current square */}
-      <Animated.View
-        pointerEvents="none"
-        style={[{ position: "absolute", left: 0, top: 0, width: DIBBY_SIZE, height: DIBBY_SIZE, transformOrigin: "50% 100%" }, dibbyStyle]}
-      >
-        {hopping ? (
-          <Image
-            key={`hop-${hops}`}
-            source={CLIPS.hop}
-            style={{ position: "absolute", width: HOP_CLIP.width, height: HOP_CLIP.height, left: (DIBBY_SIZE - HOP_CLIP.width) / 2, top: DIBBY_SIZE - HOP_CLIP.height }}
-            contentFit="contain"
-            accessible={false}
-          />
-        ) : (
-          <Image key={`${pose}-${phase}-${clip ? "clip" : "still"}`} source={clip ?? DIBBY[pose]} style={{ width: DIBBY_SIZE, height: DIBBY_SIZE }} contentFit="contain" transition={fade} accessible={false} />
-        )}
+      <Animated.View pointerEvents="none" style={[{ position: "absolute", left: 0, top: 0, width: DIBBY_SIZE, height: DIBBY_SIZE, transformOrigin: "50% 100%" }, dibbyStyle]}>
+        {POSES.map((p, i) => (
+          <PoseStill key={p} pose={p} index={i} shown={shown} />
+        ))}
       </Animated.View>
     </View>
+  );
+}
+
+const SHADOW_W = 34;
+
+function PoseStill({ pose, index, shown }: { pose: Pose; index: number; shown: { value: number } }) {
+  const style = useAnimatedStyle(() => ({ opacity: Math.round(shown.value) === index ? 1 : 0 }));
+  return (
+    <Animated.View style={[{ position: "absolute", inset: 0 }, style]}>
+      <Image source={DIBBY[pose]} style={{ width: DIBBY_SIZE, height: DIBBY_SIZE }} contentFit="contain" accessible={false} />
+    </Animated.View>
   );
 }
