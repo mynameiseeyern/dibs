@@ -21,6 +21,9 @@ function Screens() {
       <StatusBar style={mode === "dark" ? "light" : "dark"} />
       <Stack
         screenOptions={{
+          // Every screen draws its own top bar (components/dibby/top-bar.tsx): iOS 26's native bar
+          // puts grey glass behind the back button. Swipe-back still works.
+          headerShown: false,
           headerShadowVisible: false,
           headerStyle: { backgroundColor: page },
           headerTintColor: ink,
