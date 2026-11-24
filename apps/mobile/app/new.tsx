@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import type { NewPlanRequest, PlanSummary } from "@dibs/shared/api";
 import { TIME_PRESETS } from "@dibs/shared/daypart";
+import { readPlanText } from "@dibs/shared/plan-text";
 import { shareText } from "@dibs/shared/plans";
 import { PlanCard, type PlanFact } from "@/components/dibby/plan-card";
 import { Answers, Choice, DIBBY, DibbyAsks, Option, Stagger, talkMs, usePace, type Pose } from "@/components/dibby/flow";
@@ -28,6 +29,10 @@ import { useColour } from "@/lib/theme";
  * Dibby hops forward a square per answer, lands in a new pose and reads the next question out.
  * What, when, where; then your name if we don't know it yet (no account needed); then it's on,
  * ready to drop in the group chat.
+ *
+ * Like the web's chat (app/new/PlanChat.tsx), the first square takes the whole plan in one go:
+ * "dumplings fri arvo near Newtown" fills in the name, day and time (readPlanText, no AI), and
+ * Dibby hops straight past any square that's already answered.
  */
 
 type Step = "what" | "when" | "where" | "who" | "making" | "done";
@@ -46,6 +51,16 @@ const QUESTION = { what: "What are we doing?", when: "When are we going?", where
 
 const FIELD_STEP: Record<string, Step> = { title: "what", place: "where", where: "where", ask: "where", first: "who", last: "who" };
 const PART_WORD: Record<string, string> = { "06:00": "super early", "09:00": "morning", "12:00": "midday", "15:00": "arvo", "18:00": "evening", "20:00": "night", "22:00": "late" };
+
+/** "19:30" → "7:30pm", for a time someone typed rather than tapped. */
+function clock(t: string): string {
+  const [h = 0, m = 0] = t.split(":").map(Number);
+  return `${h % 12 || 12}${m ? `:${String(m).padStart(2, "0")}` : ""}${h < 12 ? "am" : "pm"}`;
+}
+const timeWord = (t: string) => PART_WORD[t] ?? clock(t);
+/** "Saturday", or "today"/"tomorrow" when it's mid-sentence. */
+const daySaid = (ymd: string, today: string) => dayWord(ymd, today).replace(/^(Today|Tomorrow)$/, (w) => w.toLowerCase());
+const timeLabel = (t: string) => TIME_PRESETS.find((p) => p.at === t)?.label ?? clock(t);
 
 export default function NewPlan() {
   const insets = useSafeAreaInsets();
@@ -69,6 +84,8 @@ export default function NewPlan() {
   const [first, setFirst] = useState("");
   const [last, setLast] = useState("");
   const [error, setError] = useState<{ msg: string; step: Step } | null>(null);
+  /** What Dibby says on the first square when you gave a day but no name. */
+  const [whatAck, setWhatAck] = useState<string | null>(null);
   const [made, setMade] = useState<{ slug: string; plan: PlanSummary | null } | null>(null);
 
   const today = useMemo(() => sydneyToday(), []);
@@ -78,6 +95,29 @@ export default function NewPlan() {
     setError(null);
     setStep(s);
   };
+
+  /** Next on the first square: read the whole sentence, keep what it says, skip what's answered. */
+  function answerWhat() {
+    const raw = title.trim();
+    if (!raw) return;
+    const r = readPlanText(raw);
+    // Only what was typed counts, so an answer from before stays unless this one says otherwise.
+    if (r.date) setDate(r.date);
+    if (r.time) setTime(r.time);
+    if (!r.title) {
+      setTitle("");
+      const when = [r.date ? daySaid(r.date, today) : null, r.time ? timeWord(r.time) : null].filter(Boolean).join(" ");
+      setWhatAck(when ? `Got it, ${when}. And what are we doing?` : null);
+      return;
+    }
+    setWhatAck(null);
+    setTitle(r.title);
+    setCategory(r.category ?? IDEAS.find((i) => i.label === r.title)?.category ?? null);
+    // What you typed is a good brief for Dibby too, if it comes to that ("near Newtown" and all).
+    if (!ask.trim() && r.area) setAsk(raw);
+    // Day and time both said: hop straight past "when".
+    go((r.date ?? date) && (r.time ?? time) && (r.date || r.time) ? "where" : "when");
+  }
 
   async function submit() {
     setError(null);
@@ -115,9 +155,9 @@ export default function NewPlan() {
 
   // What Dibby says back after each answer: short, like a mate would.
   const whenAck = !title.trim() ? null : `${title.trim()}, love that.`;
-  const whereAck = date ? `${dayWord(date, today)}${time ? ` ${PART_WORD[time] ?? ""}`.trimEnd() : ""}, sweet.` : "No day yet, all good.";
+  const whereAck = date ? `${title.trim() ? `${title.trim()}, ` : ""}${title.trim() ? daySaid(date, today) : dayWord(date, today)}${time ? ` ${timeWord(time)}` : ""}. Sweet.` : "No day yet, all good.";
 
-  const whenLabel = date ? [dayLabel(date, today), time ? TIME_PRESETS.find((t) => t.at === time)?.label : null].filter(Boolean).join(", ") : "No day yet";
+  const whenLabel = date ? [dayLabel(date, today), time ? timeLabel(time) : null].filter(Boolean).join(", ") : "No day yet";
   const whereLabel = where === "place" ? placeName.trim() || "Got a spot" : where === "vote" ? "Crew votes" : where === "dibby" ? "Dibby's on it" : "Where";
   const order: Step[] = needName ? ["what", "when", "where", "who"] : ["what", "when", "where"];
   const at = Math.max(0, order.indexOf(step));
@@ -158,7 +198,7 @@ export default function NewPlan() {
         <ScrollView contentContainerClassName="gap-5 px-4 pb-6 pt-1" keyboardShouldPersistTaps="handled">
           {step === "what" ? (
             <>
-              <DibbyAsks stepKey="what" question={QUESTION.what} />
+              <DibbyAsks stepKey="what" ack={whatAck} question={QUESTION.what} hint={whatAck ? undefined : "Say the day and time too, if you know it."} />
               <Answers stepKey="what" after={talkMs(QUESTION.what)}>
                 <TextInput
                   value={title}
@@ -166,11 +206,11 @@ export default function NewPlan() {
                     setTitle(t);
                     setCategory(IDEAS.find((i) => i.label === t)?.category ?? null);
                   }}
-                  placeholder="Friday dinner"
+                  placeholder="Dumplings fri arvo"
                   maxLength={80}
                   autoFocus={pace.reduce}
                   returnKeyType="next"
-                  onSubmitEditing={() => title.trim() && go("when")}
+                  onSubmitEditing={answerWhat}
                   accessibilityLabel="What are we doing?"
                   className="border-b-2 border-stroke-soft-200 py-2 font-display text-title-h3 text-text-strong-950"
                   placeholderTextColor={hintInk}
@@ -220,6 +260,12 @@ export default function NewPlan() {
                           <Choice label={t.label} selected={time === t.at} onPress={() => setTime(time === t.at ? null : t.at)} />
                         </Stagger>
                       ))}
+                      {time && !TIME_PRESETS.some((t) => t.at === time) ? (
+                        // A time typed on the first square ("7pm"), shown so it can be kept or tapped off.
+                        <Stagger index={TIME_PRESETS.length}>
+                          <Choice label={clock(time)} selected onPress={() => setTime(null)} />
+                        </Stagger>
+                      ) : null}
                     </View>
                   </Animated.View>
                 ) : null}
@@ -317,7 +363,7 @@ export default function NewPlan() {
 
         <View className="px-4 pb-4" style={{ paddingBottom: Math.max(insets.bottom, 16) }}>
           {step === "what" ? (
-            <Button.Root size="large" block disabled={!title.trim()} onPress={() => go("when")}>
+            <Button.Root size="large" block disabled={!title.trim()} onPress={answerWhat}>
               Next
             </Button.Root>
           ) : step === "when" ? (
