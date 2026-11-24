@@ -31,6 +31,8 @@ export interface NewPlanInput {
   /** What to ask Dibby for ("dumplings near Chatswood"), and the budget, 1 to 3. */
   ask: string;
   spend: 1 | 2 | 3 | null;
+  /** "Roughly where?" for a vote, like the web form's area field. */
+  area: string | null;
 }
 
 export type Host = { organiserName: string; organiserUserId: string | null; organiserGuestId: string | null };
@@ -54,6 +56,7 @@ export function readNewPlan(body: Record<string, unknown>): NewPlanInput {
     placeId: p && typeof p.place_id === "string" && /^[\w:-]{1,300}$/.test(p.place_id) ? p.place_id : null,
     ask: clip(body.ask, 500).replace(/^@dibby\s*/i, ""),
     spend: spend === 1 || spend === 2 || spend === 3 ? spend : null,
+    area: clip(body.area, 80) || null,
   };
 }
 
@@ -88,7 +91,7 @@ export async function makePlan(p: NewPlanInput, host: Host): Promise<{ slug: str
     const plan = await store.createPlan({
       ...base,
       title: p.title || draft.title,
-      area: draft.area,
+      area: p.area || draft.area,
       startsAt: startsAt ?? (draft.startsAtLocal ? localToIso(draft.startsAtLocal) : null),
     });
     for (const v of draft.venues) await store.addOption({ planId: plan.id, label: v.name, placeId: v.placeId, note: v.address });
@@ -112,6 +115,7 @@ export async function makePlan(p: NewPlanInput, host: Host): Promise<{ slug: str
     if (!place) return { error: "Couldn't find that place. Pick it again, or type it in.", field: "place" };
     venue = { placeId: place.placeId, name: place.name, address: null };
   } else if (p.where === "place" && p.place) venue = { placeId: null, name: p.place.name, address: p.place.address };
-  const plan = await store.createPlan({ ...base, title: p.title, area: null, startsAt, venue });
+  // Same as the web form: an area only when there's no set place.
+  const plan = await store.createPlan({ ...base, title: p.title, area: venue ? null : p.area, startsAt, venue });
   return { slug: plan.slug };
 }
