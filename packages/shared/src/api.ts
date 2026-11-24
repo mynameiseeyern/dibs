@@ -136,6 +136,8 @@ export interface NewPlanRequest {
   place?: { name: string; address?: string | null; place_id?: string | null } | null;
   ask?: string;
   spend?: 1 | 2 | 3 | null;
+  /** "Roughly where? (optional)" when the crew votes: "Surry Hills". */
+  area?: string | null;
   /** Only for someone with no account and no guest pass yet. */
   first?: string;
   last?: string;
