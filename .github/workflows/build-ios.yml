@@ -1,0 +1,69 @@
+# Builds the iOS app on GitHub's own Mac runner (no waiting in Expo's build queue, no EAS build
+# credits; free while the repo is public) and sends it to TestFlight. Run it by hand from the
+# Actions tab → "Build iOS for TestFlight" → Run workflow, whenever a native change lands (a new
+# native module, app.json, a permission). JS-only changes go out as updates (publish-app-update.yml).
+#
+# Uses the same EXPO_TOKEN secret. Signing credentials and the App Store Connect key come from EAS,
+# as for `eas build` / `eas submit` run by hand; the build number goes up on EAS (autoIncrement).
+name: Build iOS for TestFlight
+
+on:
+  workflow_dispatch:
+    inputs:
+      submit:
+        description: Send the build to TestFlight
+        type: boolean
+        default: true
+
+concurrency:
+  group: build-ios
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+          packager: pnpm
+
+      - name: fastlane and CocoaPods (local builds need them)
+        run: |
+          command -v fastlane || brew install fastlane
+          command -v pod || brew install cocoapods
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build
+        working-directory: apps/mobile
+        env:
+          EAS_LOCAL_BUILD_ARTIFACTS_DIR: ${{ runner.temp }}/build
+        run: eas build --platform ios --profile production --local --non-interactive
+
+      - name: Keep the .ipa (Actions → this run → Artifacts)
+        uses: actions/upload-artifact@v4
+        with:
+          name: dibby-ios
+          path: ${{ runner.temp }}/build/*.ipa
+          retention-days: 7
+
+      - name: Send to TestFlight
+        if: ${{ inputs.submit }}
+        working-directory: apps/mobile
+        run: eas submit --platform ios --profile production --path "$(ls ${{ runner.temp }}/build/*.ipa | head -n 1)" --non-interactive

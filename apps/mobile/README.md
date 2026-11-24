@@ -92,6 +92,7 @@ Builds run in the cloud on EAS, so no Xcode or Android Studio needed. From `apps
 | `preview` | An install link for your own phones (Android APK, iOS ad hoc) | `npx eas-cli build --profile preview --platform all` |
 | `production` | Store builds (iOS `.ipa`, Android `.aab`), build number bumped automatically | `npx eas-cli build --profile production --platform all` |
 | — | Send the latest production build to TestFlight / Play internal testing | `npx eas-cli submit --platform ios` (or `android`) |
+| `production` | iOS build on GitHub's Mac runner, straight to TestFlight (no Expo queue, free while the repo is public) | Actions → "Build iOS for TestFlight" → Run workflow |
 | — | Push a JS-only change to installed apps, no review | `npx eas-cli update --channel production` |
 
 The first Android upload has to be done by hand in Play Console (download the `.aab` from the EAS build page); `eas submit` works after that.
