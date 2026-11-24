@@ -1,8 +1,8 @@
-import { forwardRef, useCallback, useEffect, useMemo, useRef, useState, type ComponentRef } from "react";
-import { ActivityIndicator, FlatList, Image, Keyboard, KeyboardAvoidingView, Platform, Pressable, Text, TextInput, View, type ScrollViewProps } from "react-native";
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import { forwardRef, useCallback, useMemo, useRef, useState, type ComponentRef } from "react";
+import { ActivityIndicator, FlatList, Image, Platform, Pressable, Text, TextInput, View, type ScrollViewProps } from "react-native";
+import Animated, { useAnimatedStyle, type SharedValue } from "react-native-reanimated";
 import type { KeyboardChatScrollViewProps, KeyboardChatScrollViewRef } from "react-native-keyboard-controller";
-import { keyboardController } from "@/lib/keyboard";
+import { keyboardController, useKeyboardFromEvents } from "@/lib/keyboard";
 import { router, useLocalSearchParams } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -35,7 +35,8 @@ const STAMP_GAP_MS = 15 * 60 * 1000;
  * by frame (react-native-keyboard-controller reads the native keyboard animation on iOS and
  * Android's WindowInsetsAnimation), the newest messages lift with it, and the thread behind dims
  * while you type. Swipe the thread down to put the keyboard away (interactive on iOS).
- * Builds from before the library was added (see lib/keyboard.ts) get KeyboardAvoidingView instead.
+ * Builds from before the library was added (see lib/keyboard.ts) move the composer from the
+ * keyboard's show and hide events instead, on the same timing.
  */
 export default function PlanChatScreen() {
   // Scoped to this screen, so the rest of the app keeps its own keyboard handling.
@@ -66,6 +67,7 @@ function PlanChat() {
   const lift = bottom - KEYBOARD_GAP;
   const scroller = useCallback((props: ScrollViewProps) => <ChatScroll {...props} offset={lift} />, [lift]);
   const KC = keyboardController;
+  const events = useKeyboardFromEvents(!KC);
 
   const detail = state.kind === "ok" ? state.detail : null;
   const messages = useMemo(() => detail?.chat?.messages ?? [], [detail]);
@@ -156,7 +158,8 @@ function PlanChat() {
         // Inverted: flex-end is the top, so a short chat starts under the pinned line like the web.
         contentContainerStyle={{ flexGrow: 1, justifyContent: "flex-end" }}
         keyboardShouldPersistTaps="handled"
-        keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+        // Interactive needs the library: without it the composer only moves once the swipe lets go.
+        keyboardDismissMode={KC && Platform.OS === "ios" ? "interactive" : "on-drag"}
         renderScrollComponent={KC ? scroller : undefined}
         ListHeaderComponent={
           sending ? (
@@ -173,7 +176,7 @@ function PlanChat() {
           </View>
         )}
       />
-      <Dim />
+      {KC ? <DimWithKeyboard /> : <Dim progress={events.progress} />}
     </View>
   );
   const bar = (
@@ -190,10 +193,11 @@ function PlanChat() {
           <KC.KeyboardStickyView offset={{ closed: 0, opened: lift }}>{bar}</KC.KeyboardStickyView>
         </>
       ) : (
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={Platform.OS === "ios" ? insets.top + 61 : 0} className="flex-1">
+        <>
           {thread}
           {bar}
-        </KeyboardAvoidingView>
+          <Lift height={events.height} less={lift} />
+        </>
       )}
     </View>
   );
@@ -218,22 +222,21 @@ function DimWithKeyboard() {
   return <Animated.View pointerEvents="none" className="absolute inset-0 bg-overlay" style={style} />;
 }
 
-/** Older builds: the same dim, timed to the keyboard's show and hide events instead of its frames. */
-function DimFromEvents() {
-  const progress = useSharedValue(0);
-  useEffect(() => {
-    const ios = Platform.OS === "ios";
-    const fade = (to: number) => (e: { duration?: number }) => {
-      progress.value = withTiming(to, { duration: e.duration || 250 });
-    };
-    const subs = [Keyboard.addListener(ios ? "keyboardWillShow" : "keyboardDidShow", fade(1)), Keyboard.addListener(ios ? "keyboardWillHide" : "keyboardDidHide", fade(0))];
-    return () => subs.forEach((s) => s.remove());
-  }, [progress]);
+/** Older builds: the same dim, from the keyboard's events (useKeyboardFromEvents). */
+function Dim({ progress }: { progress: SharedValue<number> }) {
   const style = useAnimatedStyle(() => ({ opacity: progress.value * DIM }));
   return <Animated.View pointerEvents="none" className="absolute inset-0 bg-overlay" style={style} />;
 }
 
-const Dim = keyboardController ? DimWithKeyboard : DimFromEvents;
+/**
+ * Older builds: room under the composer as tall as the keyboard (less the home-indicator padding
+ * it already has), so the composer rises as one piece and the thread above shrinks, keeping the
+ * newest messages just above it.
+ */
+function Lift({ height, less }: { height: SharedValue<number>; less: number }) {
+  const style = useAnimatedStyle(() => ({ height: Math.max(0, height.value - less) }));
+  return <Animated.View style={style} />;
+}
 
 /** How much of the overlay scrim the dim uses: lighter than a sheet's, the thread stays readable. */
 const DIM = 0.6;
