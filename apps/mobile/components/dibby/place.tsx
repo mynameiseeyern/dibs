@@ -71,7 +71,7 @@ export function PlaceSheet({
             {placeId ? <PlacePhoto place={place} className="h-48 w-full rounded-lg" big /> : null}
             {place?.photo?.by ? <Text className="text-paragraph-xs text-text-soft-400">Photo: {place.photo.by}, from Google Maps</Text> : null}
             <View className="gap-1">
-              <Text accessibilityRole="header" className="font-display text-title-h4 text-text-strong-950">
+              <Text accessibilityRole="header" className="text-title-h4 text-text-strong-950">
                 {place?.name ?? name}
               </Text>
               {line ? <Text className="text-paragraph-sm text-text-sub-600">{line}</Text> : null}

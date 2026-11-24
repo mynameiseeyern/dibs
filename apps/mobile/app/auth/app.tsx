@@ -37,7 +37,7 @@ export default function SignInLink() {
     <View className="flex-1 items-center justify-center gap-4 bg-bg-white-0 p-4">
       <Stack.Screen options={{ headerShown: false }} />
       <Image source={error ? DIBBY.shrug : DIBBY.thinking} style={{ width: 200, height: 200 }} contentFit="contain" accessible={false} />
-      <Text accessibilityLiveRegion="polite" className="text-center font-display text-title-h4 text-text-strong-950">
+      <Text accessibilityLiveRegion="polite" className="text-center text-title-h4 text-text-strong-950">
         {error ? "Couldn't sign you in" : "Signing you in…"}
       </Text>
       {error ? (

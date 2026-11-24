@@ -78,9 +78,10 @@ function Plan({ slug, detail, apply }: { slug: string; detail: PlanDetail; apply
   const actions =
     !off && me ? (
       <View className={onePage ? "flex-row justify-around" : "flex-row flex-wrap gap-2"} accessibilityRole="toolbar" accessibilityLabel="Plan actions">
-        {locked ? <CircleAction dibs icon="whatsapp-line" label="Share" onPress={share} /> : null}
+        {locked ? <CircleAction dibs={me.host} icon="whatsapp-line" label="Share" onPress={share} /> : null}
+        {detail.calendar ? <CircleAction icon="calendar-line" label="Calendar" onPress={() => Linking.openURL(detail.calendar!)} /> : null}
         {detail.directions ? <CircleAction icon="direction-line" label="Directions" onPress={() => Linking.openURL(detail.directions!)} /> : null}
-        {chat ? <CircleAction icon="chat-3-line" label="Chat" onPress={() => router.push(`/p/${slug}/chat`)} /> : null}
+        {chat ? <CircleAction icon="chat-3-line" label="Chat" badge={detail.unread || undefined} onPress={() => router.push(`/p/${slug}/chat`)} /> : null}
       </View>
     ) : null;
 
@@ -102,7 +103,7 @@ function Plan({ slug, detail, apply }: { slug: string; detail: PlanDetail; apply
     {
       label: "Where",
       main: plan.place ?? (plan.voting ? "Up for a vote" : (plan.area ?? "To be decided")),
-      sub: !plan.place && plan.voting ? (plan.area ? `Around ${plan.area}` : null) : plan.place && plan.area && !plan.place.toLowerCase().includes(plan.area.toLowerCase()) ? plan.area : null,
+      sub: !plan.place && plan.voting ? (plan.area ? `Around ${plan.area}` : null) : detail.address ? detail.address : plan.place && plan.area && !plan.place.toLowerCase().includes(plan.area.toLowerCase()) ? plan.area : null,
     },
     {
       label: "Going",
@@ -130,7 +131,7 @@ function Plan({ slug, detail, apply }: { slug: string; detail: PlanDetail; apply
           <View className="gap-6">
             <PlanHero going={crew} raised={raised} isYou={iAmIn} />
             <View className="items-center gap-1">
-              <Text accessibilityRole="header" className="text-center font-display text-title-h2 text-text-strong-950">
+              <Text accessibilityRole="header" className="text-center text-title-h2 text-text-strong-950">
                 {plan.title}
               </Text>
               {hostedBy ? <Text className="text-center text-paragraph-md text-text-sub-600">{hostedBy}</Text> : null}
@@ -186,7 +187,7 @@ const FIT = 5;
 function WhoRow({ going, me, going_count, capacity }: { going: NonNullable<PlanDetail["going"]>; me: string | null; going_count: number; capacity: number | null }) {
   const [open, setOpen] = useState(false);
   const waiting = going.filter((g) => g.waitlisted).length;
-  const summary = [capacity ? `${going_count} of ${capacity} going` : `${going_count} going`, waiting ? `${waiting} waiting` : null].filter(Boolean).join(" · ");
+  const summary = [capacity ? `${going_count} of ${capacity} in` : `${going_count} in`, waiting ? `${waiting} waiting` : null].filter(Boolean).join(" · ");
   const shown = going.length <= FIT ? going : going.slice(0, FIT - 1);
   const more = going.length - shown.length;
   const first = (g: { name: string }) => (me && g.name === me ? "You" : g.name.split(" ")[0]);
@@ -195,7 +196,7 @@ function WhoRow({ going, me, going_count, capacity }: { going: NonNullable<PlanD
     <View className="gap-3">
       <View className="flex-row items-end justify-between gap-3">
         <View className="shrink gap-0.5">
-          <Text accessibilityRole="header" className="font-display text-title-h5 text-text-strong-950">
+          <Text accessibilityRole="header" className="text-title-h5 text-text-strong-950">
             Who&rsquo;s going
           </Text>
           <Text className="text-paragraph-sm text-text-sub-600">{summary}</Text>
@@ -223,7 +224,7 @@ function WhoRow({ going, me, going_count, capacity }: { going: NonNullable<PlanD
         {more > 0 ? (
           <View className="w-14 items-center gap-1">
             <View className="size-12 items-center justify-center rounded-full bg-bg-soft-200">
-              <Text className="font-display text-title-h6 text-text-strong-950">+{more}</Text>
+              <Text className="text-title-h6 text-text-strong-950">+{more}</Text>
             </View>
             <Text className="text-label-sm text-text-sub-600">more</Text>
           </View>
@@ -271,7 +272,7 @@ function Vote({ slug, detail, apply }: { slug: string; detail: PlanDetail; apply
   const full = me?.access === "full";
   const canAdd = Boolean(me && full && plan.status === "voting" && rows.length < 8);
 
-  if (!me || me.access === "hidden") return null;
+  if (me?.access === "hidden") return null;
   if (!vote && !(plan.voting && canAdd)) return null;
 
   const maxPicks = vote?.maxPicks ?? 1;
@@ -285,7 +286,7 @@ function Vote({ slug, detail, apply }: { slug: string; detail: PlanDetail; apply
   const top = Math.max(0, ...rows.map((r) => r.votes));
   const leader = top > 0 ? order[0] : null;
   const tied = top > 0 && rows.filter((r) => r.votes === top).length > 1;
-  const readOnly = full ? null : (me.note ?? "You can't vote on this one.");
+  const readOnly = full ? null : me ? (me.note ?? "You can't vote on this one.") : "Tap I'm in to add a place.";
 
   async function tap(r: VoteRow) {
     if (readOnly) return toast.info(readOnly);
@@ -356,18 +357,18 @@ function Vote({ slug, detail, apply }: { slug: string; detail: PlanDetail; apply
 
   return (
     <View className="gap-3">
-      <View className="gap-0.5">
-        <Text accessibilityRole="header" className="font-display text-title-h5 text-text-strong-950">
+      <View className="flex-row items-baseline justify-between gap-3">
+        <Text accessibilityRole="header" className="text-title-h5 text-text-strong-950">
           Where to?
         </Text>
         {vote?.voters !== undefined && vote.members ? (
-          <Text className="text-paragraph-sm text-text-sub-600">
+          <Text className="shrink text-right text-paragraph-sm text-text-sub-600">
             {vote.voters} of {vote.members} voted{vote.closes ? ` · closes ${vote.closes}` : ""}
           </Text>
         ) : null}
       </View>
 
-      {open && me.host && rows.length > 0 ? (
+      {open && me?.host && rows.length > 0 ? (
         <Card.Root>
           <View className="flex-row items-center gap-3">
             <View className="flex-1 gap-0.5">
@@ -467,20 +468,23 @@ function BigVoteCard({ row, tile, total, winning, onOpen, button }: { row: VoteR
       )}
       style={clay}
     >
-      <Pressable accessibilityRole="button" accessibilityLabel={`Photos and details for ${row.label}`} onPress={onOpen} className={tile ? "active:opacity-80" : "flex-row items-center gap-3 p-3 active:opacity-80"}>
-        {row.place_id || tile ? <PlacePhoto place={place} className={tile ? "h-24 w-full" : "size-16 rounded-md"} /> : null}
-        <View className={tile ? "gap-0.5 px-3 pt-2" : "flex-1 gap-0.5"}>
-          <Text numberOfLines={tile ? 2 : 1} className="text-label-md text-text-strong-950">
-            {row.label}
-          </Text>
-          {line ? (
-            <Text numberOfLines={1} className="text-paragraph-xs text-text-sub-600">
-              {line}
+      <Pressable accessibilityRole="button" accessibilityLabel={`Photos and details for ${row.label}`} onPress={onOpen} className="active:opacity-80">
+        {place?.photo ? <PlacePhoto place={place} className={tile ? "h-24 w-full" : "h-32 w-full"} /> : null}
+        <View className="flex-row items-start gap-2.5 px-3 pt-3">
+          {place?.photo ? null : <Icon name={row.place_id ? "store-2-line" : "home-4-line"} className="mt-0.5 text-[20px] leading-[22px] text-text-sub-600" />}
+          <View className="flex-1 gap-0.5">
+            <Text numberOfLines={2} className="text-label-lg text-text-strong-950">
+              {row.label}
             </Text>
-          ) : null}
+            {line ? (
+              <Text numberOfLines={2} className="text-paragraph-sm text-text-sub-600">
+                {line}
+              </Text>
+            ) : null}
+          </View>
         </View>
       </Pressable>
-      <View className={tile ? "flex-row items-center gap-1 p-2" : "flex-row items-center gap-2 px-3 pb-3"}>
+      <View className={tile ? "mt-auto flex-row items-center gap-1 p-2 pt-4" : "flex-row items-center gap-2 px-3 pb-3 pt-4"}>
         <View className="flex-1 gap-1">
           {total > 0 ? (
             <>
@@ -506,7 +510,13 @@ function RestVoteRow({ row, tied, onOpen, button }: { row: VoteRow; tied: boolea
   return (
     <View className="min-h-[72px] flex-row items-center gap-2">
       <Pressable accessibilityRole="button" accessibilityLabel={`Photos and details for ${row.label}`} onPress={onOpen} className="flex-1 flex-row items-center gap-3 py-2 active:opacity-70">
-        <PlacePhoto place={place} className={row.mine ? "size-12 rounded-md bg-primary-lighter" : "size-12 rounded-md"} />
+        {place?.photo ? (
+          <PlacePhoto place={place} className="size-12 rounded-md" />
+        ) : (
+          <View className={row.mine ? "size-12 items-center justify-center rounded-md bg-primary-lighter" : "size-12 items-center justify-center rounded-md bg-bg-soft-200"}>
+            <Icon name={row.place_id ? "store-2-line" : "home-4-line"} className="text-[22px] leading-[22px] text-primary-base" />
+          </View>
+        )}
         <View className="flex-1 gap-0.5">
           <Text numberOfLines={1} className="text-label-md text-text-strong-950">
             {row.label}
@@ -515,6 +525,7 @@ function RestVoteRow({ row, tied, onOpen, button }: { row: VoteRow; tied: boolea
             {row.votes === 0 ? "No votes yet" : `${row.votes} ${row.votes === 1 ? "vote" : "votes"}`}
             {tied ? " · also tied" : ""}
           </Text>
+          <Text className="text-label-sm text-primary-dark">Photos and details</Text>
         </View>
       </Pressable>
       {button}
@@ -550,7 +561,7 @@ function Join({ slug, apply }: { slug: string; apply: (d: PlanDetail) => void })
   return (
     <Card.Root>
       <View className="gap-4">
-        <Text accessibilityRole="header" className="font-display text-title-h4 text-text-strong-950">
+        <Text accessibilityRole="header" className="text-title-h4 text-text-strong-950">
           You coming?
         </Text>
         {needName ? (

@@ -13,6 +13,19 @@ import { cn } from "@/utils/cn";
 
 type Person = { name: string; colour: Avatar.AvatarRootProps["color"] };
 
+// "You" in the face's own label colour (components/ui/avatar.tsx), so it reads on lime as on violet.
+const YOU_INK: Record<string, string> = {
+  violet: "text-primary-darker",
+  lime: "text-static-black",
+  sun: "text-away-dark",
+  mint: "text-success-dark",
+  tangerine: "text-highlighted-dark",
+  rose: "text-feature-dark",
+  aqua: "text-verified-dark",
+  ivory: "text-stable-dark",
+  gray: "text-text-sub-600",
+};
+
 /** One seat in the crew: pops up from below with a little overshoot, like the web's locked-rise. */
 function Rise({ delay, children }: { delay: number; children: ReactNode }) {
   const reduce = useReducedMotion();
@@ -64,7 +77,7 @@ export function PlanHero({ going, raised, isYou }: { going: Person[]; raised: Pe
           <Rise delay={0}>
             <View className="-translate-y-3 rounded-full border-2 border-stroke-strong-950" style={pop}>
               <Avatar.Root size="72" color={lead.colour} name={isYou ? undefined : lead.name}>
-                {isYou ? <Text className="font-display text-[20px] leading-[24px] text-primary-darker">You</Text> : undefined}
+                {isYou ? <Text className={`font-display text-[20px] leading-[24px] ${YOU_INK[lead.colour ?? "violet"] ?? "text-primary-darker"}`}>You</Text> : undefined}
               </Avatar.Root>
             </View>
           </Rise>

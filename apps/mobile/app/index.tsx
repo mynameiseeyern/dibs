@@ -6,6 +6,9 @@ import type { MyPlan } from "@dibs/shared/api";
 import { DibbyHello, type Anchor } from "@/components/dibby/hello";
 import { PushAsk } from "@/components/dibby/push-ask";
 import { PlanCard, PlanCardSkeleton, type PlanFact } from "@/components/dibby/plan-card";
+import { Image } from "expo-image";
+import * as Avatar from "@/components/ui/avatar";
+import * as AvatarGroup from "@/components/ui/avatar-group";
 import * as Button from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import * as LinkButton from "@/components/ui/link-button";
@@ -44,7 +47,7 @@ function Welcome() {
       <Stack.Screen options={{ headerShown: false }} />
       <View className="flex-1 justify-center gap-4 p-4">
         <Text className="font-display text-[40px] leading-[44px] text-primary-base">dibby</Text>
-        <Text accessibilityRole="header" className="font-display text-title-h2 text-text-strong-950">
+        <Text accessibilityRole="header" className="text-title-h2 text-text-strong-950">
           Get out of the group chat.
         </Text>
         <Text className="text-paragraph-lg text-text-sub-600">
@@ -78,17 +81,17 @@ function Welcome() {
   );
 }
 
-type Load = { kind: "loading" } | { kind: "error"; message: string } | { kind: "ok"; upcoming: MyPlan[]; past: MyPlan[] };
+type Load = { kind: "loading" } | { kind: "error"; message: string } | { kind: "ok"; upcoming: MyPlan[]; sortOut: MyPlan[]; past: MyPlan[] };
 
 function MyPlans({ signedIn }: { signedIn: boolean }) {
   const [load, setLoad] = useState<Load>({ kind: "loading" });
   const [refreshing, setRefreshing] = useState(false);
 
-  const { setGuestPass } = useSession();
+  const { setGuestPass, state: auth } = useSession();
   const fetchPlans = useCallback(async () => {
     try {
-      const { upcoming, past, claimed } = await getMyPlans();
-      setLoad({ kind: "ok", upcoming, past });
+      const { upcoming, sort_out, past, claimed } = await getMyPlans();
+      setLoad({ kind: "ok", upcoming, sortOut: sort_out ?? [], past });
       // Signed in with a guest pass still here: its plans are on the account now, so drop it.
       if (signedIn && claimed !== undefined) await setGuestPass(null);
     } catch (e) {
@@ -109,12 +112,13 @@ function MyPlans({ signedIn }: { signedIn: boolean }) {
           behind anything in it, which isn't the design (TestFlight, Nov 2026). */}
       <Stack.Screen options={{ headerShown: false }} />
       <View className="h-14 flex-row items-center justify-between px-4">
-        <Text accessibilityRole="header" className="font-display text-[28px] leading-[32px] text-primary-base">
-          dibby
-        </Text>
+        <View accessible accessibilityRole="header" accessibilityLabel="Dibby" className="flex-row items-center gap-2">
+          <Image source={require("../assets/dibby/icon-192.png")} style={{ width: 32, height: 32, borderRadius: 8 }} accessible={false} />
+          <Text className="font-display text-[28px] leading-[32px] tracking-[-1px] text-text-strong-950">dibby</Text>
+        </View>
         {signedIn ? (
-          <Pressable accessibilityRole="button" accessibilityLabel="Your account" hitSlop={12} onPress={() => router.push("/account")}>
-            <Icon name="user-3-line" className="text-[24px] leading-[24px] text-text-strong-950" />
+          <Pressable accessibilityRole="button" accessibilityLabel="Your account" hitSlop={8} onPress={() => router.push("/account")}>
+            <Avatar.Root size="40" color="violet" name={auth.status === "signedIn" && auth.me?.name ? `${auth.me.name.first} ${auth.me.name.last}`.trim() : undefined} />
           </Pressable>
         ) : (
           <LinkButton.Root variant="primary" onPress={() => router.push("/sign-in")}>
@@ -135,6 +139,15 @@ function MyPlans({ signedIn }: { signedIn: boolean }) {
           />
         }
       >
+        {!signedIn && load.kind === "ok" && load.upcoming.length + load.sortOut.length + load.past.length > 0 ? (
+          <Pressable accessibilityRole="button" onPress={() => router.push("/sign-in")} className="flex-row gap-3 rounded-lg bg-information-lighter p-4 active:opacity-80">
+            <Icon name="smartphone-line" className="text-[20px] leading-[24px] text-information-base" />
+            <View className="flex-1 gap-0.5">
+              <Text className="text-label-md text-information-base">Only on this phone for now</Text>
+              <Text className="text-paragraph-sm text-text-strong-950">Add your email to see these plans on your other devices.</Text>
+            </View>
+          </Pressable>
+        ) : null}
         {load.kind === "ok" && load.upcoming.length > 0 ? <PushAsk /> : null}
         {load.kind === "loading" ? (
           <>
@@ -143,9 +156,9 @@ function MyPlans({ signedIn }: { signedIn: boolean }) {
           </>
         ) : load.kind === "error" ? (
           <Text className="text-paragraph-md text-text-sub-600">{load.message}</Text>
-        ) : load.upcoming.length === 0 && load.past.length === 0 ? (
+        ) : load.upcoming.length === 0 && load.sortOut.length === 0 && load.past.length === 0 ? (
           <View className="gap-2 py-8">
-            <Text accessibilityRole="header" className="font-display text-title-h3 text-text-strong-950">
+            <Text accessibilityRole="header" className="text-title-h3 text-text-strong-950">
               Nothing on. Suss.
             </Text>
             <Text className="text-paragraph-md text-text-sub-600">Start something and drop it in the group chat.</Text>
@@ -153,6 +166,7 @@ function MyPlans({ signedIn }: { signedIn: boolean }) {
         ) : (
           <>
             {load.upcoming.length > 0 ? <Section title="Up next" lead plans={load.upcoming} /> : null}
+            {load.sortOut.length > 0 ? <Section title="To sort out" plans={load.sortOut} /> : null}
             {load.past.length > 0 ? <Section title="Been and done" plans={load.past} quiet /> : null}
           </>
         )}
@@ -174,34 +188,45 @@ function MyPlans({ signedIn }: { signedIn: boolean }) {
 function Section({ title, plans, lead, quiet }: { title: string; plans: MyPlan[]; lead?: boolean; quiet?: boolean }) {
   return (
     <View className="gap-3">
-      <Text accessibilityRole="header" className={lead ? "font-display text-title-h3 text-text-strong-950" : "pt-2 text-subheading-sm uppercase text-text-soft-400"}>
+      <Text accessibilityRole="header" className={lead ? "text-title-h3 text-text-strong-950" : "pt-2 text-subheading-sm uppercase text-text-soft-400"}>
         {title}
       </Text>
-      {plans.map((p) => {
-        const nudge = nudgeFor(p);
-        return (
-          <Pressable key={p.slug} accessibilityRole="button" accessibilityLabel={p.title} disabled={p.status === "cancelled"} onPress={() => router.push(`/p/${p.slug}`)} className={quiet ? "opacity-80" : undefined}>
-            <PlanCard
-              title={p.title}
-              status={p.status}
-              category={p.category}
-              meta={p.host ? "Hosting" : p.rsvp === "in" ? (p.waitlisted ? "Waitlist" : "Going") : p.rsvp === "maybe" ? "Maybe" : null}
-              facts={facts(p)}
-              footer={
-                <View className="w-full gap-2">
+      {plans.map((p) => (
+        <Pressable key={p.slug} accessibilityRole="button" accessibilityLabel={p.title} disabled={p.status === "cancelled"} onPress={() => router.push(`/p/${p.slug}`)}>
+          <PlanCard
+            plain
+            quiet={quiet}
+            title={p.title}
+            status={p.status}
+            statusLabel={p.status_label}
+            meta={p.role_label ?? (p.host ? "Hosting" : "Going")}
+            facts={facts(p)}
+            footer={
+              <View className="w-full gap-3">
+                <View className="flex-row items-center justify-between">
+                  {p.faces && p.faces.length ? (
+                    <AvatarGroup.Root size="32">
+                      {p.faces.slice(0, 5).map((f, i) => (
+                        <Avatar.Root key={`${f.name}-${i}`} color={f.colour} name={f.name} />
+                      ))}
+                      {p.faces.length > 5 ? <AvatarGroup.Overflow>{`+${p.faces.length - 5}`}</AvatarGroup.Overflow> : null}
+                    </AvatarGroup.Root>
+                  ) : (
+                    <View />
+                  )}
                   <Text className="text-paragraph-sm text-text-sub-600">{p.going} in</Text>
-                  {nudge ? (
-                    <View className="flex-row items-center gap-1.5">
-                      <Icon name="arrow-right-line" className="text-[16px] leading-[16px] text-primary-base" />
-                      <Text className="text-label-sm text-primary-base">{nudge}</Text>
-                    </View>
-                  ) : null}
                 </View>
-              }
-            />
-          </Pressable>
-        );
-      })}
+                {nudgeFor(p) ? (
+                  <View className="flex-row items-center gap-2 border-t border-stroke-soft-200 pt-3">
+                    <Icon name="arrow-right-line" className="text-[16px] leading-[16px] text-primary-dark" />
+                    <Text className="flex-1 text-label-sm text-primary-dark">{nudgeFor(p)}</Text>
+                  </View>
+                ) : null}
+              </View>
+            }
+          />
+        </Pressable>
+      ))}
     </View>
   );
 }
@@ -216,8 +241,9 @@ function facts(p: MyPlan): PlanFact[] {
   return out;
 }
 
-/** The one thing to do next on this plan, if there is one (the money and wrap-up nudges need bills). */
+/** The server's nudge (money, wrap-up), or the one the app can work out on an older server. */
 function nudgeFor(p: MyPlan): string | null {
+  if (p.nudge !== undefined) return p.nudge;
   if (!p.host && !p.rsvp && p.status !== "cancelled" && p.status !== "wrapped") return "You haven't said if you're in";
   return null;
 }

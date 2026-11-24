@@ -137,14 +137,14 @@ export function DibbyAsks({ stepKey, question, hint, ack }: { stepKey: string; q
         {!asked ? (
           <Thinking />
         ) : still ? (
-          <Text className="font-display text-title-h3 text-text-strong-950">{question}</Text>
+          <Text className="text-title-h3 text-text-strong-950">{question}</Text>
         ) : (
           words.map((w, i) => (
             <Animated.Text
               key={`${stepKey}-${i}`}
               entering={FadeInDown.duration(200).delay(i * WORD_MS)}
               importantForAccessibility="no"
-              className="font-display text-title-h3 text-text-strong-950"
+              className="text-title-h3 text-text-strong-950"
             >
               {i < words.length - 1 ? `${w} ` : w}
             </Animated.Text>

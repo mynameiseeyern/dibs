@@ -32,6 +32,12 @@ type PlanCardProps = {
   className?: string;
   /** Old prop, before the when moved into the facts. Ignored. */
   eyebrow?: string | null;
+  /** A plain card (the web's home rows), not the lavender sticker. */
+  plain?: boolean;
+  /** The web's chip text for the status, e.g. "Voting · closes Thu 6:15am". */
+  statusLabel?: string;
+  /** Been and done: a smaller title (20px), like .plan-row--quiet. */
+  quiet?: boolean;
 };
 
 // The web's status badges (apps/web/lib/status.ts): same words, tones and icons.
@@ -41,16 +47,16 @@ const STATUS: Record<Exclude<PlanStatus, "cancelled">, { label: string; tone: "w
   wrapped: { label: "Wrapped", tone: "primary", icon: "flag-line" },
 };
 
-export function PlanCard({ title, status, category, meta, byline, size = "row", facts = [], footer, className }: PlanCardProps) {
+export function PlanCard({ title, status, category, meta, byline, size = "row", facts = [], footer, className, plain, statusLabel, quiet }: PlanCardProps) {
   const off = status === "cancelled";
   const pill = status && !off ? STATUS[status] : null;
   return (
-    <Card.Root variant={off ? "default" : "sticker"} className={className} accessibilityState={{ disabled: off }}>
+    <Card.Root variant={off || plain ? "default" : "sticker"} className={className} accessibilityState={{ disabled: off }}>
       <View className="flex-row items-center justify-between gap-3">
         <View className="shrink flex-row flex-wrap items-center gap-1.5">
           {pill ? (
             <StatusPill tone={pill.tone} icon={pill.icon}>
-              {pill.label}
+              {statusLabel ?? pill.label}
             </StatusPill>
           ) : off ? (
             <StatusPill tone="faded">Called off</StatusPill>
@@ -66,7 +72,7 @@ export function PlanCard({ title, status, category, meta, byline, size = "row", 
       <View className="gap-0.5">
         <Text
           accessibilityRole="header"
-          className={cn(size === "page" ? "font-display text-title-h3" : "font-display text-title-h4", off ? "text-text-sub-600" : "text-text-strong-950")}
+          className={cn(size === "page" ? "text-title-h3" : quiet ? "text-title-h5" : "text-title-h4", off ? "text-text-sub-600" : "text-text-strong-950")}
         >
           {title}
         </Text>
