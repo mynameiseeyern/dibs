@@ -1,0 +1,59 @@
+# Publishes the app's JS to phones on the production channel when main changes, from GitHub's own
+# runners: no waiting in Expo's free-tier build queue. Expo still stores and serves the update.
+# Needs the EXPO_TOKEN repository secret (an Expo access token). Native changes (app.json, eas.json,
+# new native modules) still need a TestFlight build; this only ships JS and assets.
+name: Publish app update
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - apps/mobile/**
+      - packages/shared/**
+      - packages/ui/**
+      - pnpm-lock.yaml
+      - .github/workflows/publish-app-update.yml
+  workflow_dispatch:
+
+# Each run publishes all of main, so a newer merge can replace one still running.
+concurrency:
+  group: publish-app-update
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Check the Expo token is set
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error::Add an EXPO_TOKEN repository secret (expo.dev → Account settings → Access tokens)."
+            exit 1
+          fi
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+          packager: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Publish to production
+        working-directory: apps/mobile
+        env:
+          # The commit's first line, passed through env so quotes in it can't break the command.
+          MESSAGE: ${{ github.event.head_commit.message || 'Manual publish' }}
+        run: eas update --channel production --environment production --message "$(printf '%s' "$MESSAGE" | head -n 1)" --non-interactive
