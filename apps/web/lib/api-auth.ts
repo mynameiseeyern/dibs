@@ -1,3 +1,4 @@
+import { siteUrl } from "@/lib/site";
 import "server-only";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
@@ -54,16 +55,31 @@ export async function newApiGuest(first: string, last: string): Promise<{ guest:
   return { guest, token };
 }
 
+/** Where an app-asked sign-in email's button goes. Must be in Supabase's redirect URLs. */
+export const APP_SIGN_IN_URL = () => `${siteUrl()}/auth/app`;
+
 export const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 /** Emails a sign-in code. The same email as the web's link; the template carries both. */
 export async function sendCode(email: string): Promise<{ error?: string }> {
   if (!usingSupabase) return {};
-  const { error } = await anonClient().auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+  // The email template links to /auth/app when it sees this, so the button opens the app.
+  const { error } = await anonClient().auth.signInWithOtp({ email, options: { shouldCreateUser: true, emailRedirectTo: APP_SIGN_IN_URL() } });
   if (!error) return {};
   console.error("[api sign-in]", error.status, error.code, error.message);
   if (error.status === 429 || /rate limit/i.test(error.message)) return { error: "Too many sign-in emails just now. Give it a bit and try again." };
   return { error: "Couldn't send the code. Try again in a sec." };
+}
+
+/** The button in an app-asked sign-in email: the token hash from the link, for a session. */
+export async function verifyLink(tokenHash: string): Promise<AuthSession | { error: string }> {
+  if (!usingSupabase) return { error: "Sign-in links need Supabase." };
+  const { data, error } = await anonClient().auth.verifyOtp({ token_hash: tokenHash, type: "email" });
+  if (error || !data.session) {
+    if (error) console.error("[api verify link]", error.status, error.code, error.message);
+    return { error: "That link's expired or been used. Get a new code." };
+  }
+  return toSession(data.session);
 }
 
 export async function verifyCode(email: string, code: string): Promise<AuthSession | { error: string }> {

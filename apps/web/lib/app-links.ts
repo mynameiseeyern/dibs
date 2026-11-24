@@ -12,8 +12,12 @@
 
 export const APP_ID = "social.dibby.app";
 
-/** The paths the app handles. Matches the app's routes and android.intentFilters in app.json. */
-export const APP_PATHS = ["/p/*"];
+/**
+ * The paths the app handles. Matches the app's routes and android.intentFilters in app.json.
+ * /auth/app is the sign-in link in an email the app asked for (sendCode); the web's own sign-in
+ * emails link to /auth/callback, which stays in the browser.
+ */
+export const APP_PATHS = ["/p/*", "/auth/app"];
 
 export function appleAppSiteAssociation(teamId = process.env.APPLE_TEAM_ID?.trim()) {
   const details = teamId
