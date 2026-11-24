@@ -11,8 +11,6 @@
       "bundleIdentifier": "social.dibby.app",
       "supportsTablet": false,
       "associatedDomains": [
-        "applinks:dibby.social",
-        "applinks:dibby.social",
         "applinks:dibby.social"
       ],
       "infoPlist": {
@@ -39,21 +37,6 @@
               "scheme": "https",
               "host": "dibby.social",
               "pathPrefix": "/auth/app"
-            }
-          ],
-          "category": [
-            "BROWSABLE",
-            "DEFAULT"
-          ]
-        },
-        {
-          "action": "VIEW",
-          "autoVerify": true,
-          "data": [
-            {
-              "scheme": "https",
-              "host": "dibby.social",
-              "pathPrefix": "/p/"
             }
           ],
           "category": [
