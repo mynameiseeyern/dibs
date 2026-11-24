@@ -11,7 +11,13 @@ module.exports = {
     fontFamily: theme.fontFamily,
     borderRadius: theme.borderRadius,
     spacing: theme.spacing,
-    extend: {},
+    extend: {
+      // NativeWind's preset sets `sans`, `serif` and `mono` in its own `extend`, which beats the
+      // theme above. On iOS its `sans` is "'system font'", not a real font, so every `font-sans`
+      // came out in Times (TestFlight, Nov 2026). The web preview never sees it: only builds with
+      // NATIVEWIND_OS=ios or android do. Ours goes here so it wins on every platform.
+      fontFamily: { sans: theme.fontFamily.sans, mono: theme.fontFamily.mono, serif: theme.fontFamily.sans },
+    },
   },
   plugins: [({ addUtilities }) => addUtilities(theme.typeStyles)],
 };
