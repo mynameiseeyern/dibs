@@ -75,6 +75,7 @@ export async function getPlan(slug: string): Promise<PlanSummary | null> {
 // Sign-in
 export const sendCode = (email: string) => call<{ sent: string }>("/api/v1/auth/code", { method: "POST", body: { email }, auth: false });
 export const verifyCode = (email: string, code: string) => call<AuthSession>("/api/v1/auth/verify", { method: "POST", body: { email, code }, auth: false });
+export const verifyLink = (token_hash: string) => call<AuthSession>("/api/v1/auth/verify", { method: "POST", body: { token_hash }, auth: false });
 export const refresh = (refresh_token: string) => call<AuthSession>("/api/v1/auth/refresh", { method: "POST", body: { refresh_token }, auth: false });
 
 // Account
