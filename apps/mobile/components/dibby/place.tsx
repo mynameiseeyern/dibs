@@ -3,8 +3,8 @@
 // Google key never reaches the phone. Cards load once per session (lib/places.ts), and only the
 // place ID is ever kept (Places terms). A place typed in shows its name and address instead.
 
-import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Linking, Pressable, ScrollView, Text, useWindowDimensions, View } from "react-native";
+import { useEffect, useRef, useState, type ComponentRef } from "react";
+import { ActivityIndicator, Linking, Pressable, ScrollView, Text, TextInput, useWindowDimensions, View } from "react-native";
 import { Image } from "expo-image";
 import type { PlaceHit, PlaceInfo } from "@dibs/shared/api";
 import * as Button from "@/components/ui/button";
@@ -229,6 +229,16 @@ export function PlacePicker({
   const [address, setAddress] = useState("");
   const seq = useRef(0);
   const spinner = useColour("primary-base");
+  const search = useRef<ComponentRef<typeof TextInput>>(null);
+
+  // Focus the search once the sheet has slid up (SheetFrame takes 250ms), not as it mounts: the
+  // keyboard arriving first meant the sheet missed it and sat hidden behind the keyboard, leaving
+  // just the dimmed page until something made it measure again (TestFlight, Nov 2026).
+  useEffect(() => {
+    if (!open || typing) return;
+    const t = setTimeout(() => search.current?.focus(), 320);
+    return () => clearTimeout(t);
+  }, [open, typing]);
 
   useEffect(() => {
     if (!open) {
@@ -297,7 +307,7 @@ export function PlacePicker({
               <Input.Root>
                 <Input.Wrapper>
                   <Input.Icon name="search-line" />
-                  <Input.Input value={q} onChangeText={setQ} placeholder="Thai, bowling, Bondi Icebergs" autoFocus autoCorrect={false} returnKeyType="search" />
+                  <Input.Input ref={search} value={q} onChangeText={setQ} placeholder="Thai, bowling, Bondi Icebergs" autoCorrect={false} returnKeyType="search" />
                 </Input.Wrapper>
               </Input.Root>
               {searching && !hits ? <ActivityIndicator color={spinner} className="py-4" /> : null}
