@@ -12,6 +12,9 @@ import { ThemeRoot, useColour, useMode } from "@/lib/theme";
 import { Toaster } from "@/components/ui/toast";
 
 SplashScreen.preventAutoHideAsync();
+// Dibby on the splash is drawn in the same place on the first screen (components/dibby/crew-scene.tsx),
+// so a short fade is all the handoff needs: the crew arrive around him.
+SplashScreen.setOptions({ fade: true, duration: 250 });
 
 function Screens() {
   const mode = useMode();

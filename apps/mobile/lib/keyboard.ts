@@ -12,7 +12,9 @@ type KeyboardControllerLib = typeof import("react-native-keyboard-controller");
  * only required once the native side is confirmed; otherwise callers fall back to React Native's
  * own keyboard handling. Expo Go and every build from now on have it.
  */
-export const keyboardController: KeyboardControllerLib | null = TurboModuleRegistry.get("KeyboardController")
+export const keyboardController: KeyboardControllerLib | null =
+  // The web preview has no native modules (or TurboModuleRegistry) at all.
+  Platform.OS !== "web" && TurboModuleRegistry?.get("KeyboardController")
   ? // eslint-disable-next-line @typescript-eslint/no-require-imports
     (require("react-native-keyboard-controller") as KeyboardControllerLib)
   : null;
