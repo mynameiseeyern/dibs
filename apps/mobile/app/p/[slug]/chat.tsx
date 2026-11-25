@@ -1,5 +1,5 @@
 import { forwardRef, useCallback, useMemo, useRef, useState, type ComponentRef } from "react";
-import { ActivityIndicator, FlatList, Image, Platform, Pressable, Text, TextInput, View, type ScrollViewProps } from "react-native";
+import { ActivityIndicator, FlatList, Image, Platform, Pressable, StyleSheet, Text, TextInput, View, type ScrollViewProps } from "react-native";
 import Animated, { useAnimatedStyle, type SharedValue } from "react-native-reanimated";
 import type { KeyboardChatScrollViewProps, KeyboardChatScrollViewRef } from "react-native-keyboard-controller";
 import { keyboardController, useKeyboardFromEvents } from "@/lib/keyboard";
@@ -17,6 +17,7 @@ import { reactTo, sendMessage, toggleDibbyMute } from "@/lib/api";
 import { chatStamp } from "@/lib/dates";
 import { useColour } from "@/lib/theme";
 import { usePlan } from "@/lib/use-plan";
+import { MotionView } from "@/lib/motion";
 
 type Chat = NonNullable<PlanDetail["chat"]>;
 type Msg = Chat["messages"][number];
@@ -219,13 +220,21 @@ ChatScroll.displayName = "ChatScroll";
 function DimWithKeyboard() {
   const { progress } = keyboardController!.useReanimatedKeyboardAnimation();
   const style = useAnimatedStyle(() => ({ opacity: progress.value * DIM }));
-  return <Animated.View pointerEvents="none" className="absolute inset-0 bg-overlay" style={style} />;
+  return (
+    <MotionView pointerEvents="none" style={[StyleSheet.absoluteFill, style]}>
+      <View className="flex-1 bg-overlay" />
+    </MotionView>
+  );
 }
 
 /** Older builds: the same dim, from the keyboard's events (useKeyboardFromEvents). */
 function Dim({ progress }: { progress: SharedValue<number> }) {
   const style = useAnimatedStyle(() => ({ opacity: progress.value * DIM }));
-  return <Animated.View pointerEvents="none" className="absolute inset-0 bg-overlay" style={style} />;
+  return (
+    <MotionView pointerEvents="none" style={[StyleSheet.absoluteFill, style]}>
+      <View className="flex-1 bg-overlay" />
+    </MotionView>
+  );
 }
 
 /**
@@ -235,7 +244,7 @@ function Dim({ progress }: { progress: SharedValue<number> }) {
  */
 function Lift({ height, less }: { height: SharedValue<number>; less: number }) {
   const style = useAnimatedStyle(() => ({ height: Math.max(0, height.value - less) }));
-  return <Animated.View style={style} />;
+  return <MotionView style={style} />;
 }
 
 /** How much of the overlay scrim the dim uses: lighter than a sheet's, the thread stays readable. */

@@ -13,7 +13,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, {
+import {
   Easing,
   FadeIn,
   useAnimatedStyle,
@@ -26,6 +26,7 @@ import { DIBBY, useScreenReader } from "./flow";
 import { HERO_SIZE, HERO_TOP } from "./hero";
 import { SPLASH_SIZE } from "./crew-scene";
 import { useShadow } from "@/lib/theme";
+import { MotionView } from "@/lib/motion";
 
 const SPLASH = require("../../assets/splash-dibby.png");
 const TALK = require("../../assets/dibby/motion/talk-hi.webp");
@@ -147,16 +148,18 @@ export function DibbyHello({ active, onDone }: { active: boolean; onDone: () => 
         {/* Same column as crew-scene.tsx: Dibby between two equal spacers, so he's where he was. */}
         <View pointerEvents="none" style={{ flex: 1, justifyContent: "flex-end", alignItems: "center", paddingHorizontal: 24 }}>
           {line >= 0 ? (
-            <Animated.View entering={FadeIn.duration(220)} style={{ marginBottom: -12 }} className="items-center">
+            <MotionView entering={FadeIn.duration(220)} style={{ marginBottom: -12, alignItems: "center" }}>
               <View className="max-w-[300px] rounded-xl border border-stroke-soft-200 bg-bg-white-0 px-5 py-3" style={bubbleShadow}>
                 {/* The bubble stays; only the words change, fading in. */}
-                <Animated.Text key={line} entering={FadeIn.duration(200)} accessibilityLiveRegion="polite" className={line === 0 ? "text-center text-title-h4 text-text-strong-950" : "text-center text-paragraph-lg text-text-strong-950"}>
-                  {LINES[line]}
-                </Animated.Text>
+                <MotionView key={line} entering={FadeIn.duration(200)}>
+                  <Text accessibilityLiveRegion="polite" className={line === 0 ? "text-center text-title-h4 text-text-strong-950" : "text-center text-paragraph-lg text-text-strong-950"}>
+                    {LINES[line]}
+                  </Text>
+                </MotionView>
               </View>
               {/* The bubble's tail, pointing down at him. */}
               <View className="-mt-[7px] size-3.5 rotate-45 border-b border-r border-stroke-soft-200 bg-bg-white-0" />
-            </Animated.View>
+            </MotionView>
           ) : null}
         </View>
         <View
@@ -164,19 +167,19 @@ export function DibbyHello({ active, onDone }: { active: boolean; onDone: () => 
           onLayout={(e) => setCentre(e.nativeEvent.layout.y + e.nativeEvent.layout.height / 2)}
           style={{ height: SPLASH_SIZE, alignItems: "center", justifyContent: "center" }}
         >
-          <Animated.View style={[{ width: SPLASH_SIZE, height: SPLASH_SIZE, alignItems: "center", justifyContent: "center", transformOrigin: "50% 83%" }, body]}>
+          <MotionView style={[{ width: SPLASH_SIZE, height: SPLASH_SIZE, alignItems: "center", justifyContent: "center", transformOrigin: "50% 83%" }, body]}>
             {pose === "splash" ? (
               <Image source={SPLASH} style={{ width: SPLASH_SIZE, height: SPLASH_SIZE }} contentFit="contain" accessible={false} />
             ) : (
               <Image source={pose === "talk" ? TALK : DIBBY.hi} style={{ width: POSE_SIZE, height: POSE_SIZE }} contentFit="contain" accessible={false} />
             )}
-          </Animated.View>
+          </MotionView>
         </View>
         <View pointerEvents="none" style={{ flex: 1, alignItems: "center", paddingTop: 40 }}>
           {line >= 0 ? (
-            <Animated.Text entering={FadeIn.delay(600).duration(300)} className="text-label-sm text-text-soft-400">
-              Tap to keep going
-            </Animated.Text>
+            <MotionView entering={FadeIn.delay(600).duration(300)}>
+              <Text className="text-label-sm text-text-soft-400">Tap to keep going</Text>
+            </MotionView>
           ) : null}
         </View>
       </Pressable>

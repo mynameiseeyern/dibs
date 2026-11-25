@@ -11,12 +11,13 @@
 // <StepBar count={3} at={0} />
 
 import { useEffect, useRef, useState } from "react";
-import { Text, View } from "react-native";
+import { Platform, Text, View } from "react-native";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import Animated, { cancelAnimation, Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from "react-native-reanimated";
 import { cn } from "@/utils/cn";
 import { DIBBY, type Pose } from "./flow";
+import { MotionView } from "@/lib/motion";
 
 /** Where Dibby stands, under the top bar: the hello moment (hello.tsx) lands him here. */
 export const HERO_TOP = 64;
@@ -71,11 +72,11 @@ export function DibbyHero({ pose, question, size = HERO_SIZE }: { pose: Pose; qu
       timers.push(
         setTimeout(() => {
           setTalking(true);
-          mouth.current?.startAnimating();
+          if (Platform.OS !== "web") mouth.current?.startAnimating(); // the web preview can't
         }, at),
         setTimeout(
           () => {
-            mouth.current?.stopAnimating();
+            if (Platform.OS !== "web") mouth.current?.stopAnimating();
             setTalking(false);
           },
           at + talkFor(question)
@@ -136,8 +137,10 @@ export function DibbyHero({ pose, question, size = HERO_SIZE }: { pose: Pose; qu
     <View style={{ alignItems: "center" }}>
       {/* Fixed sizes throughout: a percentage-sized image here drew nothing on iOS. */}
       <View style={{ width: box, height: box }}>
-        <Animated.View pointerEvents="none" style={[{ position: "absolute", left: box / 4, width: box / 2, bottom: 2, height: 8, borderRadius: 999 }, shadow]} className="bg-static-black" />
-        <Animated.View style={[{ position: "absolute", top: 0, left: 0, width: box, height: box, transformOrigin: "50% 100%" }, body]}>
+        <MotionView pointerEvents="none" style={[{ position: "absolute", left: box / 4, width: box / 2, bottom: 2, height: 8 }, shadow]}>
+          <View className="flex-1 rounded-full bg-static-black" />
+        </MotionView>
+        <MotionView style={[{ position: "absolute", top: 0, left: 0, width: box, height: box, transformOrigin: "50% 100%" }, body]}>
           {/* Every pose mounted (so it's loaded), one showing, pinned on top of each other. */}
           {POSES.map((p) => (
             <View key={p} style={{ position: "absolute", top: 0, left: 0, width: box, height: box, opacity: p === shown && !talking ? 1 : 0 }}>
@@ -150,10 +153,10 @@ export function DibbyHero({ pose, question, size = HERO_SIZE }: { pose: Pose; qu
               <Image ref={mouth} source={TALK[pose]} autoplay={false} style={{ width: box, height: box }} contentFit="contain" accessible={false} />
             </View>
           ) : null}
-        </Animated.View>
+        </MotionView>
       </View>
 
-      <Animated.View style={[{ marginTop: 12, alignItems: "center" }, bubble]}>
+      <MotionView style={[{ marginTop: 12, alignItems: "center" }, bubble]}>
         {/* The tail, pointing up at him. */}
         <View style={{ marginBottom: -8 }} className="h-4 w-4 rotate-45 rounded-[3px] bg-bg-soft-200" />
         <View className="rounded-xl bg-bg-soft-200 px-5 py-3">
@@ -161,7 +164,7 @@ export function DibbyHero({ pose, question, size = HERO_SIZE }: { pose: Pose; qu
             {said}
           </Text>
         </View>
-      </Animated.View>
+      </MotionView>
     </View>
   );
 }

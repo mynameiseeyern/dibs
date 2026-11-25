@@ -4,8 +4,9 @@
 // follows the keyboard frame by frame; older builds use the keyboard's events (lib/keyboard.ts).
 
 import type { ReactNode } from "react";
-import Animated, { useAnimatedStyle, type SharedValue } from "react-native-reanimated";
+import { useAnimatedStyle, type SharedValue } from "react-native-reanimated";
 import { keyboardController, useKeyboardFromEvents } from "@/lib/keyboard";
+import { MotionView } from "@/lib/motion";
 
 /** The library's provider when this build has it; nothing otherwise. */
 export function KeyboardRoot({ children }: { children: ReactNode }) {
@@ -31,5 +32,5 @@ function FromEvents({ less }: { less: number }) {
 
 function Space({ height, sign, less }: { height: SharedValue<number>; sign: 1 | -1; less: number }) {
   const style = useAnimatedStyle(() => ({ height: Math.max(0, sign * height.value - less) }));
-  return <Animated.View style={style} />;
+  return <MotionView style={style} />;
 }
