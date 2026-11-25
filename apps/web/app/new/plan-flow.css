@@ -144,3 +144,8 @@
 /* What's your name: two big fields, like the first question. */
 .pf-names { display: flex; flex-direction: column; gap: var(--space-5); }
 .pf-name { display: flex; flex-direction: column; gap: var(--space-1); }
+
+/* The app's flow (DibbyAsks above each screen): the answer said back, centred under his bubble. */
+.pf-echo--centre { text-align: center; }
+.pf-centre { margin: 0; text-align: center; }
+.pf-nudge { margin: var(--space-2) 0 0; }
