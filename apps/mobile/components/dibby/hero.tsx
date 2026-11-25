@@ -1,7 +1,7 @@
 // Making a plan, Dibby asks: he stands centred at the top of each screen with the question in a
 // speech bubble under him (the screen's heading). On to the next question, he jumps on the spot
-// (crouch, up, land, settle) and lands in the next pose, and the bubble swaps its words while
-// he's in the air. While you answer he only breathes.
+// (crouch, up, land, settle) and lands in the next pose, the bubble swaps its words while he's in
+// the air, and once he's landed he says it (his talking clip). While you answer he only breathes.
 //
 // Smooth on purpose: the jump is drawn in code on the UI thread, and every pose is a still that's
 // already mounted, so landing on a new one is just a switch. Reduce Motion: no jump or breathing,
@@ -16,7 +16,7 @@ import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import Animated, { cancelAnimation, Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from "react-native-reanimated";
 import { cn } from "@/utils/cn";
-import { DIBBY, type Pose } from "./flow";
+import { DIBBY, talkMs, type Pose } from "./flow";
 
 /** Where Dibby stands, under the top bar: the hello moment (hello.tsx) lands him here. */
 export const HERO_TOP = 64;
@@ -30,6 +30,22 @@ const JUMP = 30;
 
 const POSES: Pose[] = ["think", "phone", "point", "look", "hi"];
 
+/**
+ * Dibby saying the question, mouth moving (Runway clips, transparent animated WebP). Only the
+ * current pose's clip is mounted, from the moment the question changes, so it decodes while he's
+ * in the air and is ready when he lands. It plays for as long as the question takes to say, then
+ * he's back to his still. One clip at a time, never swapped mid-play.
+ */
+const TALK: Partial<Record<Pose, number>> = {
+  think: require("../../assets/dibby/motion/talk-think.webp"),
+  phone: require("../../assets/dibby/motion/talk-phone.webp"),
+  point: require("../../assets/dibby/motion/talk-point.webp"),
+  look: require("../../assets/dibby/motion/talk-look.webp"),
+  hi: require("../../assets/dibby/motion/talk-hi.webp"),
+};
+/** Never shorter than this, so even "Where are we going?" gets a proper few words' worth. */
+const MIN_TALK_MS = 1100;
+
 export function DibbyHero({ pose, question, size = HERO_SIZE }: { pose: Pose; question: string; size?: number }) {
   const reduce = useReducedMotion();
   const lift = useSharedValue(0);
@@ -40,17 +56,39 @@ export function DibbyHero({ pose, question, size = HERO_SIZE }: { pose: Pose; qu
   /** His size changes with his pose, mid-air. */
   const [box, setBox] = useState(size);
   const [said, setSaid] = useState(question);
+  const [talking, setTalking] = useState(false);
+  const mouth = useRef<Image>(null);
   const first = useRef(true);
 
   useEffect(() => {
     const rest = () => (breathe.value = withRepeat(withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.sin) }), -1, true));
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    // He says it once he's landed: mouth moving for about as long as the words take.
+    const speak = (at: number) => {
+      if (reduce || !TALK[pose]) return;
+      timers.push(
+        setTimeout(() => {
+          setTalking(true);
+          mouth.current?.startAnimating();
+        }, at),
+        setTimeout(
+          () => {
+            mouth.current?.stopAnimating();
+            setTalking(false);
+          },
+          at + Math.max(MIN_TALK_MS, talkMs(question))
+        )
+      );
+    };
+    setTalking(false);
     if (first.current || reduce) {
       first.current = false;
       setShown(pose);
       setSaid(question);
       setBox(size);
       if (!reduce) rest();
-      return;
+      speak(350);
+      return () => timers.forEach(clearTimeout);
     }
     cancelAnimation(breathe);
     breathe.value = withTiming(0, { duration: 100 });
@@ -71,14 +109,15 @@ export function DibbyHero({ pose, question, size = HERO_SIZE }: { pose: Pose; qu
     // The bubble goes quiet as he jumps and says the new question as he lands.
     words.value = withSequence(withTiming(0, { duration: CROUCH_MS + 60 }), withDelay(AIR_MS - 60, withTiming(1, { duration: 200, easing: Easing.out(Easing.quad) })));
     breathe.value = withDelay(land + SETTLE_MS, withRepeat(withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.sin) }), -1, true));
-    const timers = [
+    timers.push(
       setTimeout(() => {
         setShown(pose);
         setSaid(question);
         setBox(size);
       }, apex),
-      setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light), land),
-    ];
+      setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light), land)
+    );
+    speak(land + 80);
     return () => timers.forEach(clearTimeout);
   }, [pose, question, size, reduce, lift, squash, breathe, words]);
 
@@ -99,10 +138,16 @@ export function DibbyHero({ pose, question, size = HERO_SIZE }: { pose: Pose; qu
         <Animated.View style={[{ position: "absolute", top: 0, left: 0, width: box, height: box, transformOrigin: "50% 100%" }, body]}>
           {/* Every pose mounted (so it's loaded), one showing, pinned on top of each other. */}
           {POSES.map((p) => (
-            <View key={p} style={{ position: "absolute", top: 0, left: 0, width: box, height: box, opacity: p === shown ? 1 : 0 }}>
+            <View key={p} style={{ position: "absolute", top: 0, left: 0, width: box, height: box, opacity: p === shown && !talking ? 1 : 0 }}>
               <Image source={DIBBY[p]} style={{ width: box, height: box }} contentFit="contain" accessible={false} />
             </View>
           ))}
+          {/* Talking: this pose's clip, mounted (and decoding) from the moment the question changes. */}
+          {TALK[pose] && !reduce ? (
+            <View key={`talk-${pose}`} style={{ position: "absolute", top: 0, left: 0, width: box, height: box, opacity: talking && shown === pose ? 1 : 0 }}>
+              <Image ref={mouth} source={TALK[pose]} autoplay={false} style={{ width: box, height: box }} contentFit="contain" accessible={false} />
+            </View>
+          ) : null}
         </Animated.View>
       </View>
 
