@@ -17,6 +17,7 @@ import type { Organising } from "./Organiser";
 import { BigTime } from "./BigTime";
 import { readPlanText } from "@dibs/shared/plan-text";
 import { DibbyAsks, type Pose } from "./DibbyAsks";
+import { DibbyHello } from "./DibbyHello";
 import "./plan-flow.css";
 import "./dibby-asks.css";
 import { TIME_PRESETS } from "@dibs/shared/daypart";
@@ -87,6 +88,8 @@ const ORDER: Step[] = ["what", "when", "where", "dibby", "who"];
  * Everything posts together to createPlan.
  */
 export function PlanFlow({ organising, searchPass, initialAsk }: { organising: Organising; searchPass?: string; initialAsk?: string }) {
+  // Someone new, starting from nothing: Dibby says hi first (DibbyHello decides if this browser has met him).
+  const [hello, setHello] = useState(organising.kind === "new" && !initialAsk?.trim());
   const [step, setStep] = useState<Step>("what");
   /** 1 going forward, -1 back: which side the answers slide in from. */
   const [dir, setDir] = useState<1 | -1>(1);
@@ -328,7 +331,9 @@ export function PlanFlow({ organising, searchPass, initialAsk }: { organising: O
       </header>
 
       {/* Dibby asks: centred, the question in his bubble. He jumps on the spot between questions. */}
-      <DibbyAsks pose={POSE[step]} question={QUESTION[step]} size={SIZE[step]} id="pf-q" />
+      {/* Remounted once the hello's over, so he says the first question after landing. */}
+      <DibbyAsks key={hello ? "hello" : "asks"} pose={POSE[step]} question={QUESTION[step]} size={SIZE[step]} id="pf-q" />
+      {hello ? <DibbyHello onDone={() => setHello(false)} /> : null}
 
       {err && !err.field && <FormError error={err.msg} />}
 
