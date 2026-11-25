@@ -668,7 +668,7 @@ gmp-place-details {
 .locked { display: flex; flex-direction: column; gap: var(--space-6); }
 .locked__head { display: flex; flex-direction: column; align-items: center; gap: var(--space-1); text-align: center; animation: locked-fade 360ms ease-out 640ms both; }
 .locked__head p { margin: 0; }
-.locked .plan-actions { justify-content: space-around; padding-top: 0; animation: locked-fade 360ms ease-out 780ms both; }
+.locked .plan-actions { justify-content: flex-start; gap: var(--space-4); padding-top: 0; animation: locked-fade 360ms ease-out 780ms both; }
 .locked-hero { position: relative; display: flex; flex-direction: column; align-items: center; gap: var(--space-4); padding-top: var(--space-8); }
 .locked-hero__crew { display: flex; align-items: flex-end; gap: 10px; }
 .locked-hero__rise, .locked-hero__seat { animation: locked-rise 520ms cubic-bezier(.34,1.56,.64,1) both; }

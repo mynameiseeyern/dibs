@@ -77,7 +77,7 @@ function Plan({ slug, detail, apply }: { slug: string; detail: PlanDetail; apply
   // coming together it's the pinned button instead, like the web.
   const actions =
     !off && me ? (
-      <View className={onePage ? "flex-row justify-around" : "flex-row flex-wrap gap-2"} accessibilityRole="toolbar" accessibilityLabel="Plan actions">
+      <View className={onePage ? "flex-row flex-wrap gap-4" : "flex-row flex-wrap gap-2"} accessibilityRole="toolbar" accessibilityLabel="Plan actions">
         {locked ? <CircleAction dibs={me.host} icon="whatsapp-line" label="Share" onPress={share} /> : null}
         {detail.calendar ? <CircleAction icon="calendar-line" label="Calendar" onPress={() => Linking.openURL(detail.calendar!)} /> : null}
         {detail.directions ? <CircleAction icon="direction-line" label="Directions" onPress={() => Linking.openURL(detail.directions!)} /> : null}
