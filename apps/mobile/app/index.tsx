@@ -1,12 +1,12 @@
 import { AppBar } from "@/components/dibby/app-bar";
-import { useCallback, useEffect, useRef, useState, type ComponentRef } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Redirect, router, Stack, useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeIn, FadeInDown, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from "react-native-reanimated";
 import { CREW_IN_MS, CrewScene, crewArrived } from "@/components/dibby/crew-scene";
 import type { MyPlan } from "@dibs/shared/api";
-import { DibbyHello, type Anchor } from "@/components/dibby/hello";
+import { DibbyHello } from "@/components/dibby/hello";
 import { PushAsk } from "@/components/dibby/push-ask";
 import { PlanCard, PlanCardSkeleton, type PlanFact } from "@/components/dibby/plan-card";
 import * as Avatar from "@/components/ui/avatar";
@@ -80,8 +80,9 @@ const MAKE = "Make plans";
  */
 function Welcome({ ready }: { ready: boolean }) {
   const reduce = useReducedMotion();
-  const button = useRef<ComponentRef<typeof View>>(null);
-  const [anchor, setAnchor] = useState<Anchor | null>(null);
+  const [hello, setHello] = useState(false);
+  const buttons = useSharedValue(1);
+  const buttonsStyle = useAnimatedStyle(() => ({ opacity: buttons.value }));
   // The words come in once the crew's arrived (straight away if they already had).
   const after = reduce ? 0 : crewArrived() ? 0 : CREW_IN_MS - 250;
 
@@ -89,17 +90,18 @@ function Welcome({ ready }: { ready: boolean }) {
     introShown = true;
   }, []);
 
+  // Everything around Dibby fades and he says hi (hello.tsx), then it's on to the form.
   const start = () => {
-    // Dibby comes out from behind the button: measure where it is, then the hello moment plays.
-    button.current?.measureInWindow((x, y, width, h) => setAnchor({ x, y, width, height: h }));
+    buttons.value = withTiming(0, { duration: 280 });
+    setHello(true);
   };
 
   return (
     <View className="flex-1">
       <Stack.Screen options={{ headerShown: false }} />
-      {/* Dibby steps out of the middle while he climbs out from behind the button instead. */}
-      <CrewScene
-        hideDibby={Boolean(anchor)}
+            <CrewScene
+        hideDibby={hello}
+        focus={hello}
         below={
           ready ? (
             <Animated.View entering={reduce ? undefined : FadeInDown.duration(420).delay(after)} pointerEvents="none" className="items-center gap-1 px-6">
@@ -113,13 +115,15 @@ function Welcome({ ready }: { ready: boolean }) {
       />
       {ready ? (
         <>
-          <Animated.View entering={reduce ? undefined : FadeIn.duration(360).delay(after + 200)} style={{ position: "absolute", left: 0, right: 0, bottom: 0 }}>
+          <Animated.View
+            entering={reduce ? undefined : FadeIn.duration(360).delay(after + 200)}
+            pointerEvents={hello ? "none" : "auto"}
+            style={[{ position: "absolute", left: 0, right: 0, bottom: 0 }, buttonsStyle]}
+          >
             <SafeAreaView edges={["bottom"]} className="gap-3 p-4">
-              <View ref={button} collapsable={false}>
-                <Button.Root variant="dibs" size="large" block onPress={start}>
-                  {MAKE}
-                </Button.Root>
-              </View>
+              <Button.Root variant="dibs" size="large" block onPress={start}>
+                {MAKE}
+              </Button.Root>
               <LinkButton.Root variant="gray" className="self-center" onPress={() => router.push("/open")}>
                 Got a plan link? Open it
               </LinkButton.Root>
@@ -131,12 +135,14 @@ function Welcome({ ready }: { ready: boolean }) {
         </>
       ) : null}
       <DibbyHello
-        anchor={anchor}
-        label={MAKE}
+        active={hello}
         onDone={() => {
           router.push("/new");
           // Let the form mount under him before the overlay goes, so there's no gap.
-          setTimeout(() => setAnchor(null), 80);
+          setTimeout(() => {
+            setHello(false);
+            buttons.value = 1;
+          }, 80);
         }}
       />
     </View>
