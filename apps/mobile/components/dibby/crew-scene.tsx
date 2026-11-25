@@ -66,11 +66,16 @@ const POP_GAP = 230;
 /** When the last message has landed. */
 export const CREW_IN_MS = POP_START + CHAT.length * POP_GAP + 300;
 
-export function CrewScene({ hideDibby = false, below }: { hideDibby?: boolean; below?: ReactNode }) {
+/**
+ * `hideDibby`: the hello moment (hello.tsx) has taken over drawing him, in the same place.
+ * `focus`: everything but Dibby fades away (the chat and what's under him), for that moment.
+ */
+export function CrewScene({ hideDibby = false, focus = false, below }: { hideDibby?: boolean; focus?: boolean; below?: ReactNode }) {
   const reduce = useReducedMotion();
   const pop = !arrived && !reduce;
   const hop = useSharedValue(0);
   const fade = useSharedValue(1);
+  const around = useSharedValue(1);
 
   useEffect(() => {
     // Once someone's called dibs, Dibby gives a little hop.
@@ -81,8 +86,14 @@ export function CrewScene({ hideDibby = false, below }: { hideDibby?: boolean; b
   }, []);
 
   useEffect(() => {
-    fade.value = withTiming(hideDibby ? 0 : 1, { duration: 160 });
+    // Straight away: the hello moment draws the same image over him in the same frame.
+    fade.value = hideDibby ? 0 : withTiming(1, { duration: 160 });
   }, [hideDibby, fade]);
+
+  useEffect(() => {
+    around.value = withTiming(focus ? 0 : 1, { duration: focus ? 280 : 200 });
+  }, [focus, around]);
+  const aroundStyle = useAnimatedStyle(() => ({ opacity: around.value }));
 
   const dibby = useAnimatedStyle(() => ({ opacity: fade.value, transform: [{ translateY: hop.value }] }));
 
@@ -94,16 +105,16 @@ export function CrewScene({ hideDibby = false, below }: { hideDibby?: boolean; b
           <Image source={SPLASH} style={{ width: SPLASH_SIZE, height: SPLASH_SIZE }} contentFit="contain" accessible={false} />
         </Animated.View>
         {/* A point at Dibby's centre that the messages are placed from. */}
-        <View pointerEvents="box-none" style={{ position: "absolute", width: 0, height: 0, overflow: "visible" }}>
+        <Animated.View pointerEvents="box-none" style={[{ position: "absolute", width: 0, height: 0, overflow: "visible" }, aroundStyle]}>
           {CHAT.map((line, i) => (
             <Message key={line.text} line={line} delay={POP_START + i * POP_GAP} pop={pop} still={reduce} seed={i} />
           ))}
-        </View>
+        </Animated.View>
       </View>
       {/* The bottom half: whatever goes under him (the welcome's name and line), from his feet down. */}
-      <View pointerEvents="box-none" style={{ flex: 1 }}>
+      <Animated.View pointerEvents="box-none" style={[{ flex: 1 }, aroundStyle]}>
         {below ? <View pointerEvents="box-none" style={{ marginTop: DIBBY_FEET - SPLASH_SIZE / 2 + 16 }}>{below}</View> : null}
-      </View>
+      </Animated.View>
     </View>
   );
 }
