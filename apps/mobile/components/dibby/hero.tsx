@@ -16,7 +16,7 @@ import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import Animated, { cancelAnimation, Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from "react-native-reanimated";
 import { cn } from "@/utils/cn";
-import { DIBBY, talkMs, type Pose } from "./flow";
+import { DIBBY, type Pose } from "./flow";
 
 /** Where Dibby stands, under the top bar: the hello moment (hello.tsx) lands him here. */
 export const HERO_TOP = 64;
@@ -43,8 +43,10 @@ const TALK: Partial<Record<Pose, number>> = {
   look: require("../../assets/dibby/motion/talk-look.webp"),
   hi: require("../../assets/dibby/motion/talk-hi.webp"),
 };
-/** Never shorter than this, so even "Where are we going?" gets a proper few words' worth. */
-const MIN_TALK_MS = 1100;
+/** How long he talks: a relaxed pace per word, and never under two seconds. */
+const TALK_WORD_MS = 280;
+const MIN_TALK_MS = 2000;
+const talkFor = (q: string) => Math.max(MIN_TALK_MS, q.trim().split(/\s+/).length * TALK_WORD_MS + 500);
 
 export function DibbyHero({ pose, question, size = HERO_SIZE }: { pose: Pose; question: string; size?: number }) {
   const reduce = useReducedMotion();
@@ -76,7 +78,7 @@ export function DibbyHero({ pose, question, size = HERO_SIZE }: { pose: Pose; qu
             mouth.current?.stopAnimating();
             setTalking(false);
           },
-          at + Math.max(MIN_TALK_MS, talkMs(question))
+          at + talkFor(question)
         )
       );
     };
