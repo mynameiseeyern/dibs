@@ -36,8 +36,9 @@ export function DibbyHero({ pose, question, size = HERO_SIZE }: { pose: Pose; qu
   const squash = useSharedValue(0);
   const breathe = useSharedValue(0);
   const words = useSharedValue(1);
-  const box = useSharedValue(size);
   const [shown, setShown] = useState<Pose>(pose);
+  /** His size changes with his pose, mid-air. */
+  const [box, setBox] = useState(size);
   const [said, setSaid] = useState(question);
   const first = useRef(true);
 
@@ -47,7 +48,7 @@ export function DibbyHero({ pose, question, size = HERO_SIZE }: { pose: Pose; qu
       first.current = false;
       setShown(pose);
       setSaid(question);
-      box.value = size;
+      setBox(size);
       if (!reduce) rest();
       return;
     }
@@ -67,8 +68,6 @@ export function DibbyHero({ pose, question, size = HERO_SIZE }: { pose: Pose; qu
       CROUCH_MS,
       withSequence(withTiming(-JUMP, { duration: AIR_MS / 2, easing: Easing.out(Easing.quad) }), withTiming(0, { duration: AIR_MS / 2, easing: Easing.in(Easing.quad) }))
     );
-    // A different size on some questions: he grows or shrinks while he's up.
-    box.value = withDelay(CROUCH_MS, withTiming(size, { duration: AIR_MS, easing: Easing.inOut(Easing.quad) }));
     // The bubble goes quiet as he jumps and says the new question as he lands.
     words.value = withSequence(withTiming(0, { duration: CROUCH_MS + 60 }), withDelay(AIR_MS - 60, withTiming(1, { duration: 200, easing: Easing.out(Easing.quad) })));
     breathe.value = withDelay(land + SETTLE_MS, withRepeat(withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.sin) }), -1, true));
@@ -76,13 +75,13 @@ export function DibbyHero({ pose, question, size = HERO_SIZE }: { pose: Pose; qu
       setTimeout(() => {
         setShown(pose);
         setSaid(question);
+        setBox(size);
       }, apex),
       setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light), land),
     ];
     return () => timers.forEach(clearTimeout);
-  }, [pose, question, size, reduce, lift, squash, breathe, words, box]);
+  }, [pose, question, size, reduce, lift, squash, breathe, words]);
 
-  const frame = useAnimatedStyle(() => ({ width: box.value, height: box.value }));
   const body = useAnimatedStyle(() => ({
     transform: [{ translateY: lift.value }, { scaleX: 1 + squash.value * 0.1 - breathe.value * 0.01 }, { scaleY: 1 - squash.value * 0.12 + breathe.value * 0.025 }],
   }));
@@ -93,23 +92,24 @@ export function DibbyHero({ pose, question, size = HERO_SIZE }: { pose: Pose; qu
   const bubble = useAnimatedStyle(() => ({ opacity: words.value, transform: [{ translateY: (1 - words.value) * 6 }, { scale: 0.97 + words.value * 0.03 }] }));
 
   return (
-    <View className="items-center">
-      <Animated.View style={frame}>
-        <Animated.View pointerEvents="none" style={[{ position: "absolute", left: "25%", right: "25%", bottom: 2, height: 8, borderRadius: 999 }, shadow]} className="bg-static-black" />
-        <Animated.View style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, transformOrigin: "50% 100%" }, body]}>
+    <View style={{ alignItems: "center" }}>
+      {/* Fixed sizes throughout: a percentage-sized image here drew nothing on iOS. */}
+      <View style={{ width: box, height: box }}>
+        <Animated.View pointerEvents="none" style={[{ position: "absolute", left: box / 4, width: box / 2, bottom: 2, height: 8, borderRadius: 999 }, shadow]} className="bg-static-black" />
+        <Animated.View style={[{ position: "absolute", top: 0, left: 0, width: box, height: box, transformOrigin: "50% 100%" }, body]}>
           {/* Every pose mounted (so it's loaded), one showing, pinned on top of each other. */}
           {POSES.map((p) => (
-            <View key={p} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, opacity: p === shown ? 1 : 0 }}>
-              <Image source={DIBBY[p]} style={{ width: "100%", height: "100%" }} contentFit="contain" accessible={false} />
+            <View key={p} style={{ position: "absolute", top: 0, left: 0, width: box, height: box, opacity: p === shown ? 1 : 0 }}>
+              <Image source={DIBBY[p]} style={{ width: box, height: box }} contentFit="contain" accessible={false} />
             </View>
           ))}
         </Animated.View>
-      </Animated.View>
+      </View>
 
-      <Animated.View style={bubble} className="mt-3 items-center">
+      <Animated.View style={[{ marginTop: 12, alignItems: "center" }, bubble]}>
         {/* The tail, pointing up at him. */}
-        <View className="-mb-2 h-4 w-4 rotate-45 rounded-[3px] bg-bg-weak-50" />
-        <View className="rounded-xl bg-bg-weak-50 px-5 py-3">
+        <View style={{ marginBottom: -8 }} className="h-4 w-4 rotate-45 rounded-[3px] bg-bg-soft-200" />
+        <View className="rounded-xl bg-bg-soft-200 px-5 py-3">
           <Text accessibilityRole="header" accessibilityLiveRegion="polite" className="text-center font-title text-[26px] leading-[32px] text-text-strong-950">
             {said}
           </Text>
