@@ -1,8 +1,10 @@
 import { AppBar } from "@/components/dibby/app-bar";
-import { useCallback, useRef, useState, type ComponentRef } from "react";
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { useCallback, useEffect, useRef, useState, type ComponentRef } from "react";
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { Redirect, router, Stack, useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Animated, { FadeIn, FadeInDown, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from "react-native-reanimated";
+import { CREW_IN_MS, CrewScene, DIBBY_FEET, crewArrived } from "@/components/dibby/crew-scene";
 import type { MyPlan } from "@dibs/shared/api";
 import { DibbyHello, type Anchor } from "@/components/dibby/hello";
 import { PushAsk } from "@/components/dibby/push-ask";
@@ -23,50 +25,111 @@ import { useColour } from "@/lib/theme";
  */
 export default function Home() {
   const { state, hasGuestPass } = useSession();
-  const spinner = useColour("primary-base");
-  if (state.status === "loading") return <ActivityIndicator className="flex-1" color={spinner} />;
+  // Still working out who's here: Dibby and the crew, the same as the splash, nothing to tap yet.
+  if (state.status === "loading") return <Welcome ready={false} />;
   if (state.status === "signedIn" && state.me && !state.me.name) return <Redirect href="/name" />;
-  if (state.status === "signedIn" || hasGuestPass) return <MyPlans signedIn={state.status === "signedIn"} />;
-  return <Welcome />;
+  if (state.status === "signedIn" || hasGuestPass)
+    return (
+      <>
+        <MyPlans signedIn={state.status === "signedIn"} />
+        <Intro />
+      </>
+    );
+  return <Welcome ready />;
+}
+
+/** Once per launch, whichever screen it's on. */
+let introShown = false;
+
+/**
+ * Starting the app with plans: Dibby and the crew arrive (carrying on from the splash), then fade
+ * away to your plans. Tap to skip. Not at all with Reduce Motion.
+ */
+function Intro() {
+  const reduce = useReducedMotion();
+  const page = useColour("bg-weak-50");
+  const [gone, setGone] = useState(introShown || reduce);
+  const opacity = useSharedValue(1);
+  const style = useAnimatedStyle(() => ({ opacity: opacity.value }));
+  const leave = useCallback(() => {
+    opacity.value = withTiming(0, { duration: 320 });
+    setTimeout(() => setGone(true), 330);
+  }, [opacity]);
+  useEffect(() => {
+    if (gone) return;
+    introShown = true;
+    const t = setTimeout(leave, (crewArrived() ? 300 : CREW_IN_MS) + 350);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  if (gone) return null;
+  return (
+    <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: page }, style]}>
+      <Pressable accessibilityLabel="Skip" style={StyleSheet.absoluteFill} onPress={leave} />
+      <CrewScene />
+    </Animated.View>
+  );
 }
 
 const MAKE = "Make plans";
 
-/** The web's intro (app/new/PlanFlow.tsx): what it's for, and straight into making a plan. */
-function Welcome() {
+/**
+ * New here: Dibby in the middle with the crew bobbing around him (carrying on from the splash, so
+ * nothing moves when it hides), the name and what it's for under him, and one button to make a plan.
+ * `ready` false while we're still working out who's here: just Dibby and the crew.
+ */
+function Welcome({ ready }: { ready: boolean }) {
+  const { height } = useWindowDimensions();
+  const reduce = useReducedMotion();
   const button = useRef<ComponentRef<typeof View>>(null);
   const [anchor, setAnchor] = useState<Anchor | null>(null);
+  // The words come in once the crew's arrived (straight away if they already had).
+  const after = reduce ? 0 : crewArrived() ? 0 : CREW_IN_MS - 250;
+
+  useEffect(() => {
+    introShown = true;
+  }, []);
 
   const start = () => {
     // Dibby comes out from behind the button: measure where it is, then the hello moment plays.
-    button.current?.measureInWindow((x, y, width, height) => setAnchor({ x, y, width, height }));
+    button.current?.measureInWindow((x, y, width, h) => setAnchor({ x, y, width, height: h }));
   };
 
   return (
-    <SafeAreaView className="flex-1" edges={["top", "bottom"]}>
+    <View className="flex-1">
       <Stack.Screen options={{ headerShown: false }} />
-      <View className="flex-1 justify-center gap-4 p-4">
-        <Text className="font-display text-[40px] leading-[44px] text-primary-base">dibby</Text>
-        <Text accessibilityRole="header" className="text-title-h2 text-text-strong-950">
-          Get out of the group chat.
-        </Text>
-        <Text className="text-paragraph-lg text-text-sub-600">
-          Everyone&rsquo;s keen till someone has to pick a day. Make the plan, drop the link in the chat, and the crew taps in. Free, no account needed.
-        </Text>
-      </View>
-      <View className="gap-3 p-4">
-        <View ref={button} collapsable={false}>
-          <Button.Root variant="dibs" size="large" block onPress={start}>
-            {MAKE}
-          </Button.Root>
-        </View>
-        <LinkButton.Root variant="gray" className="self-center" onPress={() => router.push("/open")}>
-          Got a plan link? Open it
-        </LinkButton.Root>
-        <LinkButton.Root variant="gray" className="self-center" onPress={() => router.push("/sign-in")}>
-          Got an account? Sign in
-        </LinkButton.Root>
-      </View>
+      {/* Dibby steps out of the middle while he climbs out from behind the button instead. */}
+      <CrewScene hideDibby={Boolean(anchor)} />
+      {ready ? (
+        <>
+          <Animated.View
+            entering={reduce ? undefined : FadeInDown.duration(420).delay(after)}
+            pointerEvents="none"
+            style={{ position: "absolute", left: 0, right: 0, top: height / 2 + DIBBY_FEET + 16 }}
+            className="items-center gap-1 px-6"
+          >
+            <Text accessibilityRole="header" className="font-display text-[44px] leading-[50px] text-text-strong-950">
+              dibby
+            </Text>
+            <Text className="max-w-[260px] text-center text-paragraph-lg text-text-sub-600">Plans that actually happen. Free, no account needed.</Text>
+          </Animated.View>
+          <Animated.View entering={reduce ? undefined : FadeIn.duration(360).delay(after + 200)} style={{ position: "absolute", left: 0, right: 0, bottom: 0 }}>
+            <SafeAreaView edges={["bottom"]} className="gap-3 p-4">
+              <View ref={button} collapsable={false}>
+                <Button.Root variant="dibs" size="large" block onPress={start}>
+                  {MAKE}
+                </Button.Root>
+              </View>
+              <LinkButton.Root variant="gray" className="self-center" onPress={() => router.push("/open")}>
+                Got a plan link? Open it
+              </LinkButton.Root>
+              <LinkButton.Root variant="gray" className="self-center" onPress={() => router.push("/sign-in")}>
+                Got an account? Sign in
+              </LinkButton.Root>
+            </SafeAreaView>
+          </Animated.View>
+        </>
+      ) : null}
       <DibbyHello
         anchor={anchor}
         label={MAKE}
@@ -76,7 +139,7 @@ function Welcome() {
           setTimeout(() => setAnchor(null), 80);
         }}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
