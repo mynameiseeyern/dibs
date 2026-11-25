@@ -17,7 +17,7 @@ import { useEffect, type ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
-import Animated, {
+import {
   Easing,
   useAnimatedStyle,
   useReducedMotion,
@@ -32,6 +32,7 @@ import type { MonogramColour } from "@dibs/shared/types";
 import { useShadow } from "@/lib/theme";
 import { cn } from "@/utils/cn";
 import { Monogram } from "./monogram";
+import { MotionView } from "@/lib/motion";
 
 const SPLASH = require("../../assets/splash-dibby.png");
 /** The native splash's imageWidth (app.json): Dibby draws at exactly this, centred. */
@@ -101,20 +102,20 @@ export function CrewScene({ hideDibby = false, focus = false, below }: { hideDib
     <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
       <View pointerEvents="none" style={{ flex: 1 }} />
       <View pointerEvents="box-none" style={{ height: SPLASH_SIZE, alignItems: "center", justifyContent: "center" }}>
-        <Animated.View pointerEvents="none" style={[{ width: SPLASH_SIZE, height: SPLASH_SIZE }, dibby]}>
+        <MotionView pointerEvents="none" style={[{ width: SPLASH_SIZE, height: SPLASH_SIZE }, dibby]}>
           <Image source={SPLASH} style={{ width: SPLASH_SIZE, height: SPLASH_SIZE }} contentFit="contain" accessible={false} />
-        </Animated.View>
+        </MotionView>
         {/* A point at Dibby's centre that the messages are placed from. */}
-        <Animated.View pointerEvents="box-none" style={[{ position: "absolute", width: 0, height: 0, overflow: "visible" }, aroundStyle]}>
+        <MotionView pointerEvents="box-none" style={[{ position: "absolute", width: 0, height: 0, overflow: "visible" }, aroundStyle]}>
           {CHAT.map((line, i) => (
             <Message key={line.text} line={line} delay={POP_START + i * POP_GAP} pop={pop} still={reduce} seed={i} />
           ))}
-        </Animated.View>
+        </MotionView>
       </View>
       {/* The bottom half: whatever goes under him (the welcome's name and line), from his feet down. */}
-      <Animated.View pointerEvents="box-none" style={[{ flex: 1 }, aroundStyle]}>
+      <MotionView pointerEvents="box-none" style={[{ flex: 1 }, aroundStyle]}>
         {below ? <View pointerEvents="box-none" style={{ marginTop: DIBBY_FEET - SPLASH_SIZE / 2 + 16 }}>{below}</View> : null}
-      </Animated.View>
+      </MotionView>
     </View>
   );
 }
@@ -167,15 +168,17 @@ function Message({ line, delay, pop, still, seed }: { line: Line; delay: number;
           wiggle.value = withSequence(withTiming(1, { duration: 70 }), withTiming(-1, { duration: 110 }), withSpring(0, { damping: 6, stiffness: 300 }));
         }}
       >
-        <Animated.View className="flex-row items-end gap-1.5" style={style}>
-          {line.who ? <Monogram name={line.who.name} colour={line.who.colour} /> : null}
-          <View
-            className={cn("rounded-lg px-2.5 py-1.5", mine ? "rounded-br-[6px] bg-primary-base" : "rounded-bl-[6px] border border-stroke-soft-200 bg-bg-white-0")}
-            style={shadow}
-          >
-            <Text className={cn("text-label-sm", mine ? "text-static-white" : "text-text-strong-950")}>{line.text}</Text>
+        <MotionView style={style}>
+          <View className="flex-row items-end gap-1.5">
+            {line.who ? <Monogram name={line.who.name} colour={line.who.colour} /> : null}
+            <View
+              className={cn("rounded-lg px-2.5 py-1.5", mine ? "rounded-br-[6px] bg-primary-base" : "rounded-bl-[6px] border border-stroke-soft-200 bg-bg-white-0")}
+              style={shadow}
+            >
+              <Text className={cn("text-label-sm", mine ? "text-static-white" : "text-text-strong-950")}>{line.text}</Text>
+            </View>
           </View>
-        </Animated.View>
+        </MotionView>
       </Pressable>
     </View>
   );

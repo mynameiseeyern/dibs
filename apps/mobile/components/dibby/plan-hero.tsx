@@ -10,6 +10,7 @@ import * as Avatar from "@/components/ui/avatar";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { useShadow } from "@/lib/theme";
 import { cn } from "@/utils/cn";
+import { MotionView } from "@/lib/motion";
 
 type Person = { name: string; colour: Avatar.AvatarRootProps["color"] };
 
@@ -37,7 +38,7 @@ function Rise({ delay, children }: { delay: number; children: ReactNode }) {
     o.value = withDelay(delay, withTiming(1, { duration: 200, easing: Easing.out(Easing.quad) }));
   }, [delay, reduce, y, o]);
   const style = useAnimatedStyle(() => ({ transform: [{ translateY: y.value }], opacity: o.value }));
-  return <Animated.View style={style}>{children}</Animated.View>;
+  return <MotionView style={style}>{children}</MotionView>;
 }
 
 /**

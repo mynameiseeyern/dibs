@@ -3,10 +3,11 @@ import { useCallback, useEffect, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Redirect, router, Stack, useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Animated, { FadeIn, FadeInDown, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from "react-native-reanimated";
+import { FadeIn, FadeInDown, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from "react-native-reanimated";
 import { CREW_IN_MS, CrewScene, crewArrived } from "@/components/dibby/crew-scene";
 import type { MyPlan } from "@dibs/shared/api";
 import { DibbyHello } from "@/components/dibby/hello";
+import { MotionView } from "@/lib/motion";
 import { PushAsk } from "@/components/dibby/push-ask";
 import { PlanCard, PlanCardSkeleton, type PlanFact } from "@/components/dibby/plan-card";
 import * as Avatar from "@/components/ui/avatar";
@@ -64,10 +65,10 @@ function Intro() {
   }, []);
   if (gone) return null;
   return (
-    <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: page }, style]}>
+    <MotionView style={[StyleSheet.absoluteFill, { backgroundColor: page }, style]}>
       <Pressable accessibilityLabel="Skip" style={StyleSheet.absoluteFill} onPress={leave} />
       <CrewScene />
-    </Animated.View>
+    </MotionView>
   );
 }
 
@@ -104,18 +105,18 @@ function Welcome({ ready }: { ready: boolean }) {
         focus={hello}
         below={
           ready ? (
-            <Animated.View entering={reduce ? undefined : FadeInDown.duration(420).delay(after)} pointerEvents="none" className="items-center gap-1 px-6">
+            <MotionView entering={reduce ? undefined : FadeInDown.duration(420).delay(after)} pointerEvents="none" style={{ alignItems: "center", gap: 4, paddingHorizontal: 24 }}>
               <Text accessibilityRole="header" className="font-display text-[44px] leading-[50px] text-text-strong-950">
                 dibby
               </Text>
               <Text className="max-w-[260px] text-center text-paragraph-lg text-text-sub-600">Plans that actually happen. Free, no account needed.</Text>
-            </Animated.View>
+            </MotionView>
           ) : null
         }
       />
       {ready ? (
         <>
-          <Animated.View
+          <MotionView
             entering={reduce ? undefined : FadeIn.duration(360).delay(after + 200)}
             pointerEvents={hello ? "none" : "auto"}
             style={[{ position: "absolute", left: 0, right: 0, bottom: 0 }, buttonsStyle]}
@@ -131,7 +132,7 @@ function Welcome({ ready }: { ready: boolean }) {
                 Got an account? Sign in
               </LinkButton.Root>
             </SafeAreaView>
-          </Animated.View>
+          </MotionView>
         </>
       ) : null}
       <DibbyHello

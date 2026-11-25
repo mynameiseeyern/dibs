@@ -23,6 +23,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { cn } from "@/utils/cn";
 import { Icon, type IconName } from "@/components/ui/icon";
+import { MotionView } from "@/lib/motion";
 
 /** How long Dibby "thinks" before asking, and how the rest follows. Zero with Reduce Motion. */
 // `think` covers Dibby's hop to the next square (HOP_MS in hopscotch.tsx) plus a beat once he's landed;
@@ -80,7 +81,11 @@ function Dot({ delay }: { delay: number }) {
     v.value = withDelay(delay, withRepeat(withSequence(withTiming(1, { duration: 320 }), withTiming(0.3, { duration: 320 })), -1));
   }, [delay, v]);
   const style = useAnimatedStyle(() => ({ opacity: v.value, transform: [{ translateY: (1 - v.value) * 2 }] }));
-  return <Animated.View className="h-2 w-2 rounded-full bg-text-soft-400" style={style} />;
+  return (
+    <MotionView style={style}>
+      <View className="h-2 w-2 rounded-full bg-text-soft-400" />
+    </MotionView>
+  );
 }
 
 /** Words a second while Dibby reads a question out. */

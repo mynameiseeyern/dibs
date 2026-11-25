@@ -10,6 +10,7 @@ import type { MonogramColour } from "@dibs/shared/types";
 import { tv } from "@/utils/tv";
 import { DIBBY } from "./flow";
 import { Monogram } from "./monogram";
+import { MotionView } from "@/lib/motion";
 
 // Dibby's face: the raised lime friend from the logo (packages/ui/assets/logos).
 const DIBBY_FACE = require("@dibs/ui/assets/logos/export/dibby-ai-member-256.png");
@@ -112,7 +113,11 @@ function TypingDot({ delay, still }: { delay: number; still: boolean }) {
     v.value = withDelay(delay, withRepeat(withSequence(withTiming(1, { duration: 400 }), withTiming(0, { duration: 400 }), withTiming(0, { duration: 200 })), -1));
   }, [delay, still, v]);
   const style = useAnimatedStyle(() => ({ opacity: still ? 0.8 : 0.4 + v.value * 0.6, transform: [{ translateY: -4 * v.value }] }));
-  return <Animated.View className="size-1.5 rounded-full bg-primary-base" style={style} />;
+  return (
+    <MotionView style={style}>
+      <View className="size-1.5 rounded-full bg-primary-base" />
+    </MotionView>
+  );
 }
 
 /** "Mia set the place." Centred and muted. */
