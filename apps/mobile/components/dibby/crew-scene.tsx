@@ -1,15 +1,20 @@
-// Dibby and the crew: Dibby waving in the middle of the screen, and his crew (blobs in the crew
-// colours, each with a pair of eyes looking his way) in a loose ring around him, a few half off
-// the edges. On the first start of the app they pop in one after another, then just bob about.
-// Tap one and it boings.
+// Dibby and the group chat: Dibby waving in the middle of the screen, and a few messages from the
+// crew floating in around him, the way a plan starts ("Fri 7pm?", "I'm in", "dumplings?"), then
+// someone calls dibs. On the first start of the app they pop in one after another, then just bob.
+// Tap one and it wiggles.
 //
 // Dibby is the native splash image (assets/splash-dibby.png) at the same size and place as the
-// native splash, dead centre of the screen, so when the splash hides nothing moves: the crew just
-// arrive around him. Used by the welcome screen, and briefly over your plans on start (app/index.tsx).
-// Reduce Motion: everyone's just there, still.
+// native splash, dead centre of the screen, so when the splash hides nothing moves: the messages
+// just arrive around him. Used by the welcome screen, and briefly over your plans on start
+// (app/index.tsx). Reduce Motion: everything's just there, still.
+//
+// Laid out with flex, not window maths: a full-screen column with Dibby between two equal spacers
+// (so he's centred whatever size the screen reports), and the messages placed from his centre with
+// transforms. An earlier version put him at left/top from useWindowDimensions, and on an iPhone
+// he sat in the top-left corner with nothing around him (TestFlight build 4, Nov 2026).
 
-import { useEffect } from "react";
-import { Pressable, useWindowDimensions, View } from "react-native";
+import { useEffect, type ReactNode } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import Animated, {
@@ -23,9 +28,10 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
-import { useColour } from "@/lib/theme";
-
-type ColourName = Parameters<typeof useColour>[0];
+import type { MonogramColour } from "@dibs/shared/types";
+import { useShadow } from "@/lib/theme";
+import { cn } from "@/utils/cn";
+import { Monogram } from "./monogram";
 
 const SPLASH = require("../../assets/splash-dibby.png");
 /** The native splash's imageWidth (app.json): Dibby draws at exactly this, centred. */
@@ -33,38 +39,42 @@ export const SPLASH_SIZE = 200;
 /** How far below the screen's centre Dibby's feet are, for laying things out under him. */
 export const DIBBY_FEET = 68;
 
-type Shape = "circle" | "squircle" | "egg";
-/** Where each one sits, as a fraction of the screen, clear of Dibby, the title under him and the buttons. */
-const CREW: { colour: ColourName; x: number; y: number; size: number; shape: Shape }[] = [
-  { colour: "crew-mint", x: 0.2, y: 0.2, size: 68, shape: "squircle" },
-  { colour: "crew-rose", x: 0.52, y: 0.13, size: 50, shape: "circle" },
-  { colour: "crew-sky", x: 0.8, y: 0.19, size: 58, shape: "egg" },
-  { colour: "crew-violet", x: 0.04, y: 0.42, size: 56, shape: "egg" },
-  { colour: "crew-coral", x: 0.98, y: 0.44, size: 66, shape: "circle" },
-  { colour: "crew-sun", x: 0.07, y: 0.62, size: 64, shape: "circle" },
-  { colour: "crew-aqua", x: 0.92, y: 0.62, size: 56, shape: "squircle" },
-  { colour: "crew-tangerine", x: 0.3, y: 0.31, size: 40, shape: "circle" },
+/**
+ * The chat, in the order it pops in. `x` is the edge nearest Dibby and `y` the message's middle,
+ * both in points from his centre: negative x sits to his left (right-aligned to x), positive to
+ * his right. His body is about ±45 wide and ±67 tall in the 200pt image.
+ */
+type Line = { text: string; who?: { name: string; colour: MonogramColour }; x: number; y: number };
+const CHAT: Line[] = [
+  { text: "Fri 7pm?", who: { name: "Sam B", colour: "sky" }, x: -30, y: -118 },
+  { text: "dumplings?", who: { name: "Mia K", colour: "sun" }, x: 30, y: -96 },
+  { text: "I'm in", who: { name: "Jess L", colour: "mint" }, x: -52, y: 2 },
+  // You, calling dibs: your own message, violet like yours in the chat. (Not lime: the welcome's
+  // Make plans button is the lime moment on that screen.)
+  { text: "dibs!", x: 56, y: 30 },
 ];
 
-/** Once per launch: the crew pops in the first time, and after that they're already here. */
+/** A message's box: wide enough for the longest, so one side can line up with Dibby. */
+const BOX = 170;
+
+/** Once per launch: the chat pops in the first time, and after that it's already here. */
 let arrived = false;
 export const crewArrived = () => arrived;
 
-const POP_START = 120;
-const POP_GAP = 85;
-/** When the last of the crew has landed. */
-export const CREW_IN_MS = POP_START + CREW.length * POP_GAP + 350;
+const POP_START = 160;
+const POP_GAP = 230;
+/** When the last message has landed. */
+export const CREW_IN_MS = POP_START + CHAT.length * POP_GAP + 300;
 
-export function CrewScene({ hideDibby = false }: { hideDibby?: boolean }) {
-  const { width, height } = useWindowDimensions();
+export function CrewScene({ hideDibby = false, below }: { hideDibby?: boolean; below?: ReactNode }) {
   const reduce = useReducedMotion();
   const pop = !arrived && !reduce;
   const hop = useSharedValue(0);
   const fade = useSharedValue(1);
 
   useEffect(() => {
-    // Once they've all arrived, Dibby gives a little hop hello.
-    if (pop) hop.value = withDelay(CREW_IN_MS - 150, withSequence(withTiming(-14, { duration: 160, easing: Easing.out(Easing.quad) }), withTiming(0, { duration: 200, easing: Easing.bounce })));
+    // Once someone's called dibs, Dibby gives a little hop.
+    if (pop) hop.value = withDelay(CREW_IN_MS - 200, withSequence(withTiming(-14, { duration: 160, easing: Easing.out(Easing.quad) }), withTiming(0, { duration: 220, easing: Easing.bounce })));
     const t = setTimeout(() => (arrived = true), CREW_IN_MS);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -75,113 +85,87 @@ export function CrewScene({ hideDibby = false }: { hideDibby?: boolean }) {
   }, [hideDibby, fade]);
 
   const dibby = useAnimatedStyle(() => ({ opacity: fade.value, transform: [{ translateY: hop.value }] }));
-  const cx = width / 2;
-  const cy = height / 2;
 
   return (
-    <View pointerEvents="box-none" style={{ position: "absolute", top: 0, left: 0, width, height }}>
-      {CREW.map((m, i) => (
-        <Blob key={m.colour} {...m} left={m.x * width} top={m.y * height} towards={{ x: cx, y: cy }} delay={POP_START + i * POP_GAP} pop={pop} still={reduce} seed={i} />
-      ))}
-      <Animated.View
-        pointerEvents="none"
-        style={[{ position: "absolute", left: cx - SPLASH_SIZE / 2, top: cy - SPLASH_SIZE / 2, width: SPLASH_SIZE, height: SPLASH_SIZE }, dibby]}
-      >
-        <Image source={SPLASH} style={{ width: SPLASH_SIZE, height: SPLASH_SIZE }} contentFit="contain" accessible={false} />
-      </Animated.View>
+    <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
+      <View pointerEvents="none" style={{ flex: 1 }} />
+      <View pointerEvents="box-none" style={{ height: SPLASH_SIZE, alignItems: "center", justifyContent: "center" }}>
+        <Animated.View pointerEvents="none" style={[{ width: SPLASH_SIZE, height: SPLASH_SIZE }, dibby]}>
+          <Image source={SPLASH} style={{ width: SPLASH_SIZE, height: SPLASH_SIZE }} contentFit="contain" accessible={false} />
+        </Animated.View>
+        {/* A point at Dibby's centre that the messages are placed from. */}
+        <View pointerEvents="box-none" style={{ position: "absolute", width: 0, height: 0, overflow: "visible" }}>
+          {CHAT.map((line, i) => (
+            <Message key={line.text} line={line} delay={POP_START + i * POP_GAP} pop={pop} still={reduce} seed={i} />
+          ))}
+        </View>
+      </View>
+      {/* The bottom half: whatever goes under him (the welcome's name and line), from his feet down. */}
+      <View pointerEvents="box-none" style={{ flex: 1 }}>
+        {below ? <View pointerEvents="box-none" style={{ marginTop: DIBBY_FEET - SPLASH_SIZE / 2 + 16 }}>{below}</View> : null}
+      </View>
     </View>
   );
 }
 
-function Blob({
-  colour,
-  left,
-  top,
-  size,
-  shape,
-  towards,
-  delay,
-  pop,
-  still,
-  seed,
-}: {
-  colour: ColourName;
-  left: number;
-  top: number;
-  size: number;
-  shape: Shape;
-  towards: { x: number; y: number };
-  delay: number;
-  pop: boolean;
-  still: boolean;
-  seed: number;
-}) {
-  const fill = useColour(colour);
+function Message({ line, delay, pop, still, seed }: { line: Line; delay: number; pop: boolean; still: boolean; seed: number }) {
+  const left = line.x < 0;
+  const mine = !line.who;
+  const shadow = useShadow("sm");
   const scale = useSharedValue(pop ? 0 : 1);
   const bob = useSharedValue(0);
-  const boing = useSharedValue(0);
+  const wiggle = useSharedValue(0);
 
   useEffect(() => {
-    if (pop) scale.value = withDelay(delay, withSpring(1, { damping: 9, stiffness: 170, mass: 0.8 }));
+    if (pop) scale.value = withDelay(delay, withSpring(1, { damping: 11, stiffness: 190, mass: 0.8 }));
     if (still) return;
     // Each bobs at its own pace, so they never move in step.
-    const period = 2200 + ((seed * 487) % 1300);
-    bob.value = withDelay(pop ? delay + 300 : (seed * 230) % 900, withRepeat(withTiming(1, { duration: period, easing: Easing.inOut(Easing.sin) }), -1, true));
+    const period = 2400 + ((seed * 487) % 1100);
+    bob.value = withDelay(pop ? delay + 400 : (seed * 230) % 900, withRepeat(withTiming(1, { duration: period, easing: Easing.inOut(Easing.sin) }), -1, true));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const amp = 5 + (seed % 3) * 2;
-  const tilt = seed % 2 ? 6 : -6;
+  const amp = 3 + (seed % 2) * 2;
   const style = useAnimatedStyle(() => ({
+    opacity: Math.min(1, scale.value * 1.5),
     transform: [
-      { translateY: (bob.value - 0.5) * 2 * amp },
-      { rotate: `${(bob.value - 0.5) * tilt}deg` },
-      { scaleX: scale.value * (1 + boing.value * 0.18) },
-      { scaleY: scale.value * (1 - boing.value * 0.18) },
+      { translateY: (bob.value - 0.5) * 2 * amp + (1 - scale.value) * 10 },
+      { rotate: `${wiggle.value * 5}deg` },
+      { scale: 0.6 + scale.value * 0.4 },
     ],
   }));
 
-  // Eyes looking Dibby's way.
-  const dx = towards.x - left;
-  const dy = towards.y - top;
-  const d = Math.hypot(dx, dy) || 1;
-  const look = { x: (dx / d) * size * 0.08, y: (dy / d) * size * 0.06 };
-  const eye = Math.max(5, size * 0.12);
-  const radius = shape === "circle" ? size / 2 : shape === "squircle" ? size * 0.32 : size / 2;
-
   return (
-    <Pressable
-      accessible={false}
-      onPress={() => {
-        Haptics.selectionAsync();
-        boing.value = withSequence(withTiming(1, { duration: 90 }), withSpring(0, { damping: 5, stiffness: 260 }));
+    // The box's top-left is at Dibby's centre; the transform moves it out to its place, with the
+    // message lined up on the side nearest him.
+    <View
+      pointerEvents="box-none"
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        width: BOX,
+        alignItems: left ? "flex-end" : "flex-start",
+        transform: [{ translateX: left ? line.x - BOX : line.x }, { translateY: line.y - 18 }],
       }}
-      style={{ position: "absolute", left: left - size / 2, top: top - size / 2, width: size, height: size * (shape === "egg" ? 1.12 : 1) }}
     >
-      <Animated.View
-        style={[
-          {
-            flex: 1,
-            backgroundColor: fill,
-            borderRadius: radius,
-            borderTopLeftRadius: shape === "egg" ? size * 0.55 : radius,
-            borderTopRightRadius: shape === "egg" ? size * 0.55 : radius,
-            alignItems: "center",
-            justifyContent: "center",
-            flexDirection: "row",
-            gap: eye * 0.9,
-          },
-          style,
-        ]}
+      <Pressable
+        accessible={false}
+        onPress={() => {
+          Haptics.selectionAsync();
+          wiggle.value = withSequence(withTiming(1, { duration: 70 }), withTiming(-1, { duration: 110 }), withSpring(0, { damping: 6, stiffness: 300 }));
+        }}
       >
-        {[0, 1].map((k) => (
+        <Animated.View className="flex-row items-end gap-1.5" style={style}>
+          {line.who ? <Monogram name={line.who.name} colour={line.who.colour} /> : null}
           <View
-            key={k}
-            className="bg-static-black"
-            style={{ width: eye, height: eye * 1.25, borderRadius: eye, opacity: 0.8, transform: [{ translateX: look.x }, { translateY: look.y - size * 0.04 }] }}
-          />
-        ))}
-      </Animated.View>
-    </Pressable>
+            className={cn("rounded-lg px-2.5 py-1.5", mine ? "rounded-br-[6px] bg-primary-base" : "rounded-bl-[6px] border border-stroke-soft-200 bg-bg-white-0")}
+            style={shadow}
+          >
+            <Text className={cn("text-label-sm", mine ? "text-static-white" : "text-text-strong-950")}>{line.text}</Text>
+          </View>
+        </Animated.View>
+      </Pressable>
+    </View>
   );
 }

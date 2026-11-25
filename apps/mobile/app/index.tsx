@@ -1,10 +1,10 @@
 import { AppBar } from "@/components/dibby/app-bar";
 import { useCallback, useEffect, useRef, useState, type ComponentRef } from "react";
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Redirect, router, Stack, useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeIn, FadeInDown, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from "react-native-reanimated";
-import { CREW_IN_MS, CrewScene, DIBBY_FEET, crewArrived } from "@/components/dibby/crew-scene";
+import { CREW_IN_MS, CrewScene, crewArrived } from "@/components/dibby/crew-scene";
 import type { MyPlan } from "@dibs/shared/api";
 import { DibbyHello, type Anchor } from "@/components/dibby/hello";
 import { PushAsk } from "@/components/dibby/push-ask";
@@ -74,12 +74,11 @@ function Intro() {
 const MAKE = "Make plans";
 
 /**
- * New here: Dibby in the middle with the crew bobbing around him (carrying on from the splash, so
+ * New here: Dibby in the middle with the group chat floating around him (carrying on from the splash, so
  * nothing moves when it hides), the name and what it's for under him, and one button to make a plan.
- * `ready` false while we're still working out who's here: just Dibby and the crew.
+ * `ready` false while we're still working out who's here: just Dibby and the chat.
  */
 function Welcome({ ready }: { ready: boolean }) {
-  const { height } = useWindowDimensions();
   const reduce = useReducedMotion();
   const button = useRef<ComponentRef<typeof View>>(null);
   const [anchor, setAnchor] = useState<Anchor | null>(null);
@@ -99,20 +98,21 @@ function Welcome({ ready }: { ready: boolean }) {
     <View className="flex-1">
       <Stack.Screen options={{ headerShown: false }} />
       {/* Dibby steps out of the middle while he climbs out from behind the button instead. */}
-      <CrewScene hideDibby={Boolean(anchor)} />
+      <CrewScene
+        hideDibby={Boolean(anchor)}
+        below={
+          ready ? (
+            <Animated.View entering={reduce ? undefined : FadeInDown.duration(420).delay(after)} pointerEvents="none" className="items-center gap-1 px-6">
+              <Text accessibilityRole="header" className="font-display text-[44px] leading-[50px] text-text-strong-950">
+                dibby
+              </Text>
+              <Text className="max-w-[260px] text-center text-paragraph-lg text-text-sub-600">Plans that actually happen. Free, no account needed.</Text>
+            </Animated.View>
+          ) : null
+        }
+      />
       {ready ? (
         <>
-          <Animated.View
-            entering={reduce ? undefined : FadeInDown.duration(420).delay(after)}
-            pointerEvents="none"
-            style={{ position: "absolute", left: 0, right: 0, top: height / 2 + DIBBY_FEET + 16 }}
-            className="items-center gap-1 px-6"
-          >
-            <Text accessibilityRole="header" className="font-display text-[44px] leading-[50px] text-text-strong-950">
-              dibby
-            </Text>
-            <Text className="max-w-[260px] text-center text-paragraph-lg text-text-sub-600">Plans that actually happen. Free, no account needed.</Text>
-          </Animated.View>
           <Animated.View entering={reduce ? undefined : FadeIn.duration(360).delay(after + 200)} style={{ position: "absolute", left: 0, right: 0, bottom: 0 }}>
             <SafeAreaView edges={["bottom"]} className="gap-3 p-4">
               <View ref={button} collapsable={false}>
