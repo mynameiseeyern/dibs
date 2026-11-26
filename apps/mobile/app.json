@@ -32,6 +32,11 @@
               "scheme": "https",
               "host": "dibby.social",
               "pathPrefix": "/p/"
+            },
+            {
+              "scheme": "https",
+              "host": "dibby.social",
+              "pathPrefix": "/auth/app"
             }
           ],
           "category": [
@@ -47,14 +52,26 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/splash-icon.png",
-          "imageWidth": 160,
-          "backgroundColor": "#6D4AFF"
+          "image": "./assets/splash-dibby.png",
+          "imageWidth": 200,
+          "backgroundColor": "#F7F6F9",
+          "dark": {
+            "image": "./assets/splash-dibby.png",
+            "backgroundColor": "#141216"
+          }
         }
       ],
       "@react-native-community/datetimepicker",
       "expo-secure-store",
-      "expo-image"
+      "expo-image",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#684CFC",
+          "defaultChannel": "default"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
@@ -64,6 +81,13 @@
       "eas": {
         "projectId": "96aa814d-5503-424b-aa41-779bf043a737"
       }
+    },
+    "owner": "mynameiseeyerns-team",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/96aa814d-5503-424b-aa41-779bf043a737"
     }
   }
 }

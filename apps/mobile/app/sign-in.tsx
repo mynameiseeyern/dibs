@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
+import * as Alert from "@/components/ui/alert";
 import * as Button from "@/components/ui/button";
 import * as DigitInput from "@/components/ui/digit-input";
 import * as Hint from "@/components/ui/hint";
@@ -12,17 +13,30 @@ import * as LinkButton from "@/components/ui/link-button";
 import { AgreeLine } from "@/components/dibby/agree-line";
 import { sendCode } from "@/lib/api";
 import { useSession } from "@/lib/session";
+import { TopBar } from "@/components/dibby/top-bar";
+import { SiteFooter, Wordmark } from "@/components/dibby/brand";
 
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
-/** Email, then the 6-digit code from the same email the web sends (it has a link and a code). */
+/**
+ * The web's /login, centred: logo, "Sign in to Dibby", email, Email me a link, the legal footer.
+ * The email has a link (it opens the app) and a 6-digit code, so after sending, both work here.
+ * `?email=` fills it in and sends straight away (the chat's email box); `?next=` is where to go after.
+ */
 export default function SignIn() {
   const { signIn } = useSession();
-  const [email, setEmail] = useState("");
+  const params = useLocalSearchParams<{ email?: string; next?: string }>();
+  const [email, setEmail] = useState(params.email ?? "");
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (params.email) send();
+    // Only on arrival with an email from the chat's box.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function send() {
     const e = email.trim().toLowerCase();
@@ -47,7 +61,7 @@ export default function SignIn() {
     try {
       const me = await signIn(sentTo, value);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      router.replace(me.name ? "/" : "/name");
+      router.replace(!me.name ? "/name" : params.next?.startsWith("/") ? (params.next as "/") : "/");
     } catch (err) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setError((err as Error).message);
@@ -59,14 +73,23 @@ export default function SignIn() {
 
   return (
     <SafeAreaView className="flex-1" edges={["bottom"]}>
+      <TopBar />
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} className="flex-1">
-        <ScrollView contentContainerClassName="gap-4 p-4" keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerClassName="flex-grow justify-center gap-4 px-4 pb-8" keyboardShouldPersistTaps="handled">
+          <Wordmark />
+          <Text accessibilityRole="header" className="text-title-h3 text-text-strong-950">
+            Sign in to Dibby
+          </Text>
+          <Text className="text-paragraph-md text-text-sub-600">We&rsquo;ll email you a link, no password. Your plans come with you to any device.</Text>
           {sentTo ? (
             <>
-              <Text accessibilityRole="header" className="text-title-h3 text-text-strong-950">
-                Check your email
-              </Text>
-              <Text className="text-paragraph-lg text-text-sub-600">Type the code we sent to {sentTo}.</Text>
+              <Alert.Root status="success">
+                <Alert.Icon name="mail-check-fill" />
+                <Alert.Content>
+                  <Alert.Title>Check your email</Alert.Title>
+                  We sent a sign-in link to {sentTo}. Tap it on this phone, or type the code from it.
+                </Alert.Content>
+              </Alert.Root>
               <DigitInput.Root numInputs={6} value={code} onChange={setCode} onComplete={verify} hasError={Boolean(error)} disabled={busy} autoFocus />
               {error ? (
                 <Hint.Root hasError>
@@ -74,9 +97,12 @@ export default function SignIn() {
                   {error}
                 </Hint.Root>
               ) : null}
-              <View className="flex-row gap-4">
+              <Button.Root size="large" block disabled={busy || code.length < 6} onPress={() => verify()}>
+                {busy ? "Checking…" : "Sign in"}
+              </Button.Root>
+              <View className="flex-row justify-center gap-4">
                 <LinkButton.Root variant="primary" disabled={busy} onPress={send}>
-                  Send a new code
+                  Send a new one
                 </LinkButton.Root>
                 <LinkButton.Root variant="gray" disabled={busy} onPress={() => (setSentTo(null), setError(null))}>
                   Use another email
@@ -85,10 +111,6 @@ export default function SignIn() {
             </>
           ) : (
             <>
-              <Text accessibilityRole="header" className="text-title-h3 text-text-strong-950">
-                Sign in
-              </Text>
-              <Text className="text-paragraph-lg text-text-sub-600">We'll email you a code. New here? Same thing, it makes your account.</Text>
               <View className="gap-1">
                 <Label.Root>Email</Label.Root>
                 <Input.Root size="large" hasError={Boolean(error)}>
@@ -97,7 +119,6 @@ export default function SignIn() {
                     <Input.Input
                       value={email}
                       onChangeText={setEmail}
-                      placeholder="you@email.com"
                       autoCapitalize="none"
                       autoCorrect={false}
                       autoComplete="email"
@@ -105,7 +126,6 @@ export default function SignIn() {
                       textContentType="emailAddress"
                       returnKeyType="send"
                       onSubmitEditing={send}
-                      autoFocus
                     />
                   </Input.Wrapper>
                 </Input.Root>
@@ -116,21 +136,14 @@ export default function SignIn() {
                   </Hint.Root>
                 ) : null}
               </View>
+              <Button.Root size="large" block disabled={busy || !email.trim()} onPress={send}>
+                {busy ? "Sending…" : "Email me a link"}
+              </Button.Root>
               <AgreeLine />
             </>
           )}
+          <SiteFooter />
         </ScrollView>
-        <View className="p-4">
-          {sentTo ? (
-            <Button.Root size="large" block disabled={busy || code.length < 6} onPress={() => verify()}>
-              {busy ? "Checking…" : "Sign in"}
-            </Button.Root>
-          ) : (
-            <Button.Root size="large" block disabled={busy || !email.trim()} onPress={send}>
-              {busy ? "Sending…" : "Email me a code"}
-            </Button.Root>
-          )}
-        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

@@ -1,5 +1,5 @@
 import { countIn } from "./plans";
-import type { Plan, PlanMember, PlanStatus } from "./types";
+import type { MonogramColour, Plan, PlanMember, PlanStatus } from "./types";
 
 /**
  * What the native app gets for a plan link (`GET /api/v1/plans/:slug`). The web and the app both
@@ -70,12 +70,35 @@ export interface Me {
   name: { first: string; last: string } | null;
 }
 
+/** `GET /api/v1/me/account`: what the web's /account shows, for whoever's on this phone. */
+export interface AccountInfo {
+  /** account: signed in. guest: made or joined plans without one. none: neither yet. */
+  kind: "account" | "guest" | "none";
+  /** "Ee Ng", or null before the name step / for nobody. */
+  name: string | null;
+  email: string | null;
+  /** Lifetime card roulette record, across every plan; null if they've never been in a spin. */
+  record: { played: number; lost: number; paid: string } | null;
+  /** Accounts only: beta update emails on or off. Change with `PUT { beta_updates }`. */
+  beta_updates: boolean | null;
+  /** Accounts only: the private calendar subscription link. Reset with `POST /api/v1/me/calendar`. */
+  calendar_url: string | null;
+}
+
 /** A row on the phone's home screen (`GET /api/v1/me/plans`): your plans, with your answer. */
 export interface MyPlan extends PlanSummary {
   /** Your answer on this plan. */
   rsvp: PlanMember["rsvp"];
   waitlisted: boolean;
   host: boolean;
+  /** "Hosting", "Co-hosting" or "Going": the web's row label. */
+  role_label?: string;
+  /** The web's status chip text, e.g. "Voting · closes Thu 6:15am". */
+  status_label?: string;
+  /** Faces for the row (people in, not the waitlist), first five or so. */
+  faces?: { name: string; colour: PlanMember["colour"] }[];
+  /** The one thing to do next ("Wrap it up: who came?", "You owe $12."), or null. */
+  nudge?: string | null;
 }
 
 export function toMyPlan(plan: Plan, members: readonly PlanMember[], me: PlanMember, when: string | null): MyPlan {
@@ -96,6 +119,8 @@ export interface ApiError {
 export interface MyPlans {
   upcoming: MyPlan[];
   past: MyPlan[];
+  /** Past plans with money still out or waiting to be wrapped up: the web's "To sort out". */
+  sort_out?: MyPlan[];
   claimed?: number;
 }
 
@@ -107,11 +132,14 @@ export interface NewPlanRequest {
   date?: string | null;
   time?: string | null;
   where: "vote" | "place" | "dibby";
-  place?: { name: string; address?: string | null } | null;
+  /** Typed in (name, optional address), or picked from the map (place_id, which the server checks). */
+  place?: { name: string; address?: string | null; place_id?: string | null } | null;
   ask?: string;
   spend?: 1 | 2 | 3 | null;
   /** Required for `where: "dibby"`: they said yes to sending this to the AI provider. */
   ai_consent?: boolean;
+  /** "Roughly where? (optional)" when the crew votes: "Surry Hills". */
+  area?: string | null;
   /** Only for someone with no account and no guest pass yet. */
   first?: string;
   last?: string;
@@ -120,5 +148,115 @@ export interface NewPlanRequest {
 /** `guest_token`: a new guest pass, sent back as `X-Dibby-Guest` from then on. */
 export interface NewPlanResponse {
   slug: string;
+  guest_token?: string;
+}
+
+/**
+ * `GET /api/v1/plans/:slug/view`: the plan as the person asking sees it (sign-in or guest pass).
+ * Follows the web's rules: can't-go sees no votes, chat or who's in; maybes, the waitlist and
+ * people who haven't replied read along; a typed-in place's address is for people in the plan.
+ */
+export interface PlanDetail {
+  plan: PlanSummary;
+  /** The organiser's first name, for "Hosted by Ee". */
+  host_name?: string | null;
+  /** Google Maps directions to the set place (a typed-in address only for people in the plan). */
+  directions?: string | null;
+  /** A typed-in place's address (people in the plan only), shown under its name. */
+  address?: string | null;
+  /** An .ics for the plan (people in the plan, locked in with a time): opening it adds it to the calendar. */
+  calendar?: string | null;
+  /** New chat messages since this person last opened the chat. */
+  unread?: number;
+  /** Null: not in the plan yet (show join). */
+  me: {
+    name: string;
+    rsvp: PlanMember["rsvp"];
+    waitlisted: boolean;
+    host: boolean;
+    /** full: vote and chat. read: see it, can't act (`note` says why). hidden: said can't go. */
+    access: "full" | "read" | "hidden";
+    note: string | null;
+    /** Chat needs an account (guests read along). */
+    canPost: boolean;
+  } | null;
+  /** Who's going, for people in the plan who can see it. */
+  going: { name: string; host: boolean; waitlisted: boolean; colour: MonogramColour }[] | null;
+  vote: {
+    open: boolean;
+    maxPicks: number;
+    options: {
+      id: string;
+      label: string;
+      note: string | null;
+      votes: number;
+      mine: boolean;
+      /** Google's ID for a business picked on the map; null for one typed in. Load its card from `GET /api/v1/places/:id`. */
+      place_id?: string | null;
+    }[];
+    /** How many have voted, out of how many can ("2 of 4 voted"). */
+    voters?: number;
+    members?: number;
+    /** "Thu 7pm", when the vote closes on its own; null when there's no deadline. */
+    closes?: string | null;
+  } | null;
+  chat: {
+    messages: {
+      id: string;
+      kind: "text" | "dibby" | "system";
+      body: string;
+      author: string | null;
+      colour: MonogramColour | null;
+      mine: boolean;
+      at: string;
+      /** Reactions on it, in the web's order (👍 ❤️ 😂 🎉), only the ones someone's used. */
+      reactions?: { emoji: string; count: number; mine: boolean }[];
+    }[];
+    /** The line pinned at the top: "Housewarming · Sat, 28 Nov · 11:00 am · Unit 23 · 7 going". */
+    summary?: string;
+    /** This person muted Dibby's nudges in this chat (the bell). Null once the plan's wrapped (no bell). */
+    muted?: boolean | null;
+    /** The reactions anyone can add, when this person can react (an account, not read only). */
+    react?: string[];
+  } | null;
+}
+
+/** `GET /api/v1/places/:id`: a business's card, the app's version of the web's PlaceCard. */
+export interface PlaceInfo {
+  place_id: string;
+  name: string;
+  address: string | null;
+  /** "Thai restaurant". */
+  kind: string | null;
+  rating: number | null;
+  ratings: number | null;
+  /** 1 to 4 ($ to $$$$), when Google knows it. */
+  price: number | null;
+  open_now: boolean | null;
+  /** A short-lived photo URL from Google (no key in it), and who took it: show "Photo: <name>". */
+  photo: { uri: string; by: string | null } | null;
+  maps_url: string;
+  /** With `?full=1` (the place sheet, like the web's Google panel): up to 10 photos, each with who took it. */
+  photos?: { uri: string; by: string | null }[];
+  /** "Monday: 11:30 am – 9:00 pm", a line a day. */
+  hours?: string[] | null;
+  website?: string | null;
+  phone?: string | null;
+  /** Google's one-line summary of the place. */
+  summary?: string | null;
+  reviews?: { author: string; rating: number | null; text: string; when: string | null }[];
+}
+
+/** `GET /api/v1/places?q=` (with `lat`/`lng` or `area`): businesses to pick from, like the web's map picker. */
+export interface PlaceHit {
+  place_id: string;
+  name: string;
+  address: string | null;
+  kind: string | null;
+  rating: number | null;
+}
+
+/** `POST /api/v1/plans/:slug/join` → maybe a new guest pass, like making a plan. */
+export interface JoinResponse {
   guest_token?: string;
 }

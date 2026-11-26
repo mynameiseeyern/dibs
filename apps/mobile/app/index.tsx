@@ -1,15 +1,24 @@
-import { useCallback, useRef, useState, type ComponentRef } from "react";
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { AppBar } from "@/components/dibby/app-bar";
+import { useCallback, useEffect, useState } from "react";
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Redirect, router, Stack, useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { FadeIn, FadeInDown, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from "react-native-reanimated";
+import { CREW_IN_MS, CrewScene, crewArrived } from "@/components/dibby/crew-scene";
 import type { MyPlan } from "@dibs/shared/api";
-import { DibbyHello, type Anchor } from "@/components/dibby/hello";
+import { DibbyHello } from "@/components/dibby/hello";
+import { MotionView } from "@/lib/motion";
+import { PushAsk } from "@/components/dibby/push-ask";
 import { PlanCard, PlanCardSkeleton, type PlanFact } from "@/components/dibby/plan-card";
+import * as Avatar from "@/components/ui/avatar";
+import * as AvatarGroup from "@/components/ui/avatar-group";
 import * as Button from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import * as LinkButton from "@/components/ui/link-button";
 import { getMyPlans } from "@/lib/api";
+import { CrewsStrip } from "@/components/dibby/crews-strip";
 import { useSession } from "@/lib/session";
+import { whenLong } from "@/lib/dates";
 import { useColour } from "@/lib/theme";
 
 /**
@@ -18,65 +27,131 @@ import { useColour } from "@/lib/theme";
  */
 export default function Home() {
   const { state, hasGuestPass } = useSession();
-  const spinner = useColour("primary-base");
-  if (state.status === "loading") return <ActivityIndicator className="flex-1" color={spinner} />;
+  // Still working out who's here: Dibby and the crew, the same as the splash, nothing to tap yet.
+  if (state.status === "loading") return <Welcome ready={false} />;
   if (state.status === "signedIn" && state.me && !state.me.name) return <Redirect href="/name" />;
-  if (state.status === "signedIn" || hasGuestPass) return <MyPlans signedIn={state.status === "signedIn"} />;
-  return <Welcome />;
+  if (state.status === "signedIn" || hasGuestPass)
+    return (
+      <>
+        <MyPlans signedIn={state.status === "signedIn"} />
+        <Intro />
+      </>
+    );
+  return <Welcome ready />;
+}
+
+/** Once per launch, whichever screen it's on. */
+let introShown = false;
+
+/**
+ * Starting the app with plans: Dibby and the crew arrive (carrying on from the splash), then fade
+ * away to your plans. Tap to skip. Not at all with Reduce Motion.
+ */
+function Intro() {
+  const reduce = useReducedMotion();
+  const page = useColour("bg-weak-50");
+  const [gone, setGone] = useState(introShown || reduce);
+  const opacity = useSharedValue(1);
+  const style = useAnimatedStyle(() => ({ opacity: opacity.value }));
+  const leave = useCallback(() => {
+    opacity.value = withTiming(0, { duration: 320 });
+    setTimeout(() => setGone(true), 330);
+  }, [opacity]);
+  useEffect(() => {
+    if (gone) return;
+    introShown = true;
+    const t = setTimeout(leave, (crewArrived() ? 300 : CREW_IN_MS) + 350);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  if (gone) return null;
+  return (
+    <MotionView style={[StyleSheet.absoluteFill, { backgroundColor: page }, style]}>
+      <Pressable accessibilityLabel="Skip" style={StyleSheet.absoluteFill} onPress={leave} />
+      <CrewScene />
+    </MotionView>
+  );
 }
 
 const MAKE = "Make plans";
 
-/** The web's intro (app/new/PlanFlow.tsx): what it's for, and straight into making a plan. */
-function Welcome() {
-  const button = useRef<ComponentRef<typeof View>>(null);
-  const [anchor, setAnchor] = useState<Anchor | null>(null);
+/**
+ * New here: Dibby in the middle with the group chat floating around him (carrying on from the splash, so
+ * nothing moves when it hides), the name and what it's for under him, and one button to make a plan.
+ * `ready` false while we're still working out who's here: just Dibby and the chat.
+ */
+function Welcome({ ready }: { ready: boolean }) {
+  const reduce = useReducedMotion();
+  const [hello, setHello] = useState(false);
+  const buttons = useSharedValue(1);
+  const buttonsStyle = useAnimatedStyle(() => ({ opacity: buttons.value }));
+  // The words come in once the crew's arrived (straight away if they already had).
+  const after = reduce ? 0 : crewArrived() ? 0 : CREW_IN_MS - 250;
 
+  useEffect(() => {
+    introShown = true;
+  }, []);
+
+  // Everything around Dibby fades and he says hi (hello.tsx), then it's on to the form.
   const start = () => {
-    // Dibby comes out from behind the button: measure where it is, then the hello moment plays.
-    button.current?.measureInWindow((x, y, width, height) => setAnchor({ x, y, width, height }));
+    buttons.value = withTiming(0, { duration: 280 });
+    setHello(true);
   };
 
   return (
-    <SafeAreaView className="flex-1" edges={["top", "bottom"]}>
+    <View className="flex-1">
       <Stack.Screen options={{ headerShown: false }} />
-      <View className="flex-1 justify-center gap-4 p-4">
-        <Text className="font-display text-[40px] leading-[44px] text-primary-base">dibby</Text>
-        <Text accessibilityRole="header" className="font-display text-title-h2 text-text-strong-950">
-          Get out of the group chat.
-        </Text>
-        <Text className="text-paragraph-lg text-text-sub-600">
-          Everyone&rsquo;s keen till someone has to pick a day. Make the plan, drop the link in the chat, and the crew taps in. Free, no account needed.
-        </Text>
-      </View>
-      <View className="gap-3 p-4">
-        <View ref={button} collapsable={false}>
-          <Button.Root variant="dibs" size="large" block onPress={start}>
-            {MAKE}
-          </Button.Root>
-        </View>
-        <LinkButton.Root variant="gray" className="self-center" onPress={() => router.push("/open")}>
-          Got a plan link? Open it
-        </LinkButton.Root>
-        <LinkButton.Root variant="gray" className="self-center" onPress={() => router.push("/sign-in")}>
-          Got an account? Sign in
-        </LinkButton.Root>
-      </View>
+            <CrewScene
+        hideDibby={hello}
+        focus={hello}
+        below={
+          ready ? (
+            <MotionView entering={reduce ? undefined : FadeInDown.duration(420).delay(after)} pointerEvents="none" style={{ alignItems: "center", gap: 4, paddingHorizontal: 24 }}>
+              <Text accessibilityRole="header" className="font-display text-[44px] leading-[50px] text-text-strong-950">
+                dibby
+              </Text>
+              <Text className="max-w-[260px] text-center text-paragraph-lg text-text-sub-600">Plans that actually happen. Free, no account needed.</Text>
+            </MotionView>
+          ) : null
+        }
+      />
+      {ready ? (
+        <>
+          <MotionView
+            entering={reduce ? undefined : FadeIn.duration(360).delay(after + 200)}
+            pointerEvents={hello ? "none" : "auto"}
+            style={[{ position: "absolute", left: 0, right: 0, bottom: 0 }, buttonsStyle]}
+          >
+            <SafeAreaView edges={["bottom"]} className="gap-3 p-4">
+              <Button.Root variant="dibs" size="large" block onPress={start}>
+                {MAKE}
+              </Button.Root>
+              <LinkButton.Root variant="gray" className="self-center" onPress={() => router.push("/open")}>
+                Got a plan link? Open it
+              </LinkButton.Root>
+              <LinkButton.Root variant="gray" className="self-center" onPress={() => router.push("/sign-in")}>
+                Got an account? Sign in
+              </LinkButton.Root>
+            </SafeAreaView>
+          </MotionView>
+        </>
+      ) : null}
       <DibbyHello
-        anchor={anchor}
-        label={MAKE}
-        squares={4}
+        active={hello}
         onDone={() => {
           router.push("/new");
           // Let the form mount under him before the overlay goes, so there's no gap.
-          setTimeout(() => setAnchor(null), 80);
+          setTimeout(() => {
+            setHello(false);
+            buttons.value = 1;
+          }, 80);
         }}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
-type Load = { kind: "loading" } | { kind: "error"; message: string } | { kind: "ok"; upcoming: MyPlan[]; past: MyPlan[] };
+type Load = { kind: "loading" } | { kind: "error"; message: string } | { kind: "ok"; upcoming: MyPlan[]; sortOut: MyPlan[]; past: MyPlan[] };
 
 function MyPlans({ signedIn }: { signedIn: boolean }) {
   const [load, setLoad] = useState<Load>({ kind: "loading" });
@@ -85,8 +160,8 @@ function MyPlans({ signedIn }: { signedIn: boolean }) {
   const { setGuestPass } = useSession();
   const fetchPlans = useCallback(async () => {
     try {
-      const { upcoming, past, claimed } = await getMyPlans();
-      setLoad({ kind: "ok", upcoming, past });
+      const { upcoming, sort_out, past, claimed } = await getMyPlans();
+      setLoad({ kind: "ok", upcoming, sortOut: sort_out ?? [], past });
       // Signed in with a guest pass still here: its plans are on the account now, so drop it.
       if (signedIn && claimed !== undefined) await setGuestPass(null);
     } catch (e) {
@@ -102,23 +177,12 @@ function MyPlans({ signedIn }: { signedIn: boolean }) {
   );
 
   return (
-    <SafeAreaView className="flex-1" edges={["bottom"]}>
-      <Stack.Screen
-        options={{
-          headerTitle: "",
-          headerLeft: () => <Text className="font-display text-[28px] leading-[32px] text-primary-base">dibby</Text>,
-          headerRight: () =>
-            signedIn ? (
-              <Pressable accessibilityRole="button" accessibilityLabel="Your account" hitSlop={12} onPress={() => router.push("/account")}>
-                <Icon name="user-3-line" className="text-[24px] leading-[24px] text-text-strong-950" />
-              </Pressable>
-            ) : (
-              <LinkButton.Root variant="primary" onPress={() => router.push("/sign-in")}>
-                Keep my plans
-              </LinkButton.Root>
-            ),
-        }}
-      />
+    <SafeAreaView className="flex-1" edges={["top", "bottom"]}>
+      {/* Our own top bar, not the native header: on iOS 26 the header puts a grey glass bubble
+          behind anything in it, which isn't the design (TestFlight, Nov 2026). */}
+      <Stack.Screen options={{ headerShown: false }} />
+      {/* The web's top bar: logo, and your initials (or ⋯) for the menu. */}
+      <AppBar top={false} />
       <ScrollView
         contentContainerClassName="gap-4 p-4"
         refreshControl={
@@ -132,6 +196,17 @@ function MyPlans({ signedIn }: { signedIn: boolean }) {
           />
         }
       >
+        {!signedIn && load.kind === "ok" && load.upcoming.length + load.sortOut.length + load.past.length > 0 ? (
+          <Pressable accessibilityRole="button" onPress={() => router.push("/sign-in")} className="flex-row gap-3 rounded-lg bg-information-lighter p-4 active:opacity-80">
+            <Icon name="smartphone-line" className="text-[20px] leading-[24px] text-information-base" />
+            <View className="flex-1 gap-0.5">
+              <Text className="text-label-md text-information-base">Only on this phone for now</Text>
+              <Text className="text-paragraph-sm text-text-strong-950">Add your email to see these plans on your other devices.</Text>
+            </View>
+          </Pressable>
+        ) : null}
+        {signedIn ? <CrewsStrip /> : null}
+        {load.kind === "ok" && load.upcoming.length > 0 ? <PushAsk /> : null}
         {load.kind === "loading" ? (
           <>
             <PlanCardSkeleton />
@@ -139,22 +214,25 @@ function MyPlans({ signedIn }: { signedIn: boolean }) {
           </>
         ) : load.kind === "error" ? (
           <Text className="text-paragraph-md text-text-sub-600">{load.message}</Text>
-        ) : load.upcoming.length === 0 && load.past.length === 0 ? (
+        ) : load.upcoming.length === 0 && load.sortOut.length === 0 && load.past.length === 0 ? (
           <View className="gap-2 py-8">
-            <Text className="text-title-h4 text-text-strong-950">No plans yet</Text>
-            <Text className="text-paragraph-md text-text-sub-600">Make one, or open a link someone dropped in the chat.</Text>
+            <Text accessibilityRole="header" className="text-title-h3 text-text-strong-950">
+              Nothing on. Suss.
+            </Text>
+            <Text className="text-paragraph-md text-text-sub-600">Start something and drop it in the group chat.</Text>
           </View>
         ) : (
           <>
-            {load.upcoming.length > 0 ? <Section title="Coming up" plans={load.upcoming} /> : null}
-            {load.past.length > 0 ? <Section title="Been and done" plans={load.past} /> : null}
+            {load.upcoming.length > 0 ? <Section title="Up next" lead plans={load.upcoming} /> : null}
+            {load.sortOut.length > 0 ? <Section title="To sort out" plans={load.sortOut} /> : null}
+            {load.past.length > 0 ? <Section title="Been and done" plans={load.past} quiet /> : null}
           </>
         )}
       </ScrollView>
       <View className="gap-3 p-4">
-        <Button.Root size="large" block onPress={() => router.push("/new")}>
+        <Button.Root variant="dibs" size="large" block onPress={() => router.push("/new")}>
           <Button.Icon name="add-line" />
-          Make a plan
+          Start a plan
         </Button.Root>
         <LinkButton.Root variant="gray" className="self-center" onPress={() => router.push("/open")}>
           Got a plan link? Open it
@@ -164,34 +242,66 @@ function MyPlans({ signedIn }: { signedIn: boolean }) {
   );
 }
 
-function Section({ title, plans }: { title: string; plans: MyPlan[] }) {
+/** "Up next" leads the screen (title-h3); later sections are small eyebrows, like the web's /home. */
+function Section({ title, plans, lead, quiet }: { title: string; plans: MyPlan[]; lead?: boolean; quiet?: boolean }) {
   return (
     <View className="gap-3">
-      <Text accessibilityRole="header" className="text-label-md text-text-sub-600">
+      <Text accessibilityRole="header" className={lead ? "text-title-h3 text-text-strong-950" : "pt-2 text-subheading-sm uppercase text-text-soft-400"}>
         {title}
       </Text>
       {plans.map((p) => (
         <Pressable key={p.slug} accessibilityRole="button" accessibilityLabel={p.title} disabled={p.status === "cancelled"} onPress={() => router.push(`/p/${p.slug}`)}>
-          <PlanCard eyebrow={p.when} title={p.title} status={p.status} facts={facts(p)} footer={<Text className="text-label-sm text-text-sub-600">{answer(p)}</Text>} />
+          <PlanCard
+            plain
+            quiet={quiet}
+            title={p.title}
+            status={p.status}
+            statusLabel={p.status_label}
+            meta={p.role_label ?? (p.host ? "Hosting" : "Going")}
+            facts={facts(p)}
+            footer={
+              <View className="w-full gap-3">
+                <View className="flex-row items-center justify-between">
+                  {p.faces && p.faces.length ? (
+                    <AvatarGroup.Root size="32">
+                      {p.faces.slice(0, 5).map((f, i) => (
+                        <Avatar.Root key={`${f.name}-${i}`} color={f.colour} name={f.name} />
+                      ))}
+                      {p.faces.length > 5 ? <AvatarGroup.Overflow>{`+${p.faces.length - 5}`}</AvatarGroup.Overflow> : null}
+                    </AvatarGroup.Root>
+                  ) : (
+                    <View />
+                  )}
+                  <Text className="text-paragraph-sm text-text-sub-600">{p.going} in</Text>
+                </View>
+                {nudgeFor(p) ? (
+                  <View className="flex-row items-center gap-2 border-t border-stroke-soft-200 pt-3">
+                    <Icon name="arrow-right-line" className="text-[16px] leading-[16px] text-primary-dark" />
+                    <Text className="flex-1 text-label-sm text-primary-dark">{nudgeFor(p)}</Text>
+                  </View>
+                ) : null}
+              </View>
+            }
+          />
         </Pressable>
       ))}
     </View>
   );
 }
 
+/** The web's row facts: the day and time (only once there is one), then the place or the area. */
 function facts(p: MyPlan): PlanFact[] {
   const out: PlanFact[] = [];
-  const where = p.voting ? "Place is up for a vote" : (p.place ?? p.area);
+  const when = whenLong(p.starts_at);
+  if (when) out.push({ icon: "calendar-line", text: when });
+  const where = p.place ?? p.area;
   if (where) out.push({ icon: "map-pin-line", text: where });
-  out.push({ icon: "group-line", text: p.capacity ? `${p.going} of ${p.capacity} going` : `${p.going} going` });
   return out;
 }
 
-function answer(p: MyPlan): string {
-  if (p.host) return "You're hosting";
-  if (p.waitlisted) return "You're on the waitlist";
-  if (p.rsvp === "in") return "You're in";
-  if (p.rsvp === "maybe") return "You said maybe";
-  if (p.rsvp === "out") return "You can't make it";
-  return "You haven't replied";
+/** The server's nudge (money, wrap-up), or the one the app can work out on an older server. */
+function nudgeFor(p: MyPlan): string | null {
+  if (p.nudge !== undefined) return p.nudge;
+  if (!p.host && !p.rsvp && p.status !== "cancelled" && p.status !== "wrapped") return "You haven't said if you're in";
+  return null;
 }

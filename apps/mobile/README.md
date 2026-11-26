@@ -45,6 +45,22 @@ reads the next question out (it's the heading, coming in word by word) and rests
   `createPlan`: change both). The first plan gives the phone a guest pass, kept in the keychain and
   sent as `X-Dibby-Guest`; signing in later moves its plans onto the account and drops the pass.
 
+## Taking part in a plan
+
+`app/p/[slug]/index.tsx` (join, RSVP, vote, add a place, who's going) and `app/p/[slug]/chat.tsx`.
+`lib/use-plan.ts` loads `GET /api/v1/plans/:slug/view` and refreshes every 8 seconds while open;
+every action sends the fresh plan back.
+
+The app's endpoints don't copy the rules: they run the web's own actions
+(`apps/web/app/p/[slug]/actions.ts`) inside `asViewer` (`apps/web/lib/api-viewer.ts`), which makes
+`whoIsHere` answer with the app's sign-in or guest pass instead of cookies. So capacity, the
+waitlist, vote limits and who can vote or chat change in one place for both.
+
+- Join: first name only (last optional), I'm in or Maybe. No pass yet: the join hands one back.
+- Maybes, the waitlist and people who haven't replied read along; can't go sees no votes or chat.
+- Chat: guests read; posting needs an account (add your email, one code). Tag @dibby for ideas.
+- Places are typed in for now (name + optional address); the map picker comes later.
+
 ## How it fits with the web app
 
 - **The web app is the backend.** The phone calls `apps/web/app/api/v1/*` and never talks to Supabase directly, so every rule in the root `CLAUDE.md` (who sees addresses, balances, PayID) is enforced in one place.
@@ -76,6 +92,7 @@ Builds run in the cloud on EAS, so no Xcode or Android Studio needed. From `apps
 | `preview` | An install link for your own phones (Android APK, iOS ad hoc) | `npx eas-cli build --profile preview --platform all` |
 | `production` | Store builds (iOS `.ipa`, Android `.aab`), build number bumped automatically | `npx eas-cli build --profile production --platform all` |
 | — | Send the latest production build to TestFlight / Play internal testing | `npx eas-cli submit --platform ios` (or `android`) |
+| `production` | iOS build on GitHub's Mac runner, straight to TestFlight (no Expo queue, free while the repo is public) | Actions → "Build iOS for TestFlight" → Run workflow |
 | — | Push a JS-only change to installed apps, no review | `npx eas-cli update --channel production` |
 
 The first Android upload has to be done by hand in Play Console (download the `.aab` from the EAS build page); `eas submit` works after that.
@@ -84,7 +101,7 @@ The first Android upload has to be done by hand in Play Console (download the `.
 
 **App Review sign-in.** Set `APP_REVIEW_EMAIL` and `APP_REVIEW_CODE` (6 digits) on Vercel, sign that account in once, and give both to Apple in App Review Information. It signs in without an email. Use a throwaway account with no real data.
 
-**Before submitting:** run `supabase/migrations/0028_moderation.sql`; set `RESEND_API_KEY`, `EMAIL_FROM` and `METRICS_EMAILS` on Vercel so reports reach you and `/admin/reports` opens.
+**Before submitting:** run `supabase/migrations/0030_moderation.sql`; set `RESEND_API_KEY`, `EMAIL_FROM` and `METRICS_EMAILS` on Vercel so reports reach you and `/admin/reports` opens.
 
 **Google Play:** new personal accounts need a closed test with 12 testers opted in for 14 days in a row, then "Apply for production".
 
@@ -96,3 +113,23 @@ The first Android upload has to be done by hand in Play Console (download the `.
 - Icons: `<Icon name="calendar-line" className="text-text-sub-600" />`, the same Remix Icon font as the web. `pnpm --filter @dibs/mobile icons` refreshes the name list after a remixicon upgrade.
 - The web preview (`npx expo start --web`) is handy for checking layout, but some things only show on a phone: haptics, native pickers, the keyboard.
 - Not ported, because the web app doesn't use them: steppers (dot, horizontal, vertical), table, pagination, breadcrumb, command menu, file upload, colour picker, kbd, notification, social and fancy buttons, rating icons, status badge, button group, vertical tab menu, compact avatar group. Port one from `apps/web/components/ui` the same way when a screen needs it.
+
+## Push notifications
+
+The server sends them (`apps/web/lib/push.ts`): `withPush` in `apps/web/lib/store/index.ts` wraps
+`addMessage` and `addMember`, so anything that lands in a plan's chat (people, Dibby's nudges,
+"A spot opened up", "Ee picked the place", "called off") pushes to everyone who can see the chat
+except its author, and someone joining tells the hosts. Can't go gets nothing; muted Dibby
+nudges stay muted. Tapping one opens the plan or its chat.
+
+The app (`lib/push.ts`) never asks on first launch: `PushAsk` shows on "It's on" and on your
+plans list, and "Not now" is remembered. Once allowed, the phone registers its token
+(`POST /api/v1/push`) whenever who's signed in changes; signing out removes it.
+
+Setup, once:
+1. Apply `supabase/migrations/0028_push_tokens.sql`.
+2. iOS: `npx eas-cli credentials -p ios` and let EAS make a push key (or say yes when `eas build` asks).
+3. Android: a Firebase project with an Android app `social.dibby.app`, then upload its FCM V1
+   service account key with `npx eas-cli credentials -p android` (Push Notifications). Put
+   `google-services.json` in this folder and set `android.googleServicesFile` in `app.json`.
+4. Pushes need a development build; Expo Go on Android can't receive them.

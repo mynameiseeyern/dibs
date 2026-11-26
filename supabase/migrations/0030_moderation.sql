@@ -1,3 +1,5 @@
+-- Renumbered from 0028 when this branch caught up with main (0028_push_tokens, 0029_crews were taken).
+-- Already applied to dibs-demo on 9 Nov 2026 as "0028_moderation"; every statement is "if not exists", so re-running is safe.
 -- Report, block and ban (Apple guideline 1.2, Google's UGC policy). A "person" is `u:<user id>` or
 -- `g:<guest id>`. No foreign keys on people, so a report outlives the account it's about.
 -- No policies: service key only. Written by the server, read by /admin/reports.

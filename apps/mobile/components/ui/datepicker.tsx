@@ -8,7 +8,7 @@
 //
 // <Datepicker.Root mode="datetime" value={start} onChange={setStart} placeholder="Pick a day" minimumDate={new Date()} />
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Modal, Platform, Pressable, Text, View } from "react-native";
 import DateTimePicker, {
   DateTimePickerAndroid,
@@ -77,6 +77,8 @@ type DatepickerProps = {
   hasError?: boolean;
   className?: string;
   accessibilityLabel?: string;
+  /** Draw your own trigger (the day strip's "More" tile) instead of the field. */
+  renderTrigger?: (open: () => void) => ReactNode;
 };
 
 function DatepickerRoot({
@@ -91,6 +93,7 @@ function DatepickerRoot({
   hasError,
   className,
   accessibilityLabel,
+  renderTrigger,
 }: DatepickerProps) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<Date>(value ?? new Date());
@@ -138,6 +141,7 @@ function DatepickerRoot({
 
   return (
     <>
+      {renderTrigger ? renderTrigger(openPicker) : (
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
@@ -158,6 +162,7 @@ function DatepickerRoot({
         </Text>
         <Icon name="arrow-down-s-line" className={icon()} />
       </Pressable>
+      )}
 
       {Platform.OS === "ios" ? (
         <Modal

@@ -666,20 +666,7 @@ gmp-place-details {
 
 /* Locked in: one page, no cards. The crew pops up at the top, then the plan, its facts, actions and who's going. */
 .locked { display: flex; flex-direction: column; gap: var(--space-6); }
-.locked__head { display: flex; flex-direction: column; align-items: center; gap: var(--space-1); text-align: center; animation: locked-fade 360ms ease-out 640ms both; }
-.locked__head p { margin: 0; }
-.locked .plan-actions { justify-content: space-around; padding-top: 0; animation: locked-fade 360ms ease-out 780ms both; }
-.locked-hero { position: relative; display: flex; flex-direction: column; align-items: center; gap: var(--space-4); padding-top: var(--space-8); }
-.locked-hero__crew { display: flex; align-items: flex-end; gap: 10px; }
-.locked-hero__rise, .locked-hero__seat { animation: locked-rise 520ms cubic-bezier(.34,1.56,.64,1) both; }
-.locked-hero__seat { box-sizing: border-box; border-radius: var(--radius-full); border: 2px dashed var(--bg-sub-300); }
-.locked-hero__seat--48 { width: 48px; height: 48px; }
-.locked-hero__seat--56 { width: 56px; height: 56px; }
-.locked-hero__raised { border: 2px solid var(--stroke-strong-950); box-shadow: var(--shadow-pop); transform: translateY(-12px); animation: locked-hop 640ms cubic-bezier(.34,1.56,.64,1) 260ms both; }
-.locked-hero__spark { position: absolute; border-radius: var(--radius-full); animation: locked-spark 900ms ease-out both; }
-.locked-hero__spark--1 { left: 24%; top: 28px; width: 8px; height: 8px; background: var(--primary-dark); animation-delay: 620ms; }
-.locked-hero__spark--2 { right: 22%; top: 16px; width: 6px; height: 6px; background: var(--success-dark); animation-delay: 740ms; }
-.locked-hero__spark--3 { right: 31%; top: 52px; width: 10px; height: 10px; background: var(--away-dark); animation-delay: 680ms; }
+.locked .plan-actions { justify-content: flex-start; gap: var(--space-4); padding-top: 0; animation: locked-fade 360ms ease-out 780ms both; }
 .plan-facts { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-5) var(--space-4); animation: locked-fade 360ms ease-out 720ms both; }
 .plan-fact { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .plan-fact dt { font: 700 13px/16px var(--font-sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-soft-400); }
@@ -704,14 +691,10 @@ gmp-place-details {
 .who-row__more { width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-full); background: var(--bg-soft-200); color: var(--text-strong-950); }
 .who-row__sheet { max-height: 60vh; overflow-y: auto; margin: 0 calc(-1 * var(--space-4)); padding: 0 var(--space-4); }
 @media (prefers-reduced-motion: reduce) { .who-row__face { transition: none; } }
-.locked-hero__raised--you { font: 800 20px/1 var(--font-display); text-transform: none; }
 @keyframes locked-rise { 0% { opacity: 0; transform: translateY(28px) scale(0.6); } 70% { opacity: 1; transform: translateY(-6px) scale(1.04); } 100% { opacity: 1; transform: none; } }
-@keyframes locked-hop { 0% { opacity: 0; transform: translateY(40px) scale(0.5); } 60% { opacity: 1; transform: translateY(-14px) scale(1.08); } 100% { opacity: 1; transform: translateY(-12px); } }
 @keyframes locked-fade { from { opacity: 0; transform: translateY(8px); } }
-@keyframes locked-spark { 0% { opacity: 0; transform: scale(0.2); } 50% { opacity: 1; } 100% { opacity: 0; transform: scale(1.4); } }
 @media (prefers-reduced-motion: reduce) {
-  .locked__head, .locked .plan-actions, .locked-hero__rise, .locked-hero__seat, .locked-hero__raised, .plan-facts { animation: none; }
-  .locked-hero__spark { display: none; }
+  .locked .plan-actions, .plan-facts { animation: none; }
 }
 
 /* The organiser's call on a vote, at the top of it: who's ahead, when it closes, lock it in now. */

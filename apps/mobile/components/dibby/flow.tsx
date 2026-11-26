@@ -23,6 +23,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { cn } from "@/utils/cn";
 import { Icon, type IconName } from "@/components/ui/icon";
+import { MotionView } from "@/lib/motion";
 
 /** How long Dibby "thinks" before asking, and how the rest follows. Zero with Reduce Motion. */
 // `think` covers Dibby's hop to the next square (HOP_MS in hopscotch.tsx) plus a beat once he's landed;
@@ -80,7 +81,11 @@ function Dot({ delay }: { delay: number }) {
     v.value = withDelay(delay, withRepeat(withSequence(withTiming(1, { duration: 320 }), withTiming(0.3, { duration: 320 })), -1));
   }, [delay, v]);
   const style = useAnimatedStyle(() => ({ opacity: v.value, transform: [{ translateY: (1 - v.value) * 2 }] }));
-  return <Animated.View className="h-2 w-2 rounded-full bg-text-soft-400" style={style} />;
+  return (
+    <MotionView style={style}>
+      <View className="h-2 w-2 rounded-full bg-text-soft-400" />
+    </MotionView>
+  );
 }
 
 /** Words a second while Dibby reads a question out. */
@@ -108,7 +113,7 @@ export function useScreenReader() {
  * love that."), so it reads like a conversation. Screen readers get the whole heading at once, with
  * focus moved to it on each new question; Reduce Motion shows it straight away.
  */
-export function DibbyAsks({ stepKey, question, hint, ack }: { stepKey: string; question: string; hint?: string; ack?: string | null }) {
+export function DibbyAsks({ stepKey, question, hint, ack, extra }: { stepKey: string; question: string; hint?: string; ack?: string | null; extra?: ReactNode }) {
   const pace = usePace();
   const reader = useScreenReader();
   const still = pace.reduce || reader;
@@ -126,39 +131,48 @@ export function DibbyAsks({ stepKey, question, hint, ack }: { stepKey: string; q
     return () => clearTimeout(t);
   }, [asked, still]);
 
+  // The web's Dibby message (PlanChat's pc-dibby): its face, "Dibby AI", the reply, then the question big.
   return (
-    <View className="min-h-24 gap-1">
-      {ack ? (
-        <Animated.Text key={`ack-${stepKey}`} entering={still ? undefined : FadeIn.duration(240)} className="text-paragraph-lg text-text-sub-600">
-          {ack}
-        </Animated.Text>
-      ) : null}
-      <View ref={heading} accessible accessibilityRole="header" accessibilityLabel={question} className="min-h-10 flex-row flex-wrap">
-        {!asked ? (
-          <Thinking />
-        ) : still ? (
-          <Text className="font-display text-title-h3 text-text-strong-950">{question}</Text>
-        ) : (
-          words.map((w, i) => (
-            <Animated.Text
-              key={`${stepKey}-${i}`}
-              entering={FadeInDown.duration(200).delay(i * WORD_MS)}
-              importantForAccessibility="no"
-              className="font-display text-title-h3 text-text-strong-950"
-            >
-              {i < words.length - 1 ? `${w} ` : w}
-            </Animated.Text>
-          ))
-        )}
+    <View className="flex-row items-start gap-2">
+      <Image source={DIBBY.face} style={{ width: 32, height: 32, borderRadius: 16, marginTop: 2 }} contentFit="cover" accessible={false} />
+      <View className="min-w-0 flex-1 gap-2">
+        <View className="flex-row items-center gap-1.5">
+          <Text className="text-label-xs text-text-sub-600">Dibby</Text>
+          <View className="rounded-full bg-accent-base px-1.5">
+            <Text className="text-subheading-xs uppercase text-static-black">AI</Text>
+          </View>
+        </View>
+        {ack ? (
+          <Animated.Text key={`ack-${stepKey}`} entering={still ? undefined : FadeIn.duration(240)} className="font-sans text-[16px] leading-[22px] text-text-sub-600">
+            {ack}
+          </Animated.Text>
+        ) : null}
+        <View ref={heading} accessible accessibilityRole="header" accessibilityLabel={question} className="min-h-9 flex-row flex-wrap">
+          {!asked ? (
+            <Thinking />
+          ) : still ? (
+            <Text className={QUESTION_TEXT}>{question}</Text>
+          ) : (
+            words.map((w, i) => (
+              <Animated.Text key={`${stepKey}-${i}`} entering={FadeInDown.duration(200).delay(i * WORD_MS)} importantForAccessibility="no" className={QUESTION_TEXT}>
+                {i < words.length - 1 ? `${w} ` : w}
+              </Animated.Text>
+            ))
+          )}
+        </View>
+        {asked && hint ? (
+          <Animated.Text key={`h-${stepKey}`} entering={still ? undefined : FadeIn.duration(260).delay(words.length * WORD_MS)} className="text-paragraph-md text-text-sub-600">
+            {hint}
+          </Animated.Text>
+        ) : null}
+        {asked && extra ? extra : null}
       </View>
-      {asked && hint ? (
-        <Animated.Text key={`h-${stepKey}`} entering={still ? undefined : FadeIn.duration(260).delay(words.length * WORD_MS)} className="text-paragraph-md text-text-sub-600">
-          {hint}
-        </Animated.Text>
-      ) : null}
     </View>
   );
 }
+
+/** The web's `.pf-q`: Bricolage, the narrow title cut, 30/36. */
+const QUESTION_TEXT = "font-title text-[30px] leading-[36px] text-text-strong-950";
 
 /** The answers for a question: hidden while Dibby hops and reads it out (`after`: the reading, from talkMs), then easing up. */
 export function Answers({ stepKey, children, className, after = 0 }: { stepKey: string; children: ReactNode; className?: string; after?: number }) {
@@ -179,8 +193,8 @@ export function Stagger({ index, children }: { index: number; children: ReactNod
   return <Animated.View entering={pace.reduce ? undefined : FadeIn.duration(220).delay(index * pace.stagger)}>{children}</Animated.View>;
 }
 
-/** A tappable answer pill, 44px tall. Selected: violet. */
-export function Choice({ label, selected, onPress, icon }: { label: string; selected?: boolean; onPress: () => void; icon?: IconName }) {
+/** A tappable answer pill, 44px tall: the web's Chip (grey, violet when picked). `sub`: "6pm" after "Evening". */
+export function Choice({ label, sub, selected, onPress, icon }: { label: string; sub?: string; selected?: boolean; onPress: () => void; icon?: IconName }) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -189,13 +203,13 @@ export function Choice({ label, selected, onPress, icon }: { label: string; sele
         Haptics.selectionAsync();
         onPress();
       }}
-      className={cn(
-        "min-h-11 flex-row items-center gap-1.5 rounded-full border px-4",
-        selected ? "border-primary-base bg-primary-base" : "border-stroke-soft-200 bg-bg-white-0 active:bg-bg-weak-50"
-      )}
+      className={cn("min-h-11 flex-row items-center gap-1.5 rounded-full px-4", selected ? "bg-primary-base" : "bg-bg-soft-200 active:bg-bg-sub-300")}
     >
-      {icon ? <Icon name={icon} className={cn("text-[18px] leading-[18px]", selected ? "text-static-white" : "text-text-sub-600")} /> : null}
-      <Text className={cn("text-label-md", selected ? "text-static-white" : "text-text-strong-950")}>{label}</Text>
+      {icon ? <Icon name={icon} className={cn("text-[18px] leading-[18px]", selected ? "text-static-white" : "text-text-strong-950")} /> : null}
+      <Text className={cn("text-label-md", selected ? "text-static-white" : "text-text-strong-950")}>
+        {label}
+        {sub ? <Text className="font-sans">{` ${sub}`}</Text> : null}
+      </Text>
     </Pressable>
   );
 }
@@ -224,20 +238,21 @@ export function Option({
         Haptics.selectionAsync();
         onPress();
       }}
+      // The web's `.pf-choice`: 2px border, 80px tall, a grey icon circle that goes violet when picked.
       className={cn(
-        "min-h-16 flex-row items-center gap-3 rounded-lg border p-3",
-        selected ? "border-primary-base bg-primary-lighter" : "border-stroke-soft-200 bg-bg-white-0 active:bg-bg-weak-50"
+        "min-h-20 flex-row items-center gap-4 rounded-lg border-2 p-4",
+        selected ? "border-primary-base bg-primary-lighter" : "border-stroke-soft-200 bg-bg-white-0 active:border-stroke-sub-300"
       )}
     >
-      <View className="h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-bg-weak-50">
+      <View className={cn("h-12 w-12 items-center justify-center overflow-hidden rounded-full", dibby ? "" : selected ? "bg-primary-base" : "bg-bg-soft-200")}>
         {dibby ? (
           <Image source={DIBBY.face} style={{ width: 48, height: 48 }} contentFit="cover" accessible={false} />
         ) : icon ? (
-          <Icon name={icon} className="text-[22px] leading-[22px] text-primary-base" />
+          <Icon name={icon} className={cn("text-[24px] leading-[24px]", selected ? "text-static-white" : "text-text-strong-950")} />
         ) : null}
       </View>
-      <View className="flex-1 gap-0.5">
-        <Text className="text-label-lg text-text-strong-950">{title}</Text>
+      <View className="min-w-0 flex-1 gap-0.5">
+        <Text className="font-title text-[20px] leading-[26px] text-text-strong-950">{title}</Text>
         <Text className="text-paragraph-sm text-text-sub-600">{body}</Text>
       </View>
     </Pressable>

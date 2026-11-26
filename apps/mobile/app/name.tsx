@@ -9,6 +9,7 @@ import * as Input from "@/components/ui/input";
 import * as Label from "@/components/ui/label";
 import { saveName } from "@/lib/api";
 import { useSession } from "@/lib/session";
+import { TopBar } from "@/components/dibby/top-bar";
 
 /** Sign-up's one step: your name, so the crew knows who's in. */
 export default function Name() {
@@ -35,6 +36,7 @@ export default function Name() {
 
   return (
     <SafeAreaView className="flex-1" edges={["bottom"]}>
+      <TopBar />
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} className="flex-1">
         <ScrollView contentContainerClassName="gap-4 p-4" keyboardShouldPersistTaps="handled">
           <Text accessibilityRole="header" className="text-title-h3 text-text-strong-950">

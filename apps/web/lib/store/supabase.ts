@@ -4,7 +4,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { FORMER_MEMBER, makeSlug, pickColour } from "@dibs/shared/plans";
 import type { LoggedEvent } from "@dibs/shared/metrics";
 import { MULTI_VOTES, overLimit } from "@dibs/shared/votes";
-import type { Bill, BillShare, Message, NewMember, NewPlan, Plan, PlanMember, PlanOption, PlanPhoto, PlanTime, Store, Subscription, TimeVote, Vote, RecapAnswer, Reaction, Report } from "./types";
+import type { Bill, BillShare, Message, NewMember, NewPlan, Plan, PlanMember, PlanOption, PlanPhoto, PlanTime, PushToken, Store, Subscription, TimeVote, Vote, RecapAnswer, Reaction, Report } from "./types";
 
 const PHOTO_BUCKET = "plan-photos";
 
@@ -71,6 +71,21 @@ export const supabaseStore: Store = {
   async userForCalendarToken(token) {
     const row = must(await admin().from("calendar_feeds").select("user_id").eq("token", token).maybeSingle()) as { user_id: string } | null;
     return row?.user_id ?? null;
+  },
+  async savePushToken({ token, userId, guestId, platform }) {
+    must(
+      await admin()
+        .from("push_tokens")
+        .upsert({ token, user_id: userId, guest_id: userId ? null : guestId, platform, updated_at: new Date().toISOString() })
+    );
+  },
+  async removePushToken(token) {
+    must(await admin().from("push_tokens").delete().eq("token", token));
+  },
+  async listPushTokens({ userIds, guestIds }) {
+    if (!userIds.length && !guestIds.length) return [];
+    const ors = [userIds.length ? `user_id.in.(${userIds.join(",")})` : null, guestIds.length ? `guest_id.in.(${guestIds.join(",")})` : null].filter(Boolean).join(",");
+    return must(await admin().from("push_tokens").select("token, user_id, guest_id, platform").or(ors)) as PushToken[];
   },
   async answerBetaPrompt(userId) {
     must(await admin().from("profiles").update({ beta_prompt_answered_at: new Date().toISOString() }).eq("user_id", userId).is("beta_prompt_answered_at", null));

@@ -18,7 +18,8 @@
     "./inapp": "./src/inapp.ts",
     "./plan-text": "./src/plan-text.ts",
     "./moderation": "./src/moderation.ts",
-    "./report-reasons": "./src/report-reasons.ts"
+    "./report-reasons": "./src/report-reasons.ts",
+    "./crews": "./src/crews.ts"
   },
   "scripts": {
     "test": "vitest run",

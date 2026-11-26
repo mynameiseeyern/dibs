@@ -1,0 +1,181 @@
+// Making a plan, Dibby asks: he stands centred at the top of each screen with the question in a
+// speech bubble under him (the screen's heading). On to the next question, he jumps on the spot
+// (crouch, up, land, settle) and lands in the next pose, the bubble swaps its words while he's in
+// the air, and once he's landed he says it (his talking clip). While you answer he only breathes.
+//
+// Smooth on purpose: the jump is drawn in code on the UI thread, and every pose is a still that's
+// already mounted, so landing on a new one is just a switch. Reduce Motion: no jump or breathing,
+// the words just change.
+//
+// <DibbyHero pose="think" question="What are we doing?" size={112} />
+// <StepBar count={3} at={0} />
+
+import { useEffect, useRef, useState } from "react";
+import { Platform, Text, View } from "react-native";
+import { Image } from "expo-image";
+import * as Haptics from "expo-haptics";
+import Animated, { cancelAnimation, Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from "react-native-reanimated";
+import { cn } from "@/utils/cn";
+import { DIBBY, type Pose } from "./flow";
+import { MotionView } from "@/lib/motion";
+
+/** Where Dibby stands, under the top bar: the hello moment (hello.tsx) lands him here. */
+export const HERO_TOP = 64;
+/** His size on the first question, which is where the hello moment lands him. */
+export const HERO_SIZE = 112;
+
+const CROUCH_MS = 110;
+const AIR_MS = 360;
+const SETTLE_MS = 240;
+const JUMP = 30;
+
+const POSES: Pose[] = ["think", "phone", "point", "look", "hi"];
+
+/**
+ * Dibby saying the question, mouth moving (Runway clips, transparent animated WebP). Only the
+ * current pose's clip is mounted, from the moment the question changes, so it decodes while he's
+ * in the air and is ready when he lands. It plays for as long as the question takes to say, then
+ * he's back to his still. One clip at a time, never swapped mid-play.
+ */
+const TALK: Partial<Record<Pose, number>> = {
+  think: require("../../assets/dibby/motion/talk-think.webp"),
+  phone: require("../../assets/dibby/motion/talk-phone.webp"),
+  point: require("../../assets/dibby/motion/talk-point.webp"),
+  look: require("../../assets/dibby/motion/talk-look.webp"),
+  hi: require("../../assets/dibby/motion/talk-hi.webp"),
+};
+/** How long he talks: a relaxed pace per word, and never under two seconds. */
+const TALK_WORD_MS = 280;
+const MIN_TALK_MS = 2000;
+const talkFor = (q: string) => Math.max(MIN_TALK_MS, q.trim().split(/\s+/).length * TALK_WORD_MS + 500);
+
+export function DibbyHero({ pose, question, size = HERO_SIZE }: { pose: Pose; question: string; size?: number }) {
+  const reduce = useReducedMotion();
+  const lift = useSharedValue(0);
+  const squash = useSharedValue(0);
+  const breathe = useSharedValue(0);
+  const words = useSharedValue(1);
+  const [shown, setShown] = useState<Pose>(pose);
+  /** His size changes with his pose, mid-air. */
+  const [box, setBox] = useState(size);
+  const [said, setSaid] = useState(question);
+  const [talking, setTalking] = useState(false);
+  const mouth = useRef<Image>(null);
+  const first = useRef(true);
+
+  useEffect(() => {
+    const rest = () => (breathe.value = withRepeat(withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.sin) }), -1, true));
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    // He says it once he's landed: mouth moving for about as long as the words take.
+    const speak = (at: number) => {
+      if (reduce || !TALK[pose]) return;
+      timers.push(
+        setTimeout(() => {
+          setTalking(true);
+          if (Platform.OS !== "web") mouth.current?.startAnimating(); // the web preview can't
+        }, at),
+        setTimeout(
+          () => {
+            if (Platform.OS !== "web") mouth.current?.stopAnimating();
+            setTalking(false);
+          },
+          at + talkFor(question)
+        )
+      );
+    };
+    setTalking(false);
+    if (first.current || reduce) {
+      first.current = false;
+      setShown(pose);
+      setSaid(question);
+      setBox(size);
+      if (!reduce) rest();
+      speak(350);
+      return () => timers.forEach(clearTimeout);
+    }
+    cancelAnimation(breathe);
+    breathe.value = withTiming(0, { duration: 100 });
+    const apex = CROUCH_MS + AIR_MS / 2;
+    const land = CROUCH_MS + AIR_MS;
+    // Crouch (squash), take off (stretch), round in the air, squash on landing, settle.
+    squash.value = withSequence(
+      withTiming(0.6, { duration: CROUCH_MS, easing: Easing.out(Easing.quad) }),
+      withTiming(-0.5, { duration: 90, easing: Easing.out(Easing.quad) }),
+      withTiming(0, { duration: AIR_MS - 90, easing: Easing.inOut(Easing.quad) }),
+      withTiming(0.5, { duration: 70, easing: Easing.out(Easing.quad) }),
+      withTiming(0, { duration: SETTLE_MS, easing: Easing.out(Easing.back(2)) })
+    );
+    lift.value = withDelay(
+      CROUCH_MS,
+      withSequence(withTiming(-JUMP, { duration: AIR_MS / 2, easing: Easing.out(Easing.quad) }), withTiming(0, { duration: AIR_MS / 2, easing: Easing.in(Easing.quad) }))
+    );
+    // The bubble goes quiet as he jumps and says the new question as he lands.
+    words.value = withSequence(withTiming(0, { duration: CROUCH_MS + 60 }), withDelay(AIR_MS - 60, withTiming(1, { duration: 200, easing: Easing.out(Easing.quad) })));
+    breathe.value = withDelay(land + SETTLE_MS, withRepeat(withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.sin) }), -1, true));
+    timers.push(
+      setTimeout(() => {
+        setShown(pose);
+        setSaid(question);
+        setBox(size);
+      }, apex),
+      setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light), land)
+    );
+    speak(land + 80);
+    return () => timers.forEach(clearTimeout);
+  }, [pose, question, size, reduce, lift, squash, breathe, words]);
+
+  const body = useAnimatedStyle(() => ({
+    transform: [{ translateY: lift.value }, { scaleX: 1 + squash.value * 0.1 - breathe.value * 0.01 }, { scaleY: 1 - squash.value * 0.12 + breathe.value * 0.025 }],
+  }));
+  const shadow = useAnimatedStyle(() => {
+    const up = -lift.value / JUMP;
+    return { opacity: 0.3 - up * 0.18, transform: [{ scaleX: 1 - up * 0.4 }] };
+  });
+  const bubble = useAnimatedStyle(() => ({ opacity: words.value, transform: [{ translateY: (1 - words.value) * 6 }, { scale: 0.97 + words.value * 0.03 }] }));
+
+  return (
+    <View style={{ alignItems: "center" }}>
+      {/* Fixed sizes throughout: a percentage-sized image here drew nothing on iOS. */}
+      <View style={{ width: box, height: box }}>
+        <MotionView pointerEvents="none" style={[{ position: "absolute", left: box / 4, width: box / 2, bottom: 2, height: 8 }, shadow]}>
+          <View className="flex-1 rounded-full bg-static-black" />
+        </MotionView>
+        <MotionView style={[{ position: "absolute", top: 0, left: 0, width: box, height: box, transformOrigin: "50% 100%" }, body]}>
+          {/* Every pose mounted (so it's loaded), one showing, pinned on top of each other. */}
+          {POSES.map((p) => (
+            <View key={p} style={{ position: "absolute", top: 0, left: 0, width: box, height: box, opacity: p === shown && !talking ? 1 : 0 }}>
+              <Image source={DIBBY[p]} style={{ width: box, height: box }} contentFit="contain" accessible={false} />
+            </View>
+          ))}
+          {/* Talking: this pose's clip, mounted (and decoding) from the moment the question changes. */}
+          {TALK[pose] && !reduce ? (
+            <View key={`talk-${pose}`} style={{ position: "absolute", top: 0, left: 0, width: box, height: box, opacity: talking && shown === pose ? 1 : 0 }}>
+              <Image ref={mouth} source={TALK[pose]} autoplay={false} style={{ width: box, height: box }} contentFit="contain" accessible={false} />
+            </View>
+          ) : null}
+        </MotionView>
+      </View>
+
+      <MotionView style={[{ marginTop: 12, alignItems: "center" }, bubble]}>
+        {/* The tail, pointing up at him. */}
+        <View style={{ marginBottom: -8 }} className="h-4 w-4 rotate-45 rounded-[3px] bg-bg-soft-200" />
+        <View className="rounded-xl bg-bg-soft-200 px-5 py-3">
+          <Text accessibilityRole="header" accessibilityLiveRegion="polite" className="text-center font-title text-[26px] leading-[32px] text-text-strong-950">
+            {said}
+          </Text>
+        </View>
+      </MotionView>
+    </View>
+  );
+}
+
+/** How far through you are: a slim bar in segments. */
+export function StepBar({ count, at }: { count: number; at: number }) {
+  return (
+    <View className="flex-1 flex-row gap-1.5" accessible accessibilityLabel={`Step ${at + 1} of ${count}`}>
+      {Array.from({ length: count }, (_, i) => (
+        <View key={i} className={cn("h-1.5 flex-1 rounded-full", i <= at ? "bg-primary-base" : "bg-bg-soft-200")} />
+      ))}
+    </View>
+  );
+}

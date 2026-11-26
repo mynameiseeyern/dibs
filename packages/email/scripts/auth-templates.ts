@@ -24,7 +24,13 @@ const sender = {
 // A token_hash link to our own /auth/callback, not {{ .ConfirmationURL }}: it works in whichever
 // browser the email app opens (Gmail's and Mail's in-app ones included), because it doesn't need
 // a cookie from the tab that asked. app/auth/callback/route.ts verifies it.
-const SIGN_IN_LINK = "{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=email";
+//
+// When the app asked for the email (it sends emailRedirectTo …/auth/app, lib/api-auth.ts), the
+// button goes to /auth/app instead, which universal links open in the app. Opened in a browser,
+// /auth/app passes it on to /auth/callback, so it still signs in on the web.
+const SIGN_IN_LINK =
+  // Backticks, not quotes: Go's raw string, so it survives the href's HTML escaping.
+  "{{ if eq .RedirectTo (printf `%s/auth/app` .SiteURL) }}{{ .SiteURL }}/auth/app{{ else }}{{ .SiteURL }}/auth/callback{{ end }}?token_hash={{ .TokenHash }}&type=email";
 
 const signIn = (heading: string, lead: string) =>
   renderEmail({

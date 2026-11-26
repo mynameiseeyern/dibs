@@ -138,3 +138,109 @@ export const mapsLink = (placeId: string | null, name: string) =>
   placeId
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}&query_place_id=${placeId}`
     : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}`;
+
+/** A business's card for the app (the web's is Google's Places UI Kit element, which the app can't use). */
+export interface PlaceCardInfo {
+  placeId: string;
+  name: string;
+  address: string | null;
+  kind: string | null;
+  rating: number | null;
+  ratings: number | null;
+  price: number | null;
+  openNow: boolean | null;
+  photo: { uri: string; by: string | null } | null;
+  mapsUrl: string;
+  /** Only with `full`: what the web's Google panel shows (gallery, hours, website, phone, summary, reviews). */
+  full?: {
+    photos: { uri: string; by: string | null }[];
+    hours: string[] | null;
+    website: string | null;
+    phone: string | null;
+    summary: string | null;
+    reviews: { author: string; rating: number | null; text: string; when: string | null }[];
+  };
+}
+
+type ApiCardPlace = ApiPlace & {
+  userRatingCount?: number;
+  priceLevel?: string;
+  googleMapsUri?: string;
+  currentOpeningHours?: { openNow?: boolean };
+  photos?: { name: string; authorAttributions?: { displayName?: string }[] }[];
+  regularOpeningHours?: { weekdayDescriptions?: string[] };
+  websiteUri?: string;
+  nationalPhoneNumber?: string;
+  editorialSummary?: { text?: string };
+  reviews?: { rating?: number; relativePublishTimeDescription?: string; text?: { text?: string }; originalText?: { text?: string }; authorAttribution?: { displayName?: string } }[];
+};
+
+const CARD_FIELDS = `${PLACE_FIELDS},userRatingCount,priceLevel,googleMapsUri,currentOpeningHours.openNow,photos`;
+const FULL_FIELDS = `${CARD_FIELDS},regularOpeningHours.weekdayDescriptions,websiteUri,nationalPhoneNumber,editorialSummary,reviews`;
+/** The gallery's size, like Google's panel; each photo is a billed media call. */
+const FULL_PHOTOS = 10;
+
+/** A photo's short-lived URL (no key in it), or null. */
+async function photoUri(name: string, key: string, width: number): Promise<string | null> {
+  const media = await fetch(`https://places.googleapis.com/v1/${name}/media?maxWidthPx=${width}&skipHttpRedirect=true`, {
+    headers: { "X-Goog-Api-Key": key },
+    signal: AbortSignal.timeout(8000),
+  }).catch(() => null);
+  const body = media?.ok ? ((await media.json().catch(() => null)) as { photoUri?: string } | null) : null;
+  return body?.photoUri ?? null;
+}
+const PRICE: Record<string, number> = { PRICE_LEVEL_INEXPENSIVE: 1, PRICE_LEVEL_MODERATE: 2, PRICE_LEVEL_EXPENSIVE: 3, PRICE_LEVEL_VERY_EXPENSIVE: 4 };
+
+/**
+ * Name, rating, price, open now and the first photo for one place. The photo comes back as a
+ * short-lived Google URL with no key in it (skipHttpRedirect), so the key never reaches a phone.
+ * Nothing here is stored: only the place ID is kept (Places terms). Null when it can't be loaded.
+ */
+export async function placeCard(placeId: string, opts: { full?: boolean } = {}): Promise<PlaceCardInfo | null> {
+  if (!/^[\w:-]{1,300}$/.test(placeId) || placeId.startsWith("demo:")) {
+    const demo = demoMode() ? DEMO_PLACES.find((p) => p.placeId === placeId) : null;
+    return demo ? { placeId, name: demo.name, address: demo.address, kind: demo.kind, rating: demo.rating, ratings: null, price: null, openNow: null, photo: null, mapsUrl: mapsLink(null, demo.name) } : null;
+  }
+  const key = process.env.GOOGLE_PLACES_API_KEY;
+  if (!key) return null;
+  try {
+    const res = await fetch(`https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}?regionCode=AU`, {
+      headers: { "X-Goog-Api-Key": key, "X-Goog-FieldMask": opts.full ? FULL_FIELDS : CARD_FIELDS },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+    const p = (await res.json()) as ApiCardPlace;
+    const wanted = (p.photos ?? []).slice(0, opts.full ? FULL_PHOTOS : 1);
+    const gallery = (
+      await Promise.all(wanted.map(async (ph) => (ph.name ? { uri: await photoUri(ph.name, key, 800), by: ph.authorAttributions?.[0]?.displayName ?? null } : null)))
+    ).filter((x): x is { uri: string; by: string | null } => Boolean(x?.uri));
+    const photo: PlaceCardInfo["photo"] = gallery[0] ?? null;
+    const name = p.displayName?.text ?? "Somewhere";
+    return {
+      placeId: p.id,
+      name,
+      address: p.shortFormattedAddress ?? null,
+      kind: p.primaryTypeDisplayName?.text ?? null,
+      rating: p.rating ?? null,
+      ratings: p.userRatingCount ?? null,
+      price: p.priceLevel ? (PRICE[p.priceLevel] ?? null) : null,
+      openNow: p.currentOpeningHours?.openNow ?? null,
+      photo,
+      mapsUrl: p.googleMapsUri ?? mapsLink(p.id, name),
+      full: opts.full
+        ? {
+            photos: gallery,
+            hours: p.regularOpeningHours?.weekdayDescriptions ?? null,
+            website: p.websiteUri ?? null,
+            phone: p.nationalPhoneNumber ?? null,
+            summary: p.editorialSummary?.text ?? null,
+            reviews: (p.reviews ?? [])
+              .map((r) => ({ author: r.authorAttribution?.displayName ?? "Someone", rating: r.rating ?? null, text: r.text?.text ?? r.originalText?.text ?? "", when: r.relativePublishTimeDescription ?? null }))
+              .filter((r) => r.text),
+          }
+        : undefined,
+    };
+  } catch {
+    return null;
+  }
+}

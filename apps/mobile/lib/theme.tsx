@@ -1,5 +1,6 @@
-import { createContext, useContext, type ReactNode } from "react";
-import { useColorScheme, View } from "react-native";
+import { createContext, useContext, useEffect, type ReactNode } from "react";
+import { Appearance, useColorScheme, View } from "react-native";
+import * as SecureStore from "expo-secure-store";
 import { vars } from "nativewind";
 import { colourVars, shadows, type ShadowName } from "@dibs/ui/native/vars";
 
@@ -12,7 +13,39 @@ type Mode = "light" | "dark";
 const ModeContext = createContext<Mode>("light");
 const VARS = { light: vars(colourVars.light), dark: vars(colourVars.dark) };
 
+/** The web's Look and sound picker: match the phone, or always light or dark. Kept on this phone. */
+export type ThemeChoice = "system" | "light" | "dark";
+const THEME_KEY = "dibs.theme";
+
+function apply(choice: ThemeChoice) {
+  try {
+    Appearance.setColorScheme(choice === "system" ? "unspecified" : choice);
+  } catch {
+    // Not on every platform (the web preview); the phone's setting stays.
+  }
+}
+
+export async function getThemeChoice(): Promise<ThemeChoice> {
+  try {
+    const t = await SecureStore.getItemAsync(THEME_KEY);
+    return t === "light" || t === "dark" ? t : "system";
+  } catch {
+    return "system";
+  }
+}
+
+export async function setThemeChoice(choice: ThemeChoice) {
+  apply(choice);
+  try {
+    if (choice === "system") await SecureStore.deleteItemAsync(THEME_KEY);
+    else await SecureStore.setItemAsync(THEME_KEY, choice);
+  } catch {}
+}
+
 export function ThemeRoot({ children }: { children: ReactNode }) {
+  useEffect(() => {
+    getThemeChoice().then((c) => c !== "system" && apply(c));
+  }, []);
   const mode: Mode = useColorScheme() === "dark" ? "dark" : "light";
   return (
     <ModeContext.Provider value={mode}>

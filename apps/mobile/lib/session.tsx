@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import * as SecureStore from "expo-secure-store";
 import type { AuthSession, Me } from "@dibs/shared/api";
-import { getMe, refresh, setGuestSource, setSignedOutHandler, setTokenSource, verifyCode } from "./api";
+import { getMe, refresh, setGuestSource, setSignedOutHandler, setTokenSource, verifyCode, verifyLink } from "./api";
+import { forgetPush } from "./push";
 
 /**
  * Who's signed in on this phone. The session (from an emailed code) lives in the keychain /
@@ -26,6 +27,8 @@ type State =
 type SessionApi = {
   state: State;
   signIn: (email: string, code: string) => Promise<Me>;
+  /** The button in the sign-in email, opened in the app: its token hash. */
+  signInWithLink: (tokenHash: string) => Promise<Me>;
   signOut: () => Promise<void>;
   /** After the name step, or anything else that changes `me`. */
   setMe: (me: Me) => void;
@@ -131,23 +134,33 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     };
   }, [token, clear]);
 
+  const start = useCallback(async (s: AuthSession) => {
+    session.current = s;
+    await save(s);
+    const me = await getMe();
+    setState({ status: "signedIn", me });
+    return me;
+  }, []);
+
   const api = useMemo<SessionApi>(
     () => ({
       state,
       async signIn(email, code) {
-        const s = await verifyCode(email, code);
-        session.current = s;
-        await save(s);
-        const me = await getMe();
-        setState({ status: "signedIn", me });
-        return me;
+        return start(await verifyCode(email, code));
       },
-      signOut: clear,
+      async signInWithLink(tokenHash) {
+        return start(await verifyLink(tokenHash));
+      },
+      async signOut() {
+        // Stop pushes for this account on this phone before the session goes.
+        await forgetPush();
+        await clear();
+      },
       setMe: (me) => setState({ status: "signedIn", me }),
       hasGuestPass,
       setGuestPass,
     }),
-    [state, clear, hasGuestPass, setGuestPass]
+    [state, clear, start, hasGuestPass, setGuestPass]
   );
 
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>;

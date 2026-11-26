@@ -4,6 +4,7 @@ import { resolveStart } from "@dibs/shared/when";
 import { cleanCategory, cleanCustomPlace } from "@dibs/shared/plans";
 import { draftPlan, type DraftPicks } from "./dibby";
 import { withPlaces } from "./place-ids";
+import { getPlace } from "./places";
 import { report } from "./report";
 import { store } from "./store";
 import { localToIso } from "./time";
@@ -13,8 +14,8 @@ import { localToIso } from "./time";
  * action in `app/actions.ts`: change one, change the other. Kept apart so the web form's
  * FormData, cookies and redirects stay as they are.
  *
- * The app sends a typed-in place (name + optional address) rather than one picked from the map;
- * the map picker comes to the app later.
+ * The app sends a place typed in (name + optional address) or one picked from the map (place_id,
+ * checked with Google here, like the web's picker).
  */
 
 export interface NewPlanInput {
@@ -25,11 +26,15 @@ export interface NewPlanInput {
   time: string | null;
   where: "vote" | "place" | "dibby";
   place: { name: string; address: string | null } | null;
+  /** A business picked from the map; wins over a typed-in place. Checked with getPlace when the plan's made. */
+  placeId: string | null;
   /** What to ask Dibby for ("dumplings near Chatswood"), and the budget, 1 to 3. */
   ask: string;
   spend: 1 | 2 | 3 | null;
   /** Said yes to sending this to Anthropic. The app asks first (Apple 5.1.2(i)). */
   aiConsent: boolean;
+  /** "Roughly where?" for a vote, like the web form's area field. */
+  area: string | null;
 }
 
 export type Host = { organiserName: string; organiserUserId: string | null; organiserGuestId: string | null };
@@ -50,9 +55,11 @@ export function readNewPlan(body: Record<string, unknown>): NewPlanInput {
     time: /^([01]\d|2[0-3]):[0-5]\d$/.test(time) ? time : null,
     where,
     place: custom ? { name: custom.name, address: custom.address } : null,
+    placeId: p && typeof p.place_id === "string" && /^[\w:-]{1,300}$/.test(p.place_id) ? p.place_id : null,
     ask: clip(body.ask, 500).replace(/^@dibby\s*/i, ""),
     spend: spend === 1 || spend === 2 || spend === 3 ? spend : null,
     aiConsent: body.ai_consent === true,
+    area: clip(body.area, 80) || null,
   };
 }
 
@@ -65,7 +72,7 @@ export function checkNewPlan(p: NewPlanInput): { error: string; field: string } 
     return null;
   }
   if (!p.title) return { error: "Give it a name, like “Friday dinner”.", field: "title" };
-  if (p.where === "place" && !p.place) return { error: "Type the place in, or let the crew vote on it.", field: "place" };
+  if (p.where === "place" && !p.place && !p.placeId) return { error: "Pick the place, or let the crew vote on it.", field: "place" };
   return null;
 }
 
@@ -88,7 +95,7 @@ export async function makePlan(p: NewPlanInput, host: Host): Promise<{ slug: str
     const plan = await store.createPlan({
       ...base,
       title: p.title || draft.title,
-      area: draft.area,
+      area: p.area || draft.area,
       startsAt: startsAt ?? (draft.startsAtLocal ? localToIso(draft.startsAtLocal) : null),
     });
     for (const v of draft.venues) await store.addOption({ planId: plan.id, label: v.name, placeId: v.placeId, note: v.address });
@@ -105,7 +112,14 @@ export async function makePlan(p: NewPlanInput, host: Host): Promise<{ slug: str
     return { slug: plan.slug };
   }
 
-  const venue = p.where === "place" && p.place ? { placeId: null, name: p.place.name, address: p.place.address } : null;
-  const plan = await store.createPlan({ ...base, title: p.title, area: null, startsAt, venue });
+  let venue: { placeId: string | null; name: string; address: string | null } | null = null;
+  if (p.where === "place" && p.placeId) {
+    // From the map: Google's name for it, never what the phone sent (the web's setPlace does the same).
+    const place = await getPlace(p.placeId);
+    if (!place) return { error: "Couldn't find that place. Pick it again, or type it in.", field: "place" };
+    venue = { placeId: place.placeId, name: place.name, address: null };
+  } else if (p.where === "place" && p.place) venue = { placeId: null, name: p.place.name, address: p.place.address };
+  // Same as the web form: an area only when there's no set place.
+  const plan = await store.createPlan({ ...base, title: p.title, area: venue ? null : p.area, startsAt, venue });
   return { slug: plan.slug };
 }

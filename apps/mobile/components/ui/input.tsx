@@ -2,8 +2,8 @@
 // <Input.Root hasError><Input.Wrapper><Input.Icon name="search-line" /><Input.Input placeholder="…" /></Input.Wrapper></Input.Root>
 // 44px, radius-md, a 1.5px border that turns violet with a soft halo while focused.
 
-import { createContext, useContext, useState, type ReactNode } from "react";
-import { TextInput, View, type TextInputProps, type ViewProps } from "react-native";
+import { createContext, useContext, useState, type ComponentRef, type ReactNode, type Ref } from "react";
+import { Text, TextInput, View, type TextInputProps, type ViewProps } from "react-native";
 import { tv, type VariantProps } from "@/utils/tv";
 import { wrapText } from "@/utils/wrap-text";
 import { useColour, useShadow } from "@/lib/theme";
@@ -13,7 +13,10 @@ export const inputVariants = tv({
   slots: {
     root: "w-full flex-row overflow-hidden border-[1.5px] border-stroke-sub-300 bg-bg-white-0",
     wrapper: "flex-1 flex-row items-center bg-bg-white-0",
+    field: "flex-1 self-stretch justify-center",
     input: "flex-1 self-stretch font-sans text-[16px] text-text-strong-950",
+    // Drawn by us, not iOS: a TextInput's own placeholder can come out in Times (TestFlight, Nov 2026).
+    placeholder: "absolute inset-x-0 font-sans text-[16px]",
     icon: "text-[20px] leading-[20px] text-text-soft-400",
     affix: "items-center justify-center border-stroke-soft-200 bg-bg-weak-50",
     affixLabel: "text-paragraph-md text-text-sub-600",
@@ -22,7 +25,7 @@ export const inputVariants = tv({
     size: {
       large: { root: "min-h-13 rounded-md", wrapper: "gap-2 px-4", affix: "px-4" },
       medium: { root: "min-h-11 rounded-md", wrapper: "gap-2 px-4", affix: "px-4" },
-      small: { root: "min-h-9 rounded-sm", wrapper: "gap-2 px-3", input: "text-[14px]", affix: "px-3" },
+      small: { root: "min-h-9 rounded-sm", wrapper: "gap-2 px-3", input: "text-[14px]", placeholder: "text-[14px]", affix: "px-3" },
     },
     focused: { true: { root: "border-primary-base" } },
     hasError: { true: { root: "border-error-base" } },
@@ -58,27 +61,50 @@ function InputWrapper({ className, ...rest }: ViewProps & { className?: string }
   return <View className={wrapper({ class: className })} {...rest} />;
 }
 
-function InputInput({ className, onFocus, onBlur, ...rest }: TextInputProps & { className?: string }) {
+function InputInput({ className, onFocus, onBlur, onChangeText, placeholder, ref, ...rest }: TextInputProps & { className?: string; ref?: Ref<ComponentRef<typeof TextInput>> }) {
   const ctx = useContext(InputContext);
-  const { input } = inputVariants(ctx);
-  const placeholder = useColour(ctx.disabled ? "text-disabled-300" : "text-soft-400");
+  const { field, input, placeholder: placeholderClass } = inputVariants(ctx);
+  const hint = useColour(ctx.disabled ? "text-disabled-300" : "text-soft-400");
   const caret = useColour("primary-base");
+  const [typed, setTyped] = useState(rest.defaultValue ?? "");
+  const empty = (rest.value ?? typed) === "";
   return (
-    <TextInput
-      editable={!ctx.disabled}
-      placeholderTextColor={placeholder}
-      selectionColor={caret}
-      className={input({ class: className })}
-      onFocus={(e) => {
-        ctx.setFocused(true);
-        onFocus?.(e);
-      }}
-      onBlur={(e) => {
-        ctx.setFocused(false);
-        onBlur?.(e);
-      }}
-      {...rest}
-    />
+    <View className={field()}>
+      {placeholder && empty ? (
+        <Text
+          numberOfLines={1}
+          className={placeholderClass()}
+          style={{ color: hint }}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+          pointerEvents="none"
+        >
+          {placeholder}
+        </Text>
+      ) : null}
+      <TextInput
+        ref={ref}
+        editable={!ctx.disabled}
+        // Kept for screen readers, but invisible: the Text above is what people see.
+        placeholder={placeholder}
+        placeholderTextColor="transparent"
+        selectionColor={caret}
+        className={input({ class: className })}
+        onChangeText={(t) => {
+          setTyped(t);
+          onChangeText?.(t);
+        }}
+        onFocus={(e) => {
+          ctx.setFocused(true);
+          onFocus?.(e);
+        }}
+        onBlur={(e) => {
+          ctx.setFocused(false);
+          onBlur?.(e);
+        }}
+        {...rest}
+      />
+    </View>
   );
 }
 

@@ -5,11 +5,16 @@ import { StatusBar } from "expo-status-bar";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { useDibbyFonts } from "@/lib/fonts";
-import { SessionProvider } from "@/lib/session";
+import { usePushSetup } from "@/lib/push";
+import { useLatestVersion } from "@/lib/updates";
+import { SessionProvider, useSession } from "@/lib/session";
 import { ThemeRoot, useColour, useMode } from "@/lib/theme";
 import { Toaster } from "@/components/ui/toast";
 
 SplashScreen.preventAutoHideAsync();
+// Dibby on the splash is drawn in the same place on the first screen (components/dibby/crew-scene.tsx),
+// so a short fade is all the handoff needs: the crew arrive around him.
+SplashScreen.setOptions({ fade: true, duration: 250 });
 
 function Screens() {
   const mode = useMode();
@@ -20,6 +25,9 @@ function Screens() {
       <StatusBar style={mode === "dark" ? "light" : "dark"} />
       <Stack
         screenOptions={{
+          // Every screen draws its own top bar (components/dibby/top-bar.tsx): iOS 26's native bar
+          // puts grey glass behind the back button. Swipe-back still works.
+          headerShown: false,
           headerShadowVisible: false,
           headerStyle: { backgroundColor: page },
           headerTintColor: ink,
@@ -36,7 +44,10 @@ function Screens() {
 }
 
 export default function RootLayout() {
-  const [loaded] = useDibbyFonts();
+  const [fonts] = useDibbyFonts();
+  // Starts straight into a new version if one's out, so one launch is enough (lib/updates.ts).
+  const latest = useLatestVersion();
+  const loaded = fonts && latest;
   useEffect(() => {
     if (loaded) SplashScreen.hideAsync();
   }, [loaded]);
@@ -44,8 +55,16 @@ export default function RootLayout() {
   return (
     <ThemeRoot>
       <SessionProvider>
+        <PushSetup />
         <Screens />
       </SessionProvider>
     </ThemeRoot>
   );
+}
+
+/** Registers this phone for pushes when who's here changes, and opens the plan a tapped notification is about. */
+function PushSetup() {
+  const { state, hasGuestPass } = useSession();
+  usePushSetup(state.status === "signedIn" ? `user:${state.me?.id ?? ""}` : hasGuestPass ? "guest" : state.status);
+  return null;
 }
