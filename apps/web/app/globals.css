@@ -629,6 +629,14 @@ gmp-place-details {
 .landing__faq dt { margin: 0 0 var(--space-1); }
 .landing__faq dd { margin: 0; }
 .app-hero__status { align-self: flex-start; }
+/* Getting the beta (app/app/BetaSteps.tsx): numbered steps on a phone, a QR code on a computer. */
+.beta-steps { display: flex; flex-direction: column; gap: var(--space-4); margin: 0; padding: 0; list-style: none; counter-reset: beta; }
+.beta-steps > li { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); padding-left: 40px; counter-increment: beta; }
+.beta-steps > li::before { content: counter(beta); position: absolute; left: 0; top: 0; display: grid; place-items: center; width: 28px; height: 28px; border-radius: var(--radius-full); background: var(--primary-lighter); color: var(--primary-dark); font-weight: 600; }
+.beta-steps > li > a { margin-top: var(--space-2); }
+.beta-qr { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-3); }
+.beta-qr__code { width: 200px; height: 200px; padding: var(--space-3); border-radius: var(--radius-lg); background: var(--bg-white-0); border: 1px solid var(--stroke-soft-200); }
+.beta-qr__code svg { display: block; width: 100%; height: 100%; }
 @media (min-width: 720px) {
   .landing { max-width: 960px; }
   .landing__hero { max-width: 520px; }
