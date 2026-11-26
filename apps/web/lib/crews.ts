@@ -1,7 +1,7 @@
 import "server-only";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { inviteExpiresAt, type CrewInviteLink, type CrewRole, type CrewSummary, type InviteExpiry, type InviteMaxUses } from "@dibs/shared/crews";
+import { inviteExpiresAt, type CrewInviteLink, type CrewRole, type CrewSummary, type InviteExpiry, type InviteMaxUses, type PlanVisibility } from "@dibs/shared/crews";
 import { siteUrl } from "./site";
 
 /**
@@ -76,7 +76,17 @@ export interface CrewStore {
   decideRequest(requestId: string, status: "approved" | "declined", by: string): Promise<void>;
   removedAt(crewId: string, userId: string): Promise<string | null>;
   clearRemoval(crewId: string, userId: string): Promise<void>;
+
+  /** Which crew a plan belongs to and who can see it. Every plan that isn't a crew's: no crew, by link. */
+  planCrew(plan: { id: string }): Promise<PlanCrew>;
+  setPlanCrew(planId: string, crew: PlanCrew): Promise<void>;
 }
+
+export interface PlanCrew {
+  crewId: string | null;
+  visibility: PlanVisibility;
+}
+const NO_CREW: PlanCrew = { crewId: null, visibility: "link" };
 
 /** The link carries a random token; only its hash is stored. */
 const hashToken = (t: string) => createHash("sha256").update(t).digest("hex");
@@ -199,6 +209,16 @@ const supabaseCrews: CrewStore = {
   async clearRemoval(crewId, userId) {
     must(await admin().from("crew_removals").delete().eq("crew_id", crewId).eq("user_id", userId));
   },
+  async planCrew(plan) {
+    // Plans are read with select("*"), so the row usually has the columns already.
+    const row = plan as { crew_id?: string | null; visibility?: PlanVisibility };
+    if (row.visibility) return { crewId: row.crew_id ?? null, visibility: row.visibility };
+    const got = must(await admin().from("plans").select("crew_id, visibility").eq("id", plan.id).maybeSingle()) as { crew_id: string | null; visibility: PlanVisibility } | null;
+    return got ? { crewId: got.crew_id, visibility: got.visibility } : NO_CREW;
+  },
+  async setPlanCrew(planId, { crewId, visibility }) {
+    must(await admin().from("plans").update({ crew_id: crewId, visibility }).eq("id", planId));
+  },
 };
 
 // ---------- In memory (local runs without Supabase) ----------
@@ -209,11 +229,14 @@ interface MemDb {
   invites: InviteRow[];
   requests: RequestRow[];
   removals: { crew_id: string; user_id: string; removed_at: string }[];
+  /** Plan id → its crew. The in-memory plans live in lib/store/memory.ts. */
+  planCrews: Map<string, PlanCrew>;
 }
 const g = globalThis as unknown as { __dibsCrews?: MemDb };
-const mem: MemDb = (g.__dibsCrews ??= { crews: new Map(), members: [], invites: [], requests: [], removals: [] });
+const mem: MemDb = (g.__dibsCrews ??= { crews: new Map(), members: [], invites: [], requests: [], removals: [], planCrews: new Map() });
 mem.requests ??= [];
 mem.removals ??= [];
+mem.planCrews ??= new Map();
 const now = () => new Date().toISOString();
 
 const memoryCrews: CrewStore = {
@@ -306,6 +329,12 @@ const memoryCrews: CrewStore = {
   },
   async clearRemoval(crewId, userId) {
     mem.removals = mem.removals.filter((r) => !(r.crew_id === crewId && r.user_id === userId));
+  },
+  async planCrew(plan) {
+    return mem.planCrews.get(plan.id) ?? NO_CREW;
+  },
+  async setPlanCrew(planId, crew) {
+    mem.planCrews.set(planId, crew);
   },
 };
 

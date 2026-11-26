@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { Platform, RefreshControl, ScrollView, Share, Text, View } from "react-native";
-import { useFocusEffect, useLocalSearchParams } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { DEFAULT_INVITE_EXPIRY, INVITE_EXPIRY, INVITE_EXPIRY_LABEL, INVITE_MAX_USES, type CrewDetail, type CrewRole, type InviteExpiry, type InviteMaxUses } from "@dibs/shared/crews";
 import * as Badge from "@/components/ui/badge";
@@ -159,14 +159,20 @@ export default function Crew() {
           </Section>
         ) : null}
       </ScrollView>
-      {can.makeInvite ? (
-        <View className="p-4">
-          <Button.Root size="large" block onPress={() => setInviting(true)}>
+      <View className="gap-3 p-4">
+        {can.makePlan ? (
+          <Button.Root variant="dibs" size="large" block onPress={() => router.push({ pathname: "/new", params: { crew: crew.id } })}>
+            <Button.Icon name="add-line" />
+            Make a plan
+          </Button.Root>
+        ) : null}
+        {can.makeInvite ? (
+          <Button.Root variant="primary" mode="stroke" size="large" block onPress={() => setInviting(true)}>
             <Button.Icon name="user-add-line" />
             Invite people
           </Button.Root>
-        </View>
-      ) : null}
+        ) : null}
+      </View>
       <InviteSheet open={inviting} onOpenChange={setInviting} crew={crew} onMade={fetchCrew} />
     </SafeAreaView>
   );

@@ -1,3 +1,4 @@
+import type { PlanDetail } from "@dibs/shared/api";
 import type { CrewDetail, CrewInviteLink, CrewInvitePreview, InviteExpiry, InviteMaxUses, MyCrews, NewCrewResponse } from "@dibs/shared/crews";
 import { call } from "./api";
 
@@ -8,6 +9,10 @@ const crew = (id: string, path = "") => `/api/v1/crews/${encodeURIComponent(id)}
 export const getCrew = (id: string) => call<CrewDetail>(crew(id));
 export const decideRequest = (id: string, requestId: string, approve: boolean) => call<CrewDetail>(crew(id, `/requests/${encodeURIComponent(requestId)}`), { method: "POST", body: { approve } });
 export const revokeInvite = (id: string, inviteId: string) => call<CrewDetail>(crew(id, `/invites/${encodeURIComponent(inviteId)}`), { method: "DELETE" });
+
+/** Hosts of a crew plan: the crew alone, or anyone with the link. */
+export const setVisibility = (slug: string, visibility: "crew" | "link") =>
+  call<PlanDetail>(`/api/v1/plans/${encodeURIComponent(slug)}/visibility`, { method: "PUT", body: { visibility } });
 
 // An invite link (/c/<token>): what it shows, and asking to join.
 const invite = (token: string, path = "") => `/api/v1/crews/invite/${encodeURIComponent(token)}${path}`;
