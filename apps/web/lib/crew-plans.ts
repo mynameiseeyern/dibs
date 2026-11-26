@@ -1,5 +1,7 @@
 import "server-only";
-import { crewPlanAccess, showCrewOnPlan, type CrewRole, type PlanVisibility } from "@dibs/shared/crews";
+import { crewPlanAccess, showCrewOnPlan, suggestCrew, type CrewRole, type CrewSuggestion, type PlanVisibility } from "@dibs/shared/crews";
+import type { PlanMember } from "@dibs/shared/types";
+import { store } from "./store";
 import { crews, type CrewRow } from "./crews";
 
 /**
@@ -69,4 +71,28 @@ export async function dropLostCrewPlans<T extends { plan: { id: string; slug: st
     if (!c) return true;
     return crewPlanAccess({ crewId: c.crewId, visibility: c.visibility }, { crewRole: c.crewId ? (roles.get(c.crewId) ?? null) : null, onPlan: true }) === "see";
   });
+}
+
+/** How many of your latest plans to compare against. */
+const SUGGEST_LOOKBACK = 20;
+
+/**
+ * "Turn this into a crew?" (ARV-96): for a host with an account, on a plan with no crew that isn't
+ * called off. People on it who were also on one of your latest plans, unless they're already a crew.
+ */
+export async function crewSuggestionFor(plan: { id: string; status: string }, members: PlanMember[], hostUserId: string | null, isHost: boolean): Promise<CrewSuggestion | null> {
+  if (!isHost || !hostUserId || plan.status === "cancelled") return null;
+  if ((await crews.planCrew(plan)).crewId) return null;
+  const onThis = members.map((m) => ({ user_id: m.user_id, name: m.display_name, rsvp: m.rsvp }));
+  // Cheap check first: without two other accounts on this plan, nothing to suggest.
+  if (onThis.filter((m) => m.user_id && m.user_id !== hostUserId && m.rsvp !== "out").length < 2) return null;
+  const mine = (await store.listPlansForUser(hostUserId))
+    .filter(({ plan: p }) => p.id !== plan.id)
+    .sort((a, b) => (b.plan.created_at ?? "").localeCompare(a.plan.created_at ?? ""))
+    .slice(0, SUGGEST_LOOKBACK);
+  const [others, myCrews] = await Promise.all([
+    Promise.all(mine.map(async ({ plan: p }) => (await store.listMembers(p.id)).map((m) => m.user_id))),
+    crews.myCrews(hostUserId).then((list) => Promise.all(list.map(async (c) => (await crews.listMembers(c.id)).map((m) => m.user_id)))),
+  ]);
+  return suggestCrew(onThis, others, myCrews, hostUserId);
 }

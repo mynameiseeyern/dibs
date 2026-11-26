@@ -166,6 +166,8 @@ export interface PlanDetail {
   crew?: { id: string; name: string; emoji: string; /** You're in it, so it can open the crew. */ member?: boolean } | null;
   /** Crew plans only: "crew" for the crew alone, "link" for anyone with the link. Null for other plans. */
   visibility?: "crew" | "link" | null;
+  /** Hosts, on a plan with no crew: the same people as your other plans, so "Turn this into a crew?" (ARV-96). */
+  crew_suggestion?: { key: string; people: { user_id: string; name: string }[] } | null;
   /** The organiser's first name, for "Hosted by Ee". */
   host_name?: string | null;
   /** Google Maps directions to the set place (a typed-in address only for people in the plan). */

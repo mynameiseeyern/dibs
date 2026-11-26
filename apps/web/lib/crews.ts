@@ -36,6 +36,8 @@ export interface InviteRow {
   uses: number;
   revoked_at: string | null;
   created_at: string;
+  /** A personal invite (ARV-96): only this person can use it, and it lets them straight in. */
+  for_user?: string | null;
 }
 export type RequestStatus = "pending" | "approved" | "declined" | "cancelled";
 export interface RequestRow {
@@ -58,7 +60,7 @@ export interface CrewStore {
   listMembers(crewId: string): Promise<MemberRow[]>;
   addMember(crewId: string, userId: string, role: CrewRole): Promise<void>;
 
-  createInvite(i: { crewId: string; userId: string; role: CrewRole; expiry: InviteExpiry; maxUses: InviteMaxUses }): Promise<CrewInviteLink>;
+  createInvite(i: { crewId: string; userId: string; role: CrewRole; expiry: InviteExpiry; maxUses: InviteMaxUses; forUser?: string }): Promise<CrewInviteLink>;
   /** The invite behind a link, by its token (we look it up by hash). */
   inviteByToken(token: string): Promise<InviteRow | null>;
   getInvite(inviteId: string): Promise<InviteRow | null>;
@@ -166,18 +168,22 @@ const supabaseCrews: CrewStore = {
   async addMember(crewId, userId, role) {
     must(await admin().from("crew_members").upsert({ crew_id: crewId, user_id: userId, role }, { onConflict: "crew_id,user_id", ignoreDuplicates: true }));
   },
-  async createInvite({ crewId, userId, role, expiry, maxUses }) {
+  async createInvite({ crewId, userId, role, expiry, maxUses, forUser }) {
     const token = newToken();
     const expires = inviteExpiresAt(expiry, new Date());
     must(
-      await admin().from("crew_invites").insert({
-        crew_id: crewId,
-        token_hash: hashToken(token),
-        created_by: userId,
-        created_by_role: role,
-        expires_at: expires?.toISOString() ?? null,
-        max_uses: maxUses,
-      })
+      await admin()
+        .from("crew_invites")
+        .insert({
+          crew_id: crewId,
+          token_hash: hashToken(token),
+          created_by: userId,
+          created_by_role: role,
+          expires_at: expires?.toISOString() ?? null,
+          max_uses: maxUses,
+          // Only sent when set, so ordinary links work before 0031_crew_invite_for.sql is applied.
+          ...(forUser ? { for_user: forUser } : {}),
+        })
     );
     return { url: inviteUrl(token), expires_at: expires?.toISOString() ?? null, max_uses: maxUses };
   },
@@ -322,10 +328,11 @@ const memoryCrews: CrewStore = {
   async addMember(crewId, userId, role) {
     if (!mem.members.some((m) => m.crew_id === crewId && m.user_id === userId)) mem.members.push({ crew_id: crewId, user_id: userId, role, muted: false, joined_at: now() });
   },
-  async createInvite({ crewId, userId, role, expiry, maxUses }) {
+  async createInvite({ crewId, userId, role, expiry, maxUses, forUser }) {
     const token = newToken();
     const expires = inviteExpiresAt(expiry, new Date());
     mem.invites.push({
+      for_user: forUser ?? null,
       id: randomUUID(),
       crew_id: crewId,
       token_hash: hashToken(token),
