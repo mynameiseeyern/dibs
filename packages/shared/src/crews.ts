@@ -283,6 +283,8 @@ export interface CrewDetail {
   /** Working links: yours, or everyone's if you manage requests. */
   invites: CrewInviteRow[];
   can: CrewPermissions;
+  /** The crew's plans (ARV-92). Missing on servers from before it. */
+  plans?: CrewPlanSections;
 }
 
 /** Labels for picking a link's expiry and uses. */
@@ -295,3 +297,54 @@ export const INVITE_EXPIRY_LABEL: Record<InviteExpiry, string> = {
   "7d": "7 days",
   never: "Never",
 };
+
+// ---------- The crew's plans (ARV-92) ----------
+
+/** A plan in the crew's list, as one member sees it. */
+export interface CrewPlanRow {
+  slug: string;
+  title: string;
+  status: "voting" | "locked" | "wrapped" | "cancelled";
+  /** ISO start, or null while the day's still being worked out. */
+  starts_at: string | null;
+  /** "Fri 7pm", Sydney time, from the server. */
+  when: string | null;
+  place: string | null;
+  area: string | null;
+  going: number;
+  /** What's still up for a vote. */
+  deciding: ("when" | "where")[];
+  /** You've voted on what's being decided. */
+  voted: boolean;
+  /** Your answer, or null if you're not on it yet. */
+  rsvp: "in" | "maybe" | "out" | null;
+  host: boolean;
+  visibility: PlanVisibility;
+  created_at: string;
+}
+
+export interface CrewPlanSections {
+  still_deciding: CrewPlanRow[];
+  coming_up: CrewPlanRow[];
+  past: CrewPlanRow[];
+}
+
+/** A plan stays in Coming up until six hours after it starts, like the home screen. */
+const STILL_ON_MS = 6 * 3600 * 1000;
+
+/**
+ * Still deciding (a vote's running and there's no day yet), Coming up (soonest first; a set plan
+ * with no day goes last), Past (newest first). Called off and wrapped plans are past.
+ */
+export function crewPlanSections(rows: readonly CrewPlanRow[], now: number): CrewPlanSections {
+  const live = (r: CrewPlanRow) => r.status === "voting" || r.status === "locked";
+  const t = (r: CrewPlanRow) => (r.starts_at ? Date.parse(r.starts_at) : null);
+  const still_deciding = rows.filter((r) => r.status === "voting" && !r.starts_at).sort((a, b) => a.created_at.localeCompare(b.created_at));
+  const coming_up = rows
+    .filter((r) => live(r) && !still_deciding.includes(r) && (t(r) === null || t(r)! > now - STILL_ON_MS))
+    .sort((a, b) => (t(a) ?? Infinity) - (t(b) ?? Infinity));
+  const past = rows
+    .filter((r) => !still_deciding.includes(r) && !coming_up.includes(r))
+    .sort((a, b) => (t(b) ?? Date.parse(b.created_at)) - (t(a) ?? Date.parse(a.created_at)));
+  return { still_deciding, coming_up, past };
+}

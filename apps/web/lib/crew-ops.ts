@@ -1,6 +1,9 @@
 import "server-only";
 import {
   canAskToJoin,
+  crewPlanSections,
+  type CrewPlanRow,
+  type CrewPlanSections,
   canRevokeInvite,
   crewPermissions,
   inviteStatus,
@@ -13,6 +16,8 @@ import {
 import { crews, looksLikeToken, type CrewRow, type InviteRow } from "./crews";
 import { pushToUsers } from "./push";
 import { store } from "./store";
+import { formatShort } from "./time";
+import { countIn } from "@dibs/shared/plans";
 
 /**
  * Crews, the rules applied (ARV-91). Every crew route goes through here, so each check sits in
@@ -150,7 +155,54 @@ export async function crewDetail(crewId: string, userId: string): Promise<CrewDe
       )
     ),
     can,
+    plans: await crewPlans(crewId, userId),
   };
+}
+
+/**
+ * The crew's plans, as this member sees them (ARV-92). Every plan in the crew is theirs to see,
+ * crew only or by link. Called off plans stay, in Past.
+ */
+async function crewPlans(crewId: string, userId: string): Promise<CrewPlanSections> {
+  const ids = await crews.crewPlanIds(crewId);
+  const rows = await Promise.all(
+    ids.map(async (id): Promise<CrewPlanRow | null> => {
+      const plan = await store.getPlanById(id);
+      if (!plan) return null;
+      const [members, { visibility }] = await Promise.all([store.listMembers(id), crews.planCrew(plan)]);
+      const me = members.find((m) => m.user_id === userId) ?? null;
+      const voting = plan.status === "voting";
+      const whereUp = voting && !plan.venue_name;
+      const [times, votes, timeVotes] = await Promise.all([
+        voting && !plan.starts_at ? store.listTimes(id) : Promise.resolve([]),
+        whereUp && me ? store.listVotes(id) : Promise.resolve([]),
+        voting && !plan.starts_at && me ? store.listTimeVotes(id) : Promise.resolve([]),
+      ]);
+      const whenUp = voting && !plan.starts_at && times.length > 0;
+      const deciding: CrewPlanRow["deciding"] = [...(whenUp ? (["when"] as const) : []), ...(whereUp ? (["where"] as const) : [])];
+      const voted = Boolean(me) && ((whereUp && votes.some((v) => v.member_id === me!.id)) || (whenUp && timeVotes.some((v) => v.member_id === me!.id)));
+      return {
+        slug: plan.slug,
+        title: plan.title,
+        status: plan.status,
+        starts_at: plan.starts_at,
+        when: formatShort(plan.starts_at),
+        place: plan.venue_name,
+        area: plan.area,
+        going: countIn(members),
+        deciding,
+        voted,
+        rsvp: me?.rsvp ?? null,
+        host: me?.role === "organiser" || me?.role === "cohost",
+        visibility,
+        created_at: plan.created_at,
+      };
+    })
+  );
+  return crewPlanSections(
+    rows.filter((r): r is CrewPlanRow => r !== null),
+    Date.now()
+  );
 }
 
 /** Yes or no to a request. Owner and admins only. */

@@ -80,6 +80,8 @@ export interface CrewStore {
   /** Which crew a plan belongs to and who can see it. Every plan that isn't a crew's: no crew, by link. */
   planCrew(plan: { id: string }): Promise<PlanCrew>;
   setPlanCrew(planId: string, crew: PlanCrew): Promise<void>;
+  /** The ids of every plan in a crew. */
+  crewPlanIds(crewId: string): Promise<string[]>;
 }
 
 export interface PlanCrew {
@@ -219,6 +221,10 @@ const supabaseCrews: CrewStore = {
   async setPlanCrew(planId, { crewId, visibility }) {
     must(await admin().from("plans").update({ crew_id: crewId, visibility }).eq("id", planId));
   },
+  async crewPlanIds(crewId) {
+    if (!isUuid(crewId)) return [];
+    return (must(await admin().from("plans").select("id").eq("crew_id", crewId)) as { id: string }[]).map((r) => r.id);
+  },
 };
 
 // ---------- In memory (local runs without Supabase) ----------
@@ -335,6 +341,9 @@ const memoryCrews: CrewStore = {
   },
   async setPlanCrew(planId, crew) {
     mem.planCrews.set(planId, crew);
+  },
+  async crewPlanIds(crewId) {
+    return [...mem.planCrews].filter(([, c]) => c.crewId === crewId).map(([id]) => id);
   },
 };
 

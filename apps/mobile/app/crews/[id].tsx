@@ -11,6 +11,7 @@ import { toast } from "@/components/ui/toast";
 import { Choice } from "@/components/dibby/flow";
 import { TopBar } from "@/components/dibby/top-bar";
 import { NeedsAccount } from "@/components/dibby/crews-strip";
+import { CrewPlans } from "@/components/dibby/crew-plans";
 import { decideRequest, getCrew, inviteLasts, inviteMessage, newInvite, revokeInvite } from "@/lib/crews";
 import { useSession } from "@/lib/session";
 
@@ -20,8 +21,8 @@ const ROLE: Record<CrewRole, string | null> = { owner: "Owner", admin: "Admin", 
 const USES_LABEL = (n: InviteMaxUses) => (n === null ? "No limit" : `${n} ${n === 1 ? "person" : "people"}`);
 
 /**
- * A crew (ARV-91): who's in, people asking to join, and invite links. The crew's plans land here
- * in ARV-92; renaming, roles and leaving in ARV-94.
+ * A crew: its plans (ARV-92), people asking to join, who's in, and invite links (ARV-91).
+ * Renaming, roles and leaving come in ARV-94.
  */
 export default function Crew() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -121,6 +122,8 @@ export default function Crew() {
             ))}
           </Section>
         ) : null}
+
+        {load.detail.plans ? <CrewPlans plans={load.detail.plans} /> : null}
 
         <Section title="In the crew">
           {members.map((m) => (
