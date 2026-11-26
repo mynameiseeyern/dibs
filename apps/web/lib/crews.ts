@@ -82,6 +82,19 @@ export interface CrewStore {
   setPlanCrew(planId: string, crew: PlanCrew): Promise<void>;
   /** The ids of every plan in a crew. */
   crewPlanIds(crewId: string): Promise<string[]>;
+
+  // Managing a crew (ARV-94). lib/crew-ops.ts checks who may do each.
+  updateCrew(crewId: string, patch: { name?: string; emoji?: string }): Promise<void>;
+  setRole(crewId: string, userId: string, role: "admin" | "member"): Promise<void>;
+  /** The owner hands over: they become an admin, the other person the owner. */
+  handOver(crewId: string, fromUserId: string, toUserId: string): Promise<void>;
+  setMuted(crewId: string, userId: string, muted: boolean): Promise<void>;
+  /** Out of the crew, recorded so they can only come back through a fresh invite from the owner or an admin. */
+  removeMember(crewId: string, userId: string, by: string): Promise<void>;
+  /** Out of the crew by their own choice: nothing recorded. */
+  leave(crewId: string, userId: string): Promise<void>;
+  /** Gone, with its members, links and requests. Its plans stay, unlinked (crew-only ones stay with the people on them). */
+  deleteCrew(crewId: string): Promise<void>;
 }
 
 export interface PlanCrew {
@@ -225,6 +238,35 @@ const supabaseCrews: CrewStore = {
     if (!isUuid(crewId)) return [];
     return (must(await admin().from("plans").select("id").eq("crew_id", crewId)) as { id: string }[]).map((r) => r.id);
   },
+  async updateCrew(crewId, patch) {
+    must(await admin().from("crews").update(patch).eq("id", crewId));
+  },
+  async setRole(crewId, userId, role) {
+    must(await admin().from("crew_members").update({ role }).eq("crew_id", crewId).eq("user_id", userId).neq("role", "owner"));
+  },
+  async handOver(crewId, fromUserId, toUserId) {
+    // One owner per crew (a unique index), so step down first, then hand over.
+    must(await admin().from("crew_members").update({ role: "admin" }).eq("crew_id", crewId).eq("user_id", fromUserId).eq("role", "owner"));
+    const res = await admin().from("crew_members").update({ role: "owner" }).eq("crew_id", crewId).eq("user_id", toUserId);
+    if (res.error) {
+      await admin().from("crew_members").update({ role: "owner" }).eq("crew_id", crewId).eq("user_id", fromUserId);
+      throw new Error(res.error.message);
+    }
+  },
+  async setMuted(crewId, userId, muted) {
+    must(await admin().from("crew_members").update({ muted }).eq("crew_id", crewId).eq("user_id", userId));
+  },
+  async removeMember(crewId, userId, by) {
+    must(await admin().from("crew_members").delete().eq("crew_id", crewId).eq("user_id", userId));
+    must(await admin().from("crew_removals").upsert({ crew_id: crewId, user_id: userId, removed_by: by, removed_at: new Date().toISOString() }, { onConflict: "crew_id,user_id" }));
+  },
+  async leave(crewId, userId) {
+    must(await admin().from("crew_members").delete().eq("crew_id", crewId).eq("user_id", userId));
+  },
+  async deleteCrew(crewId) {
+    // plans.crew_id is "on delete set null"; members, links, requests and removals cascade.
+    must(await admin().from("crews").delete().eq("id", crewId));
+  },
 };
 
 // ---------- In memory (local runs without Supabase) ----------
@@ -344,6 +386,41 @@ const memoryCrews: CrewStore = {
   },
   async crewPlanIds(crewId) {
     return [...mem.planCrews].filter(([, c]) => c.crewId === crewId).map(([id]) => id);
+  },
+  async updateCrew(crewId, patch) {
+    const c = mem.crews.get(crewId);
+    if (c) Object.assign(c, patch);
+  },
+  async setRole(crewId, userId, role) {
+    const m = mem.members.find((x) => x.crew_id === crewId && x.user_id === userId);
+    if (m && m.role !== "owner") m.role = role;
+  },
+  async handOver(crewId, fromUserId, toUserId) {
+    const from = mem.members.find((x) => x.crew_id === crewId && x.user_id === fromUserId && x.role === "owner");
+    const to = mem.members.find((x) => x.crew_id === crewId && x.user_id === toUserId);
+    if (!from || !to) throw new Error("not in the crew");
+    from.role = "admin";
+    to.role = "owner";
+  },
+  async setMuted(crewId, userId, muted) {
+    const m = mem.members.find((x) => x.crew_id === crewId && x.user_id === userId);
+    if (m) m.muted = muted;
+  },
+  async removeMember(crewId, userId) {
+    mem.members = mem.members.filter((x) => !(x.crew_id === crewId && x.user_id === userId));
+    mem.removals = mem.removals.filter((r) => !(r.crew_id === crewId && r.user_id === userId));
+    mem.removals.push({ crew_id: crewId, user_id: userId, removed_at: now() });
+  },
+  async leave(crewId, userId) {
+    mem.members = mem.members.filter((x) => !(x.crew_id === crewId && x.user_id === userId));
+  },
+  async deleteCrew(crewId) {
+    mem.crews.delete(crewId);
+    mem.members = mem.members.filter((x) => x.crew_id !== crewId);
+    mem.invites = mem.invites.filter((x) => x.crew_id !== crewId);
+    mem.requests = mem.requests.filter((x) => x.crew_id !== crewId);
+    mem.removals = mem.removals.filter((x) => x.crew_id !== crewId);
+    for (const [planId, c] of mem.planCrews) if (c.crewId === crewId) mem.planCrews.set(planId, { ...c, crewId: null });
   },
 };
 

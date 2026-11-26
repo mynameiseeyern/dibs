@@ -1,6 +1,10 @@
 import "server-only";
 import {
   canAskToJoin,
+  canRemoveFromCrew,
+  cleanCrew,
+  leaveCrew,
+  type CrewGone,
   crewPlanSections,
   type CrewPlanRow,
   type CrewPlanSections,
@@ -117,7 +121,7 @@ export async function askToJoin(token: string, userId: string): Promise<CrewInvi
   }
   await crews.useInvite(invite.id);
 
-  const leads = (await crews.listMembers(crew.id)).filter((m) => m.role === "owner" || m.role === "admin").map((m) => m.user_id);
+  const leads = (await crews.listMembers(crew.id)).filter((m) => (m.role === "owner" || m.role === "admin") && !m.muted).map((m) => m.user_id);
   const who = (await nameOf(userId, true)) ?? "Someone";
   pushToUsers(store, leads, { title: `${crew.emoji} ${crew.name}`, body: `${who} wants to join the crew`, url: `/crews/${crew.id}` });
   return previewOf(invite, crew, userId);
@@ -156,6 +160,7 @@ export async function crewDetail(crewId: string, userId: string): Promise<CrewDe
     ),
     can,
     plans: await crewPlans(crewId, userId),
+    muted: members.find((m) => m.user_id === userId)?.muted ?? false,
   };
 }
 
@@ -233,4 +238,82 @@ export async function revokeInvite(crewId: string, inviteId: string, actorId: st
   if (!canRevokeInvite({ userId: actorId, role }, { createdBy: invite.created_by })) throw new CrewError("You can only turn off links you made.", 403);
   await crews.revokeInvite(inviteId);
   return (await crewDetail(crewId, actorId))!;
+}
+
+// ---------- Managing a crew (ARV-94) ----------
+
+/** Your role, or the same 404 as a crew that doesn't exist. */
+async function mustBeIn(crewId: string, userId: string): Promise<CrewRole> {
+  const role = await crews.roleIn(crewId, userId);
+  if (!role) throw NOT_FOUND();
+  return role;
+}
+
+/** Rename, new emoji (owner), or mute (anyone, for themselves). */
+export async function updateCrew(crewId: string, userId: string, patch: { name?: unknown; emoji?: unknown; muted?: unknown }): Promise<CrewDetail> {
+  const role = await mustBeIn(crewId, userId);
+  if (patch.name !== undefined || patch.emoji !== undefined) {
+    if (!crewPermissions(role).manageCrew) throw new CrewError("Only the owner can rename the crew.", 403);
+    const crew = await crews.getCrew(crewId);
+    const clean = cleanCrew(patch.name ?? crew?.name, patch.emoji ?? crew?.emoji);
+    if (!clean) throw new CrewError(patch.name !== undefined && !String(patch.name).trim() ? "Give your crew a name." : "Pick one emoji for your crew.", 400);
+    await crews.updateCrew(crewId, clean);
+  }
+  if (typeof patch.muted === "boolean") await crews.setMuted(crewId, userId, patch.muted);
+  return (await crewDetail(crewId, userId))!;
+}
+
+/**
+ * Change someone's place in the crew. Owner only: make or remove an admin, or hand the crew over
+ * (the owner becomes an admin).
+ */
+export async function setMemberRole(crewId: string, actorId: string, targetId: string, role: "admin" | "member" | "owner"): Promise<CrewDetail> {
+  const actor = await mustBeIn(crewId, actorId);
+  if (!crewPermissions(actor).manageCrew) throw new CrewError("Only the owner can change roles.", 403);
+  if (targetId === actorId) throw new CrewError("That's you.", 400);
+  const target = await crews.roleIn(crewId, targetId);
+  if (!target) throw new CrewError("They're not in the crew any more.", 404);
+  const crew = await crews.getCrew(crewId);
+  if (role === "owner") {
+    await crews.handOver(crewId, actorId, targetId);
+    if (crew) pushToUsers(store, [targetId], { title: `${crew.emoji} ${crew.name}`, body: "The crew's yours now. You're the owner.", url: `/crews/${crewId}` });
+  } else {
+    await crews.setRole(crewId, targetId, role);
+    if (crew && role === "admin" && target !== "admin") pushToUsers(store, [targetId], { title: `${crew.emoji} ${crew.name}`, body: "You're an admin now. You can let people in.", url: `/crews/${crewId}` });
+  }
+  return (await crewDetail(crewId, actorId))!;
+}
+
+/** Owner removes anyone else; admins remove members. They can only come back through a fresh invite from the owner or an admin. */
+export async function removeFromCrew(crewId: string, actorId: string, targetId: string): Promise<CrewDetail> {
+  const actor = await mustBeIn(crewId, actorId);
+  if (targetId === actorId) throw new CrewError("To go yourself, leave the crew.", 400);
+  const target = await crews.roleIn(crewId, targetId);
+  if (!target) return (await crewDetail(crewId, actorId))!;
+  if (!canRemoveFromCrew(actor, target)) throw new CrewError(actor === "admin" ? "Admins can only remove members." : "Only the owner or an admin can do that.", 403);
+  // No push: being removed isn't announced. Their crew-only plans go straight away (crewGate).
+  await crews.removeMember(crewId, targetId, actorId);
+  return (await crewDetail(crewId, actorId))!;
+}
+
+/** Leave. The owner hands over first, unless they're the last one (then the crew goes). */
+export async function leave(crewId: string, userId: string): Promise<CrewGone> {
+  const role = await mustBeIn(crewId, userId);
+  const others = (await crews.listMembers(crewId)).filter((m) => m.user_id !== userId).length;
+  const can = leaveCrew(role, others);
+  if (!can.ok) throw new CrewError("You own this crew. Hand it to someone first.", 409);
+  if (can.deletesCrew) {
+    await crews.deleteCrew(crewId);
+    return { deleted: true };
+  }
+  await crews.leave(crewId, userId);
+  return { deleted: false };
+}
+
+/** Owner only. The plans stay with the people on them; crew-only ones stay crew only, so no one else gets in. */
+export async function deleteCrew(crewId: string, userId: string): Promise<CrewGone> {
+  const role = await mustBeIn(crewId, userId);
+  if (!crewPermissions(role).manageCrew) throw new CrewError("Only the owner can delete the crew.", 403);
+  await crews.deleteCrew(crewId);
+  return { deleted: true };
 }

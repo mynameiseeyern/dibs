@@ -285,6 +285,14 @@ export interface CrewDetail {
   can: CrewPermissions;
   /** The crew's plans (ARV-92). Missing on servers from before it. */
   plans?: CrewPlanSections;
+  /** You've muted this crew's notifications (ARV-94). */
+  muted?: boolean;
+}
+
+/** `POST /api/v1/crews/:id/leave` and `DELETE /api/v1/crews/:id`: where you are afterwards. */
+export interface CrewGone {
+  /** The crew was deleted (the owner deleted it, or the last person left). */
+  deleted: boolean;
 }
 
 /** Labels for picking a link's expiry and uses. */
