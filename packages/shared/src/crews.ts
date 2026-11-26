@@ -196,3 +196,39 @@ export function isSingleEmoji(s: string): boolean {
   const graphemes = segmenter ? [...segmenter.segment(s)].length : 1;
   return graphemes === 1 && /\p{Extended_Pictographic}|\p{Regional_Indicator}/u.test(s);
 }
+
+// ---------- API shapes (/api/v1/crews) ----------
+// The web and the app both read these. Add fields, never rename or remove: old app versions stay installed.
+
+/** A crew in your list. */
+export interface CrewSummary {
+  id: string;
+  name: string;
+  emoji: string;
+  /** Your role in it. */
+  role: CrewRole;
+  members: number;
+}
+
+/** A shareable invite link. The token is only in the URL: the server keeps its hash. */
+export interface CrewInviteLink {
+  url: string;
+  /** ISO, or null for never. */
+  expires_at: string | null;
+  /** Null for no limit. */
+  max_uses: number | null;
+}
+
+/** `GET /api/v1/crews` */
+export interface MyCrews {
+  crews: CrewSummary[];
+}
+
+/** `POST /api/v1/crews { name, emoji }`: the new crew, with a 7-day invite link ready to share. */
+export interface NewCrewResponse {
+  crew: CrewSummary;
+  invite: CrewInviteLink;
+}
+
+/** A few to pick from when naming a crew. Any single emoji works. */
+export const CREW_EMOJI = ["🥟", "🍜", "🍕", "🌮", "☕", "🍻", "🏀", "⚽", "🎮", "🎤", "🏖️", "🔥", "✨", "🫶", "👯", "🐸"] as const;

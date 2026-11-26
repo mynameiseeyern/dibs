@@ -16,6 +16,7 @@ import * as Button from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import * as LinkButton from "@/components/ui/link-button";
 import { getMyPlans } from "@/lib/api";
+import { CrewsStrip } from "@/components/dibby/crews-strip";
 import { useSession } from "@/lib/session";
 import { whenLong } from "@/lib/dates";
 import { useColour } from "@/lib/theme";
@@ -204,6 +205,7 @@ function MyPlans({ signedIn }: { signedIn: boolean }) {
             </View>
           </Pressable>
         ) : null}
+        {signedIn ? <CrewsStrip /> : null}
         {load.kind === "ok" && load.upcoming.length > 0 ? <PushAsk /> : null}
         {load.kind === "loading" ? (
           <>
