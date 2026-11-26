@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Share, Text, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, Share, Text, View } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { CREW_EMOJI, cleanCrew, isSingleEmoji, type NewCrewResponse } from "@dibs/shared/crews";
+import { CREW_EMOJI, cleanCrew, type NewCrewResponse } from "@dibs/shared/crews";
 import * as Button from "@/components/ui/button";
 import * as Hint from "@/components/ui/hint";
 import * as Input from "@/components/ui/input";
@@ -10,6 +10,7 @@ import * as Label from "@/components/ui/label";
 import * as LinkButton from "@/components/ui/link-button";
 import { TopBar } from "@/components/dibby/top-bar";
 import { NeedsAccount } from "@/components/dibby/crews-strip";
+import { CrewEmojiPicker } from "@/components/dibby/crew-emoji-picker";
 import { createCrew, inviteLasts, inviteMessage } from "@/lib/crews";
 import { useSession } from "@/lib/session";
 
@@ -24,7 +25,6 @@ export default function NewCrew() {
 function Name({ onMade }: { onMade: (m: NewCrewResponse) => void }) {
   const [name, setName] = useState("");
   const [emoji, setEmoji] = useState<string>(CREW_EMOJI[0]);
-  const [own, setOwn] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -68,43 +68,7 @@ function Name({ onMade }: { onMade: (m: NewCrewResponse) => void }) {
             </View>
           </View>
 
-          <View className="gap-3">
-            <Label.Root>Pick an emoji</Label.Root>
-            <View className="flex-row flex-wrap gap-2">
-              {CREW_EMOJI.map((e) => (
-                <Pressable
-                  key={e}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: e === emoji }}
-                  accessibilityLabel={e}
-                  onPress={() => {
-                    setEmoji(e);
-                    setOwn("");
-                  }}
-                  className={`size-12 items-center justify-center rounded-lg border active:opacity-70 ${e === emoji ? "border-primary-base bg-primary-lighter" : "border-stroke-soft-200 bg-bg-white-0"}`}
-                >
-                  <Text className="text-[24px] leading-[30px]">{e}</Text>
-                </Pressable>
-              ))}
-            </View>
-            <View className="gap-1">
-              <Label.Root>Or use your own</Label.Root>
-              <Input.Root>
-                <Input.Wrapper>
-                  <Input.Input
-                    value={own}
-                    placeholder="Tap the emoji key"
-                    maxLength={16}
-                    onChangeText={(t) => {
-                      setOwn(t);
-                      const v = t.trim();
-                      if (isSingleEmoji(v)) setEmoji(v);
-                    }}
-                  />
-                </Input.Wrapper>
-              </Input.Root>
-            </View>
-          </View>
+          <CrewEmojiPicker emoji={emoji} onChange={setEmoji} />
 
           {error ? (
             <Hint.Root hasError>

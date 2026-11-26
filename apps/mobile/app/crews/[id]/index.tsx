@@ -1,10 +1,12 @@
 import { useCallback, useState } from "react";
-import { Platform, RefreshControl, ScrollView, Share, Text, View } from "react-native";
+import { Alert, Platform, Pressable, RefreshControl, ScrollView, Share, Text, View } from "react-native";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { DEFAULT_INVITE_EXPIRY, INVITE_EXPIRY, INVITE_EXPIRY_LABEL, INVITE_MAX_USES, type CrewDetail, type CrewRole, type InviteExpiry, type InviteMaxUses } from "@dibs/shared/crews";
+import { canRemoveFromCrew, DEFAULT_INVITE_EXPIRY, INVITE_EXPIRY, INVITE_EXPIRY_LABEL, INVITE_MAX_USES, type CrewDetail, type CrewMemberRow, type CrewRole, type InviteExpiry, type InviteMaxUses } from "@dibs/shared/crews";
 import * as Badge from "@/components/ui/badge";
 import * as Button from "@/components/ui/button";
+import * as CompactButton from "@/components/ui/compact-button";
+import { Icon } from "@/components/ui/icon";
 import * as LinkButton from "@/components/ui/link-button";
 import * as Modal from "@/components/ui/modal";
 import { toast } from "@/components/ui/toast";
@@ -12,7 +14,7 @@ import { Choice } from "@/components/dibby/flow";
 import { TopBar } from "@/components/dibby/top-bar";
 import { NeedsAccount } from "@/components/dibby/crews-strip";
 import { CrewPlans } from "@/components/dibby/crew-plans";
-import { decideRequest, getCrew, inviteLasts, inviteMessage, newInvite, revokeInvite } from "@/lib/crews";
+import { decideRequest, getCrew, inviteLasts, inviteMessage, newInvite, removeMember, revokeInvite, setMemberRole } from "@/lib/crews";
 import { useSession } from "@/lib/session";
 
 type Load = { kind: "loading" } | { kind: "error"; message: string } | { kind: "ok"; detail: CrewDetail };
@@ -30,6 +32,7 @@ export default function Crew() {
   const [load, setLoad] = useState<Load>({ kind: "loading" });
   const [refreshing, setRefreshing] = useState(false);
   const [inviting, setInviting] = useState(false);
+  const [picked, setPicked] = useState<CrewMemberRow | null>(null);
   const signedIn = state.status === "signedIn";
 
   const fetchCrew = useCallback(async () => {
@@ -56,6 +59,8 @@ export default function Crew() {
     );
 
   const { crew, members, requests, invites, can } = load.detail;
+  /** You can do something to this person: the owner to anyone else, admins to members. */
+  const actsOn = (m: CrewMemberRow) => !m.you && (crew.role === "owner" || canRemoveFromCrew(crew.role, m.role));
   const apply = (detail: CrewDetail) => setLoad({ kind: "ok", detail });
 
   async function decide(requestId: string, approve: boolean, name: string) {
@@ -77,7 +82,13 @@ export default function Crew() {
 
   return (
     <SafeAreaView className="flex-1" edges={["bottom"]}>
-      <TopBar />
+      <TopBar
+        right={
+          <CompactButton.Root variant="ghost" accessibilityLabel="Crew settings" onPress={() => router.push(`/crews/${crew.id}/settings`)}>
+            <CompactButton.Icon name="settings-3-line" />
+          </CompactButton.Root>
+        }
+      />
       <ScrollView
         contentContainerClassName="gap-6 p-4"
         refreshControl={
@@ -127,7 +138,15 @@ export default function Crew() {
 
         <Section title="In the crew">
           {members.map((m) => (
-            <View key={m.user_id} className="min-h-11 flex-row items-center gap-2">
+            <Pressable
+              key={m.user_id}
+              disabled={!actsOn(m)}
+              accessibilityRole={actsOn(m) ? "button" : "text"}
+              accessibilityLabel={[m.name, m.you ? "you" : null, ROLE[m.role]].filter(Boolean).join(", ")}
+              accessibilityHint={actsOn(m) ? "Change their role or remove them" : undefined}
+              onPress={() => setPicked(m)}
+              className="min-h-11 flex-row items-center gap-2 active:opacity-70"
+            >
               <Text numberOfLines={1} className="flex-1 text-paragraph-md text-text-strong-950">
                 {m.name}
                 {m.you ? <Text className="text-text-soft-400"> (you)</Text> : null}
@@ -135,7 +154,8 @@ export default function Crew() {
               {ROLE[m.role] ? (
                 <Badge.Root color={m.role === "owner" ? "primary" : "faded"}>{ROLE[m.role]!}</Badge.Root>
               ) : null}
-            </View>
+              {actsOn(m) ? <Icon name="more-line" className="text-[18px] leading-[20px] text-text-soft-400" /> : null}
+            </Pressable>
           ))}
         </Section>
 
@@ -177,6 +197,7 @@ export default function Crew() {
         ) : null}
       </View>
       <InviteSheet open={inviting} onOpenChange={setInviting} crew={crew} onMade={fetchCrew} />
+      <MemberSheet member={picked} crew={crew} onClose={() => setPicked(null)} onDone={(d) => (setPicked(null), apply(d))} />
     </SafeAreaView>
   );
 }
@@ -244,5 +265,70 @@ function InviteSheet({ open, onOpenChange, crew, onMade }: { open: boolean; onOp
         </Modal.Footer>
       </Modal.Content>
     </Modal.Root>
+  );
+}
+
+/**
+ * What you can do to someone in the crew (ARV-94). The owner: make or remove an admin, hand the
+ * crew over, remove them. Admins: remove members. Removing them isn't announced.
+ */
+function MemberSheet({ member, crew, onClose, onDone }: { member: CrewMemberRow | null; crew: CrewDetail["crew"]; onClose: () => void; onDone: (d: CrewDetail) => void }) {
+  const [busy, setBusy] = useState(false);
+  if (!member) return null;
+  const first = member.name.split(" ")[0];
+  const owner = crew.role === "owner";
+
+  async function run(work: () => Promise<CrewDetail>, done: string) {
+    setBusy(true);
+    try {
+      onDone(await work());
+      toast.success(done);
+    } catch (e) {
+      toast.error("Couldn't do that", { description: (e as Error).message });
+    } finally {
+      setBusy(false);
+    }
+  }
+  const handOver = () =>
+    Alert.alert(`Hand ${crew.name} to ${first}?`, "They become the owner. You stay in as an admin.", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Hand it over", onPress: () => run(() => setMemberRole(crew.id, member.user_id, "owner"), `${first} owns the crew now`) },
+    ]);
+  const remove = () =>
+    Alert.alert(`Remove ${first}?`, "They lose the crew and its crew-only plans. They can only come back through a new invite from the owner or an admin.", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Remove", style: "destructive", onPress: () => run(() => removeMember(crew.id, member.user_id), `${first}'s out of the crew`) },
+    ]);
+
+  return (
+    <Modal.Root open onOpenChange={(o) => !o && onClose()}>
+      <Modal.Content>
+        <Modal.Header title={member.name} description={ROLE[member.role] ?? "Member"} />
+        <Modal.Body>
+          <View className="gap-1">
+            {owner && member.role === "member" ? (
+              <SheetAction icon="shield-user-line" label="Make admin" hint="They can let people in and remove members." disabled={busy} onPress={() => run(() => setMemberRole(crew.id, member.user_id, "admin"), `${first}'s an admin now`)} />
+            ) : null}
+            {owner && member.role === "admin" ? (
+              <SheetAction icon="shield-line" label="Remove admin" disabled={busy} onPress={() => run(() => setMemberRole(crew.id, member.user_id, "member"), `${first}'s a member now`)} />
+            ) : null}
+            {owner ? <SheetAction icon="vip-crown-line" label={`Hand the crew to ${first}`} disabled={busy} onPress={handOver} /> : null}
+            <SheetAction icon="user-unfollow-line" label="Remove from crew" danger disabled={busy} onPress={remove} />
+          </View>
+        </Modal.Body>
+      </Modal.Content>
+    </Modal.Root>
+  );
+}
+
+function SheetAction({ icon, label, hint, danger, disabled, onPress }: { icon: React.ComponentProps<typeof Icon>["name"]; label: string; hint?: string; danger?: boolean; disabled?: boolean; onPress: () => void }) {
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityHint={hint} disabled={disabled} onPress={onPress} className="min-h-12 flex-row items-center gap-3 py-2 active:opacity-70">
+      <Icon name={icon} className={`text-[20px] leading-[22px] ${danger ? "text-error-base" : "text-text-sub-600"}`} />
+      <View className="flex-1">
+        <Text className={`text-label-md ${danger ? "text-error-base" : "text-text-strong-950"}`}>{label}</Text>
+        {hint ? <Text className="text-paragraph-xs text-text-soft-400">{hint}</Text> : null}
+      </View>
+    </Pressable>
   );
 }

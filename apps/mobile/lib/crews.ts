@@ -1,5 +1,5 @@
 import type { PlanDetail } from "@dibs/shared/api";
-import type { CrewDetail, CrewInviteLink, CrewInvitePreview, InviteExpiry, InviteMaxUses, MyCrews, NewCrewResponse } from "@dibs/shared/crews";
+import type { CrewGone, CrewDetail, CrewInviteLink, CrewInvitePreview, InviteExpiry, InviteMaxUses, MyCrews, NewCrewResponse } from "@dibs/shared/crews";
 import { call } from "./api";
 
 // Crews (P-ARV-2): accounts only, app only. Kept out of lib/api.ts so crew work doesn't clash with it.
@@ -7,6 +7,13 @@ export const getMyCrews = () => call<MyCrews>("/api/v1/crews");
 export const createCrew = (name: string, emoji: string) => call<NewCrewResponse>("/api/v1/crews", { method: "POST", body: { name, emoji } });
 const crew = (id: string, path = "") => `/api/v1/crews/${encodeURIComponent(id)}${path}`;
 export const getCrew = (id: string) => call<CrewDetail>(crew(id));
+// Managing a crew (ARV-94).
+export const updateCrew = (id: string, patch: { name?: string; emoji?: string; muted?: boolean }) => call<CrewDetail>(crew(id), { method: "PUT", body: patch });
+export const deleteCrew = (id: string) => call<CrewGone>(crew(id), { method: "DELETE" });
+export const leaveCrew = (id: string) => call<CrewGone>(crew(id, "/leave"), { method: "POST" });
+export const setMemberRole = (id: string, userId: string, role: "admin" | "member" | "owner") =>
+  call<CrewDetail>(crew(id, `/members/${encodeURIComponent(userId)}`), { method: "POST", body: { role } });
+export const removeMember = (id: string, userId: string) => call<CrewDetail>(crew(id, `/members/${encodeURIComponent(userId)}`), { method: "DELETE" });
 export const decideRequest = (id: string, requestId: string, approve: boolean) => call<CrewDetail>(crew(id, `/requests/${encodeURIComponent(requestId)}`), { method: "POST", body: { approve } });
 export const revokeInvite = (id: string, inviteId: string) => call<CrewDetail>(crew(id, `/invites/${encodeURIComponent(inviteId)}`), { method: "DELETE" });
 
