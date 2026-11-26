@@ -1,7 +1,7 @@
 "use server";
 
 import { FILTERED_NOTE, isFiltered } from "@dibs/shared/moderation";
-import { FORMER_MEMBER, MAX_SPOTS, MIN_SPOTS } from "@dibs/shared/plans";
+import { FORMER_MEMBER, MAX_SPOTS, MIN_SPOTS, canDeletePlan } from "@dibs/shared/plans";
 import { fillFromWaitlist } from "@/lib/plan-ops";
 import { MULTI_VOTES, maxVotes } from "@dibs/shared/votes";
 import { memberRejoinUrl } from "@/lib/rejoin";
@@ -402,4 +402,20 @@ export async function mergeMembers(slug: string, fromId: string, intoId: string)
   revalidatePath(`/p/${slug}`);
   revalidatePath(`/p/${slug}/manage`);
   return { name: first };
+}
+
+/**
+ * Delete a plan for good: the organiser, while it's theirs alone with no bills (canDeletePlan).
+ * Anything else gets called off instead, so nobody's left wondering. → `{ error }` when it can't.
+ */
+export async function deletePlan(slug: string): Promise<{ error?: string }> {
+  const view = await loadPlan(slug);
+  if (!view?.me) return { error: "That plan's already gone." };
+  const bills = await store.listBills(view.plan.id);
+  if (!canDeletePlan(view.me, view.members, bills.length)) {
+    return { error: view.me.role !== "organiser" ? "Only the organiser can delete it." : "People are on it now, so call it off instead. That way nobody's left wondering." };
+  }
+  await store.deletePlan(view.plan.id);
+  revalidatePath("/");
+  return {};
 }

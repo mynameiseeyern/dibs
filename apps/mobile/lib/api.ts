@@ -153,5 +153,7 @@ export const resetCalendarLink = () => call<AccountInfo>("/api/v1/me/calendar", 
 
 // Edit plan (hosts): the same changes as the web's Edit, one at a time.
 export const getPlanEdit = (slug: string) => call<import("@dibs/shared/api").PlanEditState>(`/api/v1/plans/${encodeURIComponent(slug)}/edit`);
+/** The organiser deletes a plan for good, while it's theirs alone with no bills (`PlanDetail.can_delete`). */
+export const deletePlan = (slug: string) => call<{ deleted: true }>(`/api/v1/plans/${encodeURIComponent(slug)}`, { method: "DELETE" });
 export const editPlan = (slug: string, change: import("@dibs/shared/api").PlanEditRequest) =>
   call<import("@dibs/shared/api").PlanEditResult>(`/api/v1/plans/${encodeURIComponent(slug)}/edit`, { method: "POST", body: change });

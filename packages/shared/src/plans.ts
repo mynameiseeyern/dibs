@@ -282,3 +282,14 @@ export const DIBBY_VOLUMES = [
   { id: "normal", label: "Normal", hint: "Also chases replies and maybes, and says when someone pulls out. Up to three a day." },
   { id: "loud", label: "Loud", hint: "Everything Normal does, up to five a day." },
 ] as const;
+
+/**
+ * Deleting a plan for good, not just calling it off: only the organiser, and only while it's
+ * theirs alone (nobody else has joined, not even as a guest or a maybe) with no bills on it.
+ * For a plan made by mistake. Once anyone else is on it, calling it off keeps the page up
+ * so nobody's left wondering where it went.
+ */
+export function canDeletePlan(me: Pick<PlanMember, "id" | "role"> | null, members: Pick<PlanMember, "id">[], bills: number): boolean {
+  if (!me || me.role !== "organiser") return false;
+  return bills === 0 && members.every((m) => m.id === me.id);
+}
