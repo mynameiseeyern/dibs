@@ -272,3 +272,56 @@ export interface PlaceHit {
 export interface JoinResponse {
   guest_token?: string;
 }
+
+/**
+ * `GET /api/v1/plans/:slug/edit`: everything the app's Edit plan screen shows, hosts only. The
+ * same values the web's /p/:slug/manage gets.
+ */
+export interface PlanEditState {
+  status: "voting" | "locked" | "wrapped" | "cancelled";
+  title: string;
+  category: string | null;
+  description: string | null;
+  /** Category suggestions: the organiser's own, then the defaults. */
+  categories: string[];
+  /** Extras switched off on this plan (chat, photos, bills, recap). */
+  extras_off: string[];
+  starts_at: string | null;
+  /** "Fri 22 Nov, 7pm", or null while it's to be decided. */
+  when_label: string | null;
+  vote_deadline: string | null;
+  deadline_label: string | null;
+  venue: string | null;
+  area: string | null;
+  option_count: number;
+  /** Null: open, no limit. */
+  capacity: number | null;
+  going: number;
+  plus_ones: boolean;
+  multi_vote: boolean;
+  vibe: "chill" | "extra" | "straight";
+  volume: "quiet" | "normal" | "loud";
+  /** Locked but not started: it can be wrapped up early, on the web for now. */
+  wrap_early: boolean;
+}
+
+/**
+ * `POST /api/v1/plans/:slug/edit`: one change at a time, through the same rules as the web's Edit.
+ * `when` and `vote_deadline` are Sydney wall clock, "YYYY-MM-DDTHH:mm" ("" clears `when`).
+ */
+export type PlanEditRequest =
+  | { field: "title" | "category" | "description" | "area"; value: string }
+  | { field: "when" | "vote_deadline"; value: string }
+  | { field: "capacity"; value: number | null }
+  | { field: "plus_ones" | "multi_vote"; value: boolean }
+  | { field: "extra"; value: { extra: string; on: boolean } }
+  | { field: "place"; value: { place_id: string } | { name: string; address?: string } }
+  | { field: "open_vote" | "cancel" }
+  | { field: "vibe"; value: "chill" | "extra" | "straight" }
+  | { field: "volume"; value: "quiet" | "normal" | "loud" };
+
+/** Hosts' answer to an edit: the plan as the app shows it, and the edit screen's fresh values. */
+export interface PlanEditResult {
+  detail: PlanDetail;
+  state: PlanEditState | null;
+}

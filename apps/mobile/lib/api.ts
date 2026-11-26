@@ -145,3 +145,8 @@ export const getAccount = () => call<AccountInfo>("/api/v1/me/account");
 export const setBetaUpdates = (on: boolean) => call<AccountInfo>("/api/v1/me/account", { method: "PUT", body: { beta_updates: on } });
 /** A new calendar subscription link; the old one stops working. */
 export const resetCalendarLink = () => call<AccountInfo>("/api/v1/me/calendar", { method: "POST" });
+
+// Edit plan (hosts): the same changes as the web's Edit, one at a time.
+export const getPlanEdit = (slug: string) => call<import("@dibs/shared/api").PlanEditState>(`/api/v1/plans/${encodeURIComponent(slug)}/edit`);
+export const editPlan = (slug: string, change: import("@dibs/shared/api").PlanEditRequest) =>
+  call<import("@dibs/shared/api").PlanEditResult>(`/api/v1/plans/${encodeURIComponent(slug)}/edit`, { method: "POST", body: change });

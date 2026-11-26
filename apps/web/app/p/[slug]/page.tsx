@@ -29,7 +29,8 @@ import { store } from "@/lib/store";
 import { countdown, formatDay, formatShort, formatWhen, isoToLocal } from "@/lib/time";
 import { loadPlan } from "@/lib/viewer";
 import { removeMyPhoto, setPlusOne, removePlusOne, addTime, goWithTime, markFree, removeTime, appInterest, trackShare, addOption, askDibbyMore, joinPlan, lockPlan, removeMe, removeOption, setRsvp, vote } from "./actions";
-import { hostRejoinLink, mergeMembers, setHost, setPlace } from "./manage/actions";
+import { hostRejoinLink, mergeMembers, setDescription, setHost, setPlace } from "./manage/actions";
+import { AddDetails } from "./AddDetails";
 import { SaveSpot } from "@/components/SaveSpot";
 import { guestRejoinUrl } from "@/lib/rejoin";
 import { JoinForm } from "./JoinForm";
@@ -366,7 +367,7 @@ export default async function PlanPage({ params, searchParams }: Props) {
             <div className="ticket__head">
               <h1 id="plan-h" className="title-h3 plan-title">{plan.title}</h1>
               {hostedBy && <p className="paragraph-md muted">{hostedBy}</p>}
-              {plan.description && <p className="paragraph-sm plan-desc">{plan.description}</p>}
+              {plan.description ? <p className="paragraph-sm plan-desc">{plan.description}</p> : isHost && !cancelled && !wrapped ? <AddDetails save={setDescription.bind(null, slug)} /> : null}
             </div>
             <div className="ticket__tear" aria-hidden="true" />
             <dl className="plan-facts ticket__stubs">
@@ -421,7 +422,7 @@ export default async function PlanPage({ params, searchParams }: Props) {
               <h1 id="plan-h" className="title-h3 plan-title">{plan.title}</h1>
               {hostedBy && <p className="paragraph-sm muted">{hostedBy}</p>}
             </div>
-            {plan.description && <p className="paragraph-sm plan-desc">{plan.description}</p>}
+            {plan.description ? <p className="paragraph-sm plan-desc">{plan.description}</p> : isHost && !cancelled && !wrapped ? <AddDetails save={setDescription.bind(null, slug)} /> : null}
             <ul className="db-plan__facts">
               <li>
                 <i className="ri-calendar-line db-icon" aria-hidden="true" /> {when ?? <span className="muted">Time to be decided</span>}

@@ -22,9 +22,12 @@ import * as Button from "@/components/ui/button";
 import * as Hint from "@/components/ui/hint";
 import { Icon } from "@/components/ui/icon";
 import * as LinkButton from "@/components/ui/link-button";
+import * as Modal from "@/components/ui/modal";
+import * as Textarea from "@/components/ui/textarea";
+import { toast } from "@/components/ui/toast";
 import { Placeholder } from "@/components/ui/placeholder";
 import { PlacePicker } from "@/components/dibby/place";
-import { API_URL, ApiError, createPlan, getPlan } from "@/lib/api";
+import { API_URL, ApiError, createPlan, editPlan, getPlan } from "@/lib/api";
 import { sydneyToday, whenLong } from "@/lib/dates";
 import { lc, sydneyHhmm, sydneyInstant, timeLabel, whenLine } from "@/lib/when-words";
 import { useSession } from "@/lib/session";
@@ -516,6 +519,10 @@ function Done({ slug, plan, title }: { slug: string; plan: PlanSummary | null; t
   const pace = usePace();
   const { state } = useSession();
   const url = `${API_URL}/p/${slug}`;
+  const [details, setDetails] = useState<string | null>(plan?.description ?? null);
+  const [addingDetails, setAddingDetails] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [savingDetails, setSavingDetails] = useState(false);
 
   const facts: PlanFact[] = [];
   const when = whenLong(plan?.starts_at ?? null) ?? plan?.when;
@@ -542,8 +549,15 @@ function Done({ slug, plan, title }: { slug: string; plan: PlanSummary | null; t
           </Animated.Text>
         </View>
 
-        <Animated.View entering={pace.reduce ? undefined : FadeInDown.duration(380).delay(650)}>
-          <PlanCard title={plan?.title ?? title} status={plan?.status ?? "voting"} category={plan?.category} facts={facts} />
+        <Animated.View entering={pace.reduce ? undefined : FadeInDown.duration(380).delay(650)} className="gap-3">
+          <PlanCard title={plan?.title ?? title} status={plan?.status ?? "voting"} category={plan?.category} byline={details} facts={facts} />
+          {/* Making a plan doesn't ask for details, so they go in here (or later from Edit). */}
+          {details ? null : (
+            <LinkButton.Root variant="primary" className="self-start" onPress={() => setAddingDetails(true)}>
+              <LinkButton.Icon name="add-line" />
+              Add details
+            </LinkButton.Root>
+          )}
         </Animated.View>
 
         <PushAsk delay={pace.reduce ? 0 : 1100} />
@@ -566,6 +580,37 @@ function Done({ slug, plan, title }: { slug: string; plan: PlanSummary | null; t
           </Animated.View>
         ) : null}
       </ScrollView>
+      <Modal.Root open={addingDetails} onOpenChange={setAddingDetails}>
+        <Modal.Content>
+          <Modal.Header title="Add details" description="What to bring, where to meet. Anyone with the link sees this, like the name." />
+          <Modal.Body>
+            <Textarea.Root value={draft} onChangeText={setDraft} maxLength={500} placeholder="Bring cash, meet out the front…" autoFocus>
+              <Textarea.CharCounter current={draft.length} max={500} />
+            </Textarea.Root>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button.Root
+              size="large"
+              block
+              disabled={!draft.trim() || savingDetails}
+              onPress={async () => {
+                setSavingDetails(true);
+                try {
+                  const { detail } = await editPlan(slug, { field: "description", value: draft.trim() });
+                  setDetails(detail.plan.description ?? draft.trim());
+                  setAddingDetails(false);
+                } catch (e) {
+                  toast.error("Couldn't add that", { description: (e as Error).message });
+                } finally {
+                  setSavingDetails(false);
+                }
+              }}
+            >
+              {savingDetails ? "Saving…" : "Save"}
+            </Button.Root>
+          </Modal.Footer>
+        </Modal.Content>
+      </Modal.Root>
       <View className="gap-3 px-4" style={{ paddingBottom: Math.max(insets.bottom, 16) }}>
         <Button.Root variant="dibs" size="large" block onPress={share}>
           <Button.Icon name="share-forward-line" />
