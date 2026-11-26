@@ -245,6 +245,10 @@
 .add-to-calendar__list { display: flex; flex-direction: column; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
 .add-to-calendar__option { justify-content: flex-start; }
 .thread__plan-link { margin-top: var(--space-2); }
+/* Dibby's confirm card (ARV-59): a new plan it drafted, waiting on whoever asked. */
+.dibby-card { display: flex; flex-direction: column; gap: var(--space-1); margin-top: var(--space-2); padding: var(--space-3); border: 1px solid var(--stroke-soft-200); border-radius: var(--radius-sm); background: var(--bg-white-0); }
+.dibby-card p { margin: 0; }
+.dibby-card__actions { display: flex; gap: var(--space-2); margin-top: var(--space-2); }
 .account-record .title-h4, .account-record .paragraph-sm { margin: 0; }
 .netting { display: flex; flex-direction: column; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
 .netting li { display: flex; justify-content: space-between; gap: var(--space-2); font: 400 14px/20px var(--font-sans); color: var(--text-sub-600); }

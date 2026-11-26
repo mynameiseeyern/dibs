@@ -123,7 +123,12 @@ export async function searchPlaces(q: string, near?: { area?: string | null }): 
 export async function getPlaceInfo(placeId: string, full = false): Promise<PlaceInfo> {
   return call<PlaceInfo>(`/api/v1/places/${encodeURIComponent(placeId)}?${await placesQuery({})}${full ? "&full=1" : ""}`);
 }
-export const sendMessage = (slug: string, body: string) => call<PlanDetail>(plan(slug, "/messages"), { method: "POST", body: { body } });
+/** `aiConsent`: they said OK to an @dibby message going to the AI (the server refuses one without it). */
+export const sendMessage = (slug: string, body: string, aiConsent = false) =>
+  call<PlanDetail>(plan(slug, "/messages"), { method: "POST", body: aiConsent ? { body, ai_consent: true } : { body } });
+/** Answer Dibby's confirm card (make or skip the plan it drafted), or undo the places it added. */
+export const dibbyAction = (slug: string, messageId: string, action: "make" | "skip" | "undo") =>
+  call<PlanDetail>(plan(slug, `/dibby/${encodeURIComponent(messageId)}`), { method: "POST", body: { action } });
 
 /** "https://dibby.social/p/k7m2qx9a", "dibby.social/p/k7m2qx9a" or just "k7m2qx9a". */
 export function slugFrom(input: string): string | null {

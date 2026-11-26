@@ -158,6 +158,11 @@ export interface Store {
 
   listMessages(planId: string, limit?: number): Promise<Message[]>;
   deleteMessage(planId: string, messageId: string): Promise<void>;
+  /**
+   * Change a message's body or template (Dibby's confirm card and Undo). With `unless`, only
+   * when the template's `plan_state` isn't set yet: false means someone else got there first.
+   */
+  updateMessage(planId: string, messageId: string, patch: { body?: string; template?: unknown }, unless?: "plan_state"): Promise<boolean>;
   deleteMessagesBy(memberId: string): Promise<void>;
   /** Off the plan: no way back in through their account or guest pass. Bills still add up, under "Former member". */
   ejectMember(memberId: string): Promise<void>;

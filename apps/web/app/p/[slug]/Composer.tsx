@@ -9,11 +9,14 @@ import * as Hint from "@/components/ui/hint";
 import * as Input from "@/components/ui/input";
 import { toast } from "@/components/ui/toast";
 import { play } from "@/lib/feedback";
+import { useAiConsent } from "@/components/AiConsent";
 
 export function Composer({ action }: { action: (s: FormState, f: FormData) => Promise<FormState> }) {
   const [text, setText] = useState("");
   const [askedDibby, setAskedDibby] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  // Nothing tagged @dibby goes to the AI until you've said OK, once per browser (ARV-59).
+  const consent = useAiConsent();
   // Dibby searches around you by default. Location is used silently if it's already allowed;
   // otherwise it's asked for when you send a message to Dibby, not while you're typing one.
   const tagging = /(^|\s)@dibby\b/i.test(text);
@@ -32,6 +35,7 @@ export function Composer({ action }: { action: (s: FormState, f: FormData) => Pr
         f.set("near_lng", String(c.lng));
       }
     }
+    if (consent.given()) f.set("ai_consent", "1");
     const r = await action(s, f);
     if (!r?.error) play("send");
     setText("");
@@ -43,8 +47,16 @@ export function Composer({ action }: { action: (s: FormState, f: FormData) => Pr
       ref={formRef}
       action={formAction}
       className="composer"
-      onSubmit={() => setAskedDibby(/(^|\s)@dibby\b/i.test(text))}
+      onSubmit={(e) => {
+        const tagged = /(^|\s)@dibby\b/i.test(text);
+        setAskedDibby(tagged);
+        if (tagged && !consent.given()) {
+          e.preventDefault();
+          consent.ensure().then((ok) => ok && formRef.current?.requestSubmit());
+        }
+      }}
     >
+      {consent.dialog}
       {pending && askedDibby && (
         <div className="db-msg db-msg--ai" aria-live="polite">
           <Dibby mood="thinking" size="xs" className="composer__thinking" />

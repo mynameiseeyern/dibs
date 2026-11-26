@@ -230,6 +230,15 @@ export interface PlanDetail {
       at: string;
       /** Reactions on it, in the web's order (👍 ❤️ 😂 🎉), only the ones someone's used. */
       reactions?: { emoji: string; count: number; mine: boolean }[];
+      /** Dibby set up another plan from this chat: its slug, for an Open button. `body` leaves the link line out. */
+      plan_link?: string | null;
+      /**
+       * A new plan Dibby drafted, waiting on this person (they asked). Nothing's made or anyone
+       * invited until they answer: `POST /api/v1/plans/:slug/dibby/:messageId { action: "make" | "skip" }`.
+       */
+      confirm?: { title: string; facts: string } | null;
+      /** How many of Dibby's places on the vote this person can take back off (`action: "undo"`). 0 when they can't. */
+      undo?: number;
     }[];
     /** The line pinned at the top: "Housewarming · Sat, 28 Nov · 11:00 am · Unit 23 · 7 going". */
     summary?: string;
@@ -284,6 +293,11 @@ export interface JoinResponse {
  * `GET /api/v1/plans/:slug/edit`: everything the app's Edit plan screen shows, hosts only. The
  * same values the web's /p/:slug/manage gets.
  */
+/** `POST /api/v1/plans/:slug/dibby/:messageId`: answer Dibby's confirm card, or undo its places. */
+export interface DibbyActionRequest {
+  action: "make" | "skip" | "undo";
+}
+
 export interface PlanEditState {
   status: "voting" | "locked" | "wrapped" | "cancelled";
   title: string;

@@ -340,6 +340,14 @@ export const memoryStore: Store = {
   async deleteMessagesBy(memberId) {
     db.messages = db.messages.filter((m) => m.member_id !== memberId);
   },
+  async updateMessage(planId, messageId, patch, unless) {
+    const m = db.messages.find((x) => x.plan_id === planId && x.id === messageId);
+    if (!m) return false;
+    if (unless && m.template && typeof m.template === "object" && (m.template as Record<string, unknown>)[unless] != null) return false;
+    if (patch.body !== undefined) m.body = patch.body;
+    if (patch.template !== undefined) m.template = patch.template;
+    return true;
+  },
   async ejectMember(memberId) {
     await this.removePhotosBy([memberId]);
     const m = db.members.get(memberId);
