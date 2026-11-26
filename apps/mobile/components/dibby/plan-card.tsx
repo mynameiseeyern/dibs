@@ -38,6 +38,8 @@ type PlanCardProps = {
   statusLabel?: string;
   /** Been and done: a smaller title (20px), like .plan-row--quiet. */
   quiet?: boolean;
+  /** The host's ⋯ (plan-menu.tsx), top right. */
+  menu?: ReactNode;
 };
 
 // The web's status badges (apps/web/lib/status.ts): same words, tones and icons.
@@ -47,7 +49,7 @@ const STATUS: Record<Exclude<PlanStatus, "cancelled">, { label: string; tone: "w
   wrapped: { label: "Wrapped", tone: "primary", icon: "flag-line" },
 };
 
-export function PlanCard({ title, status, category, meta, byline, size = "row", facts = [], footer, className, plain, statusLabel, quiet }: PlanCardProps) {
+export function PlanCard({ title, status, category, meta, byline, size = "row", facts = [], footer, className, plain, statusLabel, quiet, menu }: PlanCardProps) {
   const off = status === "cancelled";
   const pill = status && !off ? STATUS[status] : null;
   return (
@@ -68,6 +70,7 @@ export function PlanCard({ title, status, category, meta, byline, size = "row", 
           ) : null}
         </View>
         {meta ? <Text className="text-paragraph-sm text-text-sub-600">{meta}</Text> : null}
+        {menu ? <View className="-my-2 -mr-2">{menu}</View> : null}
       </View>
       <View className="gap-0.5">
         <Text
