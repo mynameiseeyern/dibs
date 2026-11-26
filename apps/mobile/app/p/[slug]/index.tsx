@@ -28,6 +28,7 @@ import { cn } from "@/utils/cn";
 import { countdown, whenLong, whenParts } from "@/lib/dates";
 import { usePlan } from "@/lib/use-plan";
 import { AppBar } from "@/components/dibby/app-bar";
+import { CrewOnPlan } from "@/components/dibby/crew-on-plan";
 
 /**
  * A plan, opened from its link (same path as the web, /p/:slug, so dibby.social links open here).
@@ -132,6 +133,7 @@ function Plan({ slug, detail, apply }: { slug: string; detail: PlanDetail; apply
     <SafeAreaView className="flex-1" edges={["bottom"]}>
       <AppBar />
       <ScrollView contentContainerClassName="gap-6 p-4 pb-8">
+        <CrewOnPlan slug={slug} detail={detail} apply={apply} />
         {onePage ? (
           <View className="gap-6">
             <SelfieBanner slug={slug} crew={shot} isYou={iAmIn && Boolean(raised)} going={plan.going} capacity={plan.capacity} />

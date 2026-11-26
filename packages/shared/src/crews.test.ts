@@ -4,6 +4,7 @@ import {
   canRemoveFromCrew,
   canRevokeInvite,
   cleanCrew,
+  crewPlanSections,
   crewPermissions,
   crewPlanAccess,
   genericPreview,
@@ -146,4 +147,43 @@ describe("cleanCrew", () => {
     expect(cleanCrew("Gang", "👍🏽")).not.toBeNull();
   });
   it("caps the name at 40", () => expect(cleanCrew("x".repeat(60), "🔥")!.name).toHaveLength(40));
+});
+
+describe("crewPlanSections", () => {
+  const now = Date.parse("2026-11-26T08:00:00Z");
+  const row = (slug: string, o: Partial<import("./crews").CrewPlanRow>): import("./crews").CrewPlanRow => ({
+    slug,
+    title: slug,
+    status: "voting",
+    starts_at: null,
+    when: null,
+    place: null,
+    area: null,
+    going: 1,
+    deciding: [],
+    voted: false,
+    rsvp: null,
+    host: false,
+    visibility: "crew",
+    created_at: "2026-11-20T00:00:00Z",
+    ...o,
+  });
+  it("splits into still deciding, coming up and past", () => {
+    const { still_deciding, coming_up, past } = crewPlanSections(
+      [
+        row("vote-no-day", { status: "voting" }),
+        row("fri", { status: "locked", starts_at: "2026-11-28T08:00:00Z" }),
+        row("tomorrow", { status: "voting", starts_at: "2026-11-27T08:00:00Z", deciding: ["where"] }),
+        row("set-no-day", { status: "locked" }),
+        row("last-week", { status: "locked", starts_at: "2026-11-19T08:00:00Z" }),
+        row("wrapped", { status: "wrapped", starts_at: "2026-11-24T08:00:00Z" }),
+        row("off", { status: "cancelled", starts_at: "2026-11-29T08:00:00Z" }),
+        row("tonight-started", { status: "locked", starts_at: "2026-11-26T05:00:00Z" }),
+      ],
+      now
+    );
+    expect(still_deciding.map((r) => r.slug)).toEqual(["vote-no-day"]);
+    expect(coming_up.map((r) => r.slug)).toEqual(["tonight-started", "tomorrow", "fri", "set-no-day"]);
+    expect(past.map((r) => r.slug)).toEqual(["off", "wrapped", "last-week"]);
+  });
 });

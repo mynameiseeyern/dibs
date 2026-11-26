@@ -145,7 +145,7 @@ function Ready({ made }: { made: NewCrewResponse }) {
           <Button.Icon name="share-forward-line" />
           Share the link
         </Button.Root>
-        <LinkButton.Root variant="gray" className="self-center" onPress={() => router.replace("/crews")}>
+        <LinkButton.Root variant="gray" className="self-center" onPress={() => router.replace(`/crews/${crew.id}`)}>
           Done
         </LinkButton.Root>
       </View>

@@ -1,6 +1,6 @@
 import { useMemo, useState, type ComponentProps } from "react";
 import { Platform, Pressable, ScrollView, Share, Text, TextInput, View } from "react-native";
-import { router, Stack } from "expo-router";
+import { router, Stack, useLocalSearchParams } from "expo-router";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -76,6 +76,8 @@ export default function NewPlan() {
 }
 
 function PlanFlow() {
+  // From a crew's page: the plan is the crew's, crew only to start with (ARV-93).
+  const { crew: crewId } = useLocalSearchParams<{ crew?: string }>();
   const insets = useSafeAreaInsets();
   const pace = usePace();
   const caret = useColour("primary-base");
@@ -207,6 +209,7 @@ function PlanFlow() {
       ask: w === "dibby" ? ask.trim() : undefined,
       spend: w === "dibby" ? spend : null,
       area: w !== "place" ? area.trim() || null : null,
+      ...(crewId ? { crew_id: crewId } : {}),
       ...(needName ? { first: first.trim(), last: last.trim() } : {}),
     };
     const started = Date.now();

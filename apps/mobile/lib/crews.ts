@@ -1,9 +1,24 @@
-import type { CrewInviteLink, InviteExpiry, InviteMaxUses, MyCrews, NewCrewResponse } from "@dibs/shared/crews";
+import type { PlanDetail } from "@dibs/shared/api";
+import type { CrewDetail, CrewInviteLink, CrewInvitePreview, InviteExpiry, InviteMaxUses, MyCrews, NewCrewResponse } from "@dibs/shared/crews";
 import { call } from "./api";
 
 // Crews (P-ARV-2): accounts only, app only. Kept out of lib/api.ts so crew work doesn't clash with it.
 export const getMyCrews = () => call<MyCrews>("/api/v1/crews");
 export const createCrew = (name: string, emoji: string) => call<NewCrewResponse>("/api/v1/crews", { method: "POST", body: { name, emoji } });
+const crew = (id: string, path = "") => `/api/v1/crews/${encodeURIComponent(id)}${path}`;
+export const getCrew = (id: string) => call<CrewDetail>(crew(id));
+export const decideRequest = (id: string, requestId: string, approve: boolean) => call<CrewDetail>(crew(id, `/requests/${encodeURIComponent(requestId)}`), { method: "POST", body: { approve } });
+export const revokeInvite = (id: string, inviteId: string) => call<CrewDetail>(crew(id, `/invites/${encodeURIComponent(inviteId)}`), { method: "DELETE" });
+
+/** Hosts of a crew plan: the crew alone, or anyone with the link. */
+export const setVisibility = (slug: string, visibility: "crew" | "link") =>
+  call<PlanDetail>(`/api/v1/plans/${encodeURIComponent(slug)}/visibility`, { method: "PUT", body: { visibility } });
+
+// An invite link (/c/<token>): what it shows, and asking to join.
+const invite = (token: string, path = "") => `/api/v1/crews/invite/${encodeURIComponent(token)}${path}`;
+export const previewInvite = (token: string) => call<CrewInvitePreview>(invite(token));
+export const askToJoin = (token: string) => call<CrewInvitePreview>(invite(token, "/ask"), { method: "POST" });
+
 export const newInvite = (crewId: string, opts: { expiry?: InviteExpiry; max_uses?: InviteMaxUses } = {}) =>
   call<CrewInviteLink>(`/api/v1/crews/${encodeURIComponent(crewId)}/invites`, { method: "POST", body: opts });
 

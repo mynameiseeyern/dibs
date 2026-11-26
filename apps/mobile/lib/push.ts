@@ -115,7 +115,8 @@ export function usePushSetup(who: string) {
   useEffect(() => {
     if (!last || last.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) return;
     const url = last.notification.request.content.data?.url;
-    if (typeof url === "string" && url.startsWith("/p/")) {
+    // Plans, and crews (a join request, or your answer).
+    if (typeof url === "string" && (url.startsWith("/p/") || url.startsWith("/crews/"))) {
       router.push(url as `/p/${string}`);
       Notifications.clearLastNotificationResponse();
     }
