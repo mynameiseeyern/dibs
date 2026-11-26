@@ -2,6 +2,7 @@ import "server-only";
 import { toPlanSummary, type PlanDetail } from "@dibs/shared/api";
 import { countIn, extraOn, planAccess, READ_ONLY_NOTE, unreadCount } from "@dibs/shared/plans";
 import { picksAllowed } from "@dibs/shared/votes";
+import { personKey } from "@dibs/shared/moderation";
 import { apiGuest, apiOrganiser } from "./api-auth";
 import { asViewer } from "./api-viewer";
 import { store } from "./store";
@@ -12,6 +13,7 @@ import { siteUrl } from "./site";
 import { formatShort, formatWhen } from "./time";
 import { loadPlan } from "./viewer";
 import { crewGate, crewSuggestionFor } from "./crew-plans";
+import { screenFor } from "./moderation";
 
 /** Runs `fn` as the app's person (sign-in, guest pass, or nobody yet), so plan actions see them. */
 export async function forApp<T>(req: Request, fn: () => Promise<T>): Promise<T> {
@@ -30,15 +32,22 @@ export async function planDetail(slug: string): Promise<PlanDetail | null> {
   const sees = !me || Boolean(access && access.level !== "hidden");
   const inChat = Boolean(me && access && access.level !== "hidden");
 
-  const [options, votes, messages, reactions] = await Promise.all([
+  const [options, votes, allMessages, reactions, screen] = await Promise.all([
     store.listOptions(plan.id),
     store.listVotes(plan.id),
     sees && extraOn(plan, "chat") ? store.listMessages(plan.id, 50) : Promise.resolve([]),
     inChat && extraOn(plan, "chat") ? store.listReactions(plan.id) : Promise.resolve([]),
+    screenFor(me ? personKey(me) : null),
   ]);
   // Same rule as the web thread: an account that isn't read only can react.
   const canReact = Boolean(me?.user_id && access?.level === "full");
   const byId = new Map(members.map((m) => [m.id, m]));
+  // Like the web thread (chat/page.tsx): messages you reported, and anything from people you've blocked, stay hidden.
+  const messages = allMessages.filter((m) => {
+    if (screen.reported.has(m.id)) return false;
+    const author = m.member_id ? byId.get(m.member_id) : null;
+    return !(author && screen.blocked.has(personKey(author) ?? ""));
+  });
   const host = members.find((m) => m.role === "organiser");
   // The web's Directions button: a place from the map, or a typed-in address for people in the plan.
   const directions = plan.venue_place_id && plan.venue_name ? mapsLink(plan.venue_place_id, plan.venue_name) : me && plan.venue_address ? mapsLink(null, plan.venue_address) : null;
@@ -72,7 +81,7 @@ export async function planDetail(slug: string): Promise<PlanDetail | null> {
     going: sees
       ? members
           .filter((m) => m.rsvp === "in" || m.role === "organiser" || m.role === "cohost")
-          .map((m) => ({ name: m.display_name, host: m.role === "organiser" || m.role === "cohost", waitlisted: m.waitlisted, colour: m.colour }))
+          .map((m) => ({ id: m.id, name: m.display_name, host: m.role === "organiser" || m.role === "cohost", waitlisted: m.waitlisted, colour: m.colour }))
       : null,
     vote:
       sees && options.length
