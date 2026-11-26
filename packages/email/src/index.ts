@@ -12,6 +12,7 @@ export function senderFromEnv(site: string) {
     site: site.replace(/\/$/, ""),
     name: process.env.EMAIL_SENDER_NAME || "Dibby, Sydney NSW",
     contact: process.env.EMAIL_REPLY_TO || "hello@dibby.social",
+    postal: process.env.EMAIL_POSTAL_ADDRESS || undefined,
   };
 }
 

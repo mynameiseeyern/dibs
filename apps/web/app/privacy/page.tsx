@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: "Privacy", robots: { index: true, fol
 
 export default function Privacy() {
   return (
-    <LegalPage title="Privacy" updated="5 November 2026">
+    <LegalPage title="Privacy" updated="9 November 2026">
       <p>
         Dibby helps a group make a plan, decide where to go and square up after. This is what we keep, why, and how to get rid of it. If
         anything here is unclear, email <a href="mailto:hello@dibby.social">hello@dibby.social</a>.
@@ -47,6 +47,10 @@ export default function Privacy() {
           <a href="/account">You</a> any time and the old link stops working.
         </li>
         <li>
+          <strong>Reports and blocks.</strong> If you report something, we keep the report, a copy of what it said and who sent it, so we can act on it. If you block someone,
+          we keep that so we can hide them from you. The person you report or block isn&rsquo;t told it was you.
+        </li>
+        <li>
           <strong>Usage counts:</strong> we log moments like &ldquo;a plan was made&rdquo;, &ldquo;a vote was cast&rdquo; or &ldquo;a bill was
           settled&rdquo;, with IDs only (no names, messages, places or amounts), to see whether Dibby is working. When someone opens a plan link
           they&rsquo;re not on yet, we count it with a random ID kept in that browser, which isn&rsquo;t tied to a name or account.
@@ -61,8 +65,9 @@ export default function Privacy() {
 
       <h2>The AI in your chat</h2>
       <p>
-        Dibby has an AI member in every plan&rsquo;s chat. It only reads messages that tag @dibby, and what you type in &ldquo;Ask Dibby&rdquo;. Those
-        are sent to our AI provider, Anthropic, so it can reply. It doesn&rsquo;t remember anything between plans and never mentions money or anything
+        Dibby has an AI member in every plan&rsquo;s chat. It only works when someone tags @dibby or types in &ldquo;Ask Dibby&rdquo;. Then what they typed, the plan&rsquo;s
+        details, the names of the people on it and the last 20 messages in that plan&rsquo;s chat go to our AI provider, Anthropic, so it can reply. Your email and PayID never do. Anthropic
+        handles this on our behalf and doesn&rsquo;t train its models on it. The app asks for your OK the first time. It doesn&rsquo;t remember anything between plans and never mentions money or anything
         personal.
       </p>
 

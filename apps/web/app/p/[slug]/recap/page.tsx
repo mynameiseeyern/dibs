@@ -13,6 +13,7 @@ import { planPreview } from "@/lib/plan-preview";
 import { loadRoll } from "@/lib/photos";
 import { CameraCard } from "../CameraCard";
 import { PhotoRoll } from "../PhotoRoll";
+import { hostRemovePhoto, reportThing } from "../moderation-actions";
 import { removeMyPhoto } from "../actions";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
@@ -80,7 +81,7 @@ export default async function Recap({ params }: { params: Promise<{ slug: string
       {roll && (roll.photos.length > 0 || roll.canAdd) && (
         <section className="section db-stack" aria-labelledby="photos-h">
           <h2 id="photos-h" className="title-h5">The photos</h2>
-          <PhotoRoll slug={slug} photos={roll.photos} revealed={roll.revealed} remove={removeMyPhoto.bind(null, slug)} />
+          <PhotoRoll slug={slug} photos={roll.photos} revealed={roll.revealed} remove={removeMyPhoto.bind(null, slug)} report={reportThing.bind(null, slug)} hostRemove={view.isHost ? hostRemovePhoto.bind(null, slug) : undefined} />
           {roll.canAdd && roll.taken < roll.max && <CameraCard slug={slug} taken={roll.taken} max={roll.max} revealed={roll.revealed} />}
         </section>
       )}

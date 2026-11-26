@@ -21,6 +21,8 @@ import { withPlaces } from "@/lib/place-ids";
 import { areaChoices, withAsk } from "@/lib/area";
 import { track } from "@/lib/events";
 import { report } from "@/lib/report";
+import { FILTERED_NOTE, isFiltered, personKey } from "@dibs/shared/moderation";
+import { BANNED_NOTE, isBanned } from "@/lib/moderation";
 
 export type FormState = { error?: string } | undefined;
 
@@ -42,6 +44,8 @@ export async function joinPlan(slug: string, _prev: FormState, form: FormData): 
   if (!view) return { error: "This plan doesn't exist any more." };
   if (view.me) return undefined;
   if (view.plan.status === "cancelled") return { error: "This one's been called off." };
+  const joiner = view.organiser ? `u:${view.organiser.id}` : view.guest ? `g:${view.guest.id}` : null;
+  if (await isBanned(joiner, view.plan.id)) return { error: BANNED_NOTE };
   const raw = form.get("rsvp");
   const rsvp: Rsvp | null = raw === "in" || raw === "maybe" ? raw : null;
 
@@ -64,6 +68,7 @@ export async function joinPlan(slug: string, _prev: FormState, form: FormData): 
   const first = clean(form.get("first_name"));
   const last = clean(form.get("last_name"));
   if (!first) return { error: "Pop in your name so the crew knows who you are." };
+  if (isFiltered(first, last)) return { error: FILTERED_NOTE };
   const name = `${first} ${last}`.trim();
 
   // Signed in but never set up to organise (a guest who added their email): join as the account.
@@ -195,6 +200,8 @@ export async function postMessage(slug: string, _prev: FormState, form: FormData
   if (no) return { error: no };
   const body = String(form.get("body") ?? "").trim().slice(0, 2000);
   if (!body) return undefined;
+  if (isFiltered(body)) return { error: FILTERED_NOTE };
+  if (await isBanned(personKey(view.me), view.plan.id)) return { error: BANNED_NOTE };
   const tagged = mentionsDibby(body);
   await store.addMessage({ planId: view.plan.id, memberId: view.me.id, kind: "text", body, mentionsDibby: tagged });
 
@@ -342,6 +349,7 @@ export async function addOption(slug: string, _prev: FormState, form: FormData):
   // Typed in: a title and an optional address, as given. Otherwise a real business from the map.
   const custom = form.has("custom_name") ? cleanCustomPlace(form.get("custom_name"), form.get("custom_address")) : null;
   if (form.has("custom_name") && !custom) return { error: "Give the place a name." };
+  if (isFiltered(custom?.name, custom?.address)) return { error: FILTERED_NOTE };
   const place = custom ? null : await getPlace(String(form.get("place_id") ?? ""));
   if (!custom && !place) return { error: "Couldn't find that place. Pick one from the map." };
   const label = custom?.name ?? place!.name;

@@ -97,6 +97,14 @@ Builds run in the cloud on EAS, so no Xcode or Android Studio needed. From `apps
 
 The first Android upload has to be done by hand in Play Console (download the `.aab` from the EAS build page); `eas submit` works after that.
 
+## Store submission
+
+**App Review sign-in.** Set `APP_REVIEW_EMAIL` and `APP_REVIEW_CODE` (6 digits) on Vercel, sign that account in once, and give both to Apple in App Review Information. It signs in without an email. Use a throwaway account with no real data.
+
+**Before submitting:** run `supabase/migrations/0030_moderation.sql`; set `RESEND_API_KEY`, `EMAIL_FROM` and `METRICS_EMAILS` on Vercel so reports reach you and `/admin/reports` opens.
+
+**Google Play:** new personal accounts need a closed test with 12 testers opted in for 14 days in a row, then "Apply for production".
+
 ## Writing UI
 
 - Use a component from `components/ui` or `components/dibby` before building a control. Strings go inside a component or `<Text>`; a bare string in a `View` crashes.

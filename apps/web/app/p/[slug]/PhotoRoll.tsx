@@ -5,6 +5,8 @@ import type { MonogramColour } from "@dibs/shared/types";
 import * as Button from "@/components/ui/button";
 import * as Modal from "@/components/ui/modal";
 import { toast } from "@/components/ui/toast";
+import { ContentMenu } from "@/components/ContentMenu";
+import type { ReportReason } from "@dibs/shared/moderation";
 
 export type RollPhoto = { id: string; name: string; colour: MonogramColour; mine: boolean; stamp: string; width: number | null; height: number | null; glow: string | null };
 
@@ -58,7 +60,7 @@ function Print({ src, width, height, n }: { src: string; width: number | null; h
  * photos, each with its date stamp, developing in the first time you see them; tap for the full
  * one, save it, or take back your own.
  */
-export function PhotoRoll({ slug, photos, revealed, remove }: { slug: string; photos: RollPhoto[]; revealed: boolean; remove: (id: string) => Promise<{ error?: string }> }) {
+export function PhotoRoll({ slug, photos, revealed, remove, report, hostRemove }: { slug: string; photos: RollPhoto[]; revealed: boolean; report?: (kind: string, id: string, reason: string, note: string) => Promise<{ error?: string }>; hostRemove?: (id: string) => Promise<{ error?: string }>; remove: (id: string) => Promise<{ error?: string }> }) {
   const [open, setOpen] = useState<RollPhoto | null>(null);
   const [pending, start] = useTransition();
   if (photos.length === 0) return null;
@@ -152,6 +154,16 @@ export function PhotoRoll({ slug, photos, revealed, remove }: { slug: string; ph
                   >
                     {pending ? "Taking it down…" : "Take my photo down"}
                   </Button.Root>
+                )}
+                {!open.mine && (report || hostRemove) && (
+                  <ContentMenu
+                    variant="button"
+                    triggerText="Report or take down"
+                    title="This photo"
+                    label={`Report photo by ${open.name}`}
+                    report={report ? (reason: ReportReason, note: string) => report("photo", open.id, reason, note).then((r) => (r.error ? r : (setOpen(null), r))) : undefined}
+                    remove={hostRemove ? { label: "Take it down", done: "Photo taken down", act: () => hostRemove(open.id).then((r) => (r.error ? r : (setOpen(null), r))) } : undefined}
+                  />
                 )}
               </Modal.Footer>
             </>

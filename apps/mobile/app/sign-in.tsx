@@ -10,6 +10,7 @@ import * as Hint from "@/components/ui/hint";
 import * as Input from "@/components/ui/input";
 import * as Label from "@/components/ui/label";
 import * as LinkButton from "@/components/ui/link-button";
+import { AgreeLine } from "@/components/dibby/agree-line";
 import { sendCode } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import { TopBar } from "@/components/dibby/top-bar";
@@ -138,6 +139,7 @@ export default function SignIn() {
               <Button.Root size="large" block disabled={busy || !email.trim()} onPress={send}>
                 {busy ? "Sending…" : "Email me a link"}
               </Button.Root>
+              <AgreeLine />
             </>
           )}
           <SiteFooter />

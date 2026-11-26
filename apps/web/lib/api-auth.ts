@@ -62,7 +62,7 @@ export const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 /** Emails a sign-in code. The same email as the web's link; the template carries both. */
 export async function sendCode(email: string): Promise<{ error?: string }> {
-  if (!usingSupabase) return {};
+  if (!usingSupabase || reviewLogin(email)) return {};
   // The email template links to /auth/app when it sees this, so the button opens the app.
   const { error } = await anonClient().auth.signInWithOtp({ email, options: { shouldCreateUser: true, emailRedirectTo: APP_SIGN_IN_URL() } });
   if (!error) return {};
@@ -88,11 +88,37 @@ export async function verifyCode(email: string, code: string): Promise<AuthSessi
       ? { access_token: DEMO_PREFIX + randomUUID(), refresh_token: "demo", expires_at: Math.floor(Date.now() / 1000) + 30 * 86400 }
       : { error: "That code doesn't look right." };
   }
+  const review = reviewLogin(email);
+  if (review) return review.code === code ? reviewSession(email) : { error: "That code didn't work. Check it, or get a new one." };
   const { data, error } = await anonClient().auth.verifyOtp({ email, token: code, type: "email" });
   if (error || !data.session) {
     if (error) console.error("[api verify]", error.status, error.code, error.message);
     return { error: "That code didn't work. Check it, or get a new one." };
   }
+  return toSession(data.session);
+}
+
+/**
+ * App Review can't get an emailed code, and Apple requires a working demo login (2.1). Off unless
+ * APP_REVIEW_EMAIL and APP_REVIEW_CODE are set. Only ever one throwaway account with no real data.
+ */
+function reviewLogin(email: string): { code: string } | null {
+  const reviewEmail = process.env.APP_REVIEW_EMAIL?.trim().toLowerCase();
+  const code = process.env.APP_REVIEW_CODE?.trim();
+  return reviewEmail && code && /^\d{6}$/.test(code) && email === reviewEmail ? { code } : null;
+}
+
+/** Mints a real one-time code with the service key and redeems it, so it's an ordinary session. */
+async function reviewSession(email: string): Promise<AuthSession | { error: string }> {
+  const service = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false, autoRefreshToken: false } });
+  await service.auth.admin.createUser({ email, email_confirm: true }).catch(() => null); // Already there is fine.
+  const { data: link, error: linkError } = await service.auth.admin.generateLink({ type: "magiclink", email });
+  if (linkError || !link.properties?.email_otp) {
+    console.error("[api review login]", linkError?.message);
+    return { error: "That code didn't work. Check it, or get a new one." };
+  }
+  const { data, error } = await anonClient().auth.verifyOtp({ email, token: link.properties.email_otp, type: "email" });
+  if (error || !data.session) return { error: "That code didn't work. Check it, or get a new one." };
   return toSession(data.session);
 }
 

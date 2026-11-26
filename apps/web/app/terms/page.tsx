@@ -5,12 +5,12 @@ export const metadata: Metadata = { title: "Terms", robots: { index: true, follo
 
 export default function Terms() {
   return (
-    <LegalPage title="Terms" updated="5 November 2026">
+    <LegalPage title="Terms" updated="9 November 2026">
       <p>The short version: Dibby is a free beta for planning things with your mates. Be decent, and know what it does and doesn&rsquo;t do.</p>
 
       <h2>Who can use it</h2>
       <p>
-        You need to be 16 or older to use Dibby. Anyone 16+ with a plan link can join it as a guest. You&rsquo;re responsible for who you share
+        You need to be 16 or older to use Dibby. By joining a plan, making one or signing in, you agree to these terms. Anyone 16+ with a plan link can join it as a guest. You&rsquo;re responsible for who you share
         your plan links with: anyone with the link can see the plan&rsquo;s name, time and place name.
       </p>
       <p>
@@ -37,11 +37,29 @@ export default function Terms() {
       </p>
 
       <h2>Be decent</h2>
+      <p>
+        <strong>There&rsquo;s zero tolerance here for objectionable content or abusive users.</strong> That covers bullying, harassment, hate, threats, sexual content,
+        scams and anything illegal. Break it and we&rsquo;ll remove the content and can remove you from Dibby for good.
+      </p>
       <ul>
         <li>Don&rsquo;t use Dibby to harass anyone, or to share anything illegal, hateful or that isn&rsquo;t yours to share.</li>
         <li>Don&rsquo;t try to break, overload or get around how Dibby works.</li>
-        <li>Hosts can take places off a vote and remove plans. We can remove content or accounts that break these terms.</li>
+        <li>Hosts can take places off a vote, delete messages, take down photos, remove people and call plans off. We can remove content or accounts that break these terms.</li>
       </ul>
+
+      <h2>Reporting and blocking</h2>
+      <p>
+        Tap the three dots on a message or a person, or &ldquo;Report this plan&rdquo;, to report something. It&rsquo;s hidden for you straight away and we look at every report within
+        24 hours. You can block someone the same way, and you won&rsquo;t see their messages or photos on any plan. Filters stop some words from being posted at all. Or email{" "}
+        <a href="mailto:hello@dibby.social">hello@dibby.social</a>.
+      </p>
+
+      <h2>Copyright</h2>
+      <p>
+        If something on Dibby infringes your copyright, email <a href="mailto:hello@dibby.social">hello@dibby.social</a> with your name and contact details, what the work is, where it
+        appears on Dibby (a link to the plan), and a statement that you own it or act for the owner and believe the use isn&rsquo;t allowed. We&rsquo;ll take it down if the
+        claim stands, and we remove people who keep infringing.
+      </p>
 
       <h2>Our responsibility</h2>
       <p>

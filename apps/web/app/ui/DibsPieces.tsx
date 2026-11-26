@@ -165,10 +165,10 @@ export function DibsPieces() {
 
       <Piece title="Chat">
         <State label="Default (me, a mate, Dibby, system)">
-          <Thread messages={MESSAGES} members={CREW} meId="ee" canPost vibe="chill" post={async () => undefined} />
+          <Thread slug="demo" messages={MESSAGES} members={CREW} meId="ee" canPost vibe="chill" post={async () => undefined} />
         </State>
         <State label="Read only (maybe)">
-          <Thread messages={MESSAGES.slice(0, 2)} members={CREW} meId="jo" canPost readOnly="You're a maybe, so you can only read along." vibe="chill" post={async () => undefined} />
+          <Thread slug="demo" messages={MESSAGES.slice(0, 2)} members={CREW} meId="jo" canPost readOnly="You're a maybe, so you can only read along." vibe="chill" post={async () => undefined} />
         </State>
       </Piece>
 

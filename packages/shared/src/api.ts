@@ -142,6 +142,8 @@ export interface NewPlanRequest {
   place?: { name: string; address?: string | null; place_id?: string | null } | null;
   ask?: string;
   spend?: 1 | 2 | 3 | null;
+  /** Required for `where: "dibby"`: they said yes to sending this to the AI provider. */
+  ai_consent?: boolean;
   /** "Roughly where? (optional)" when the crew votes: "Surry Hills". */
   area?: string | null;
   /** Only for someone with no account and no guest pass yet. */

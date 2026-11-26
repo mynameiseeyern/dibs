@@ -1,3 +1,4 @@
+import { FILTERED_NOTE, isFiltered } from "@dibs/shared/moderation";
 import type { Me } from "@dibs/shared/api";
 import { apiError, apiJson, apiOrganiser, readBody, text } from "@/lib/api-auth";
 import { track } from "@/lib/events";
@@ -22,6 +23,7 @@ export async function PUT(req: Request) {
   const first = text(body.first, 40);
   const last = text(body.last, 40);
   if (!first || !last) return apiError("We need your first and last name.", 400);
+  if (isFiltered(first, last)) return apiError(FILTERED_NOTE, 400);
   const existing = await store.getProfile(me.id).catch(() => null);
   try {
     await store.upsertProfile({

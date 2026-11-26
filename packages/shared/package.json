@@ -17,6 +17,8 @@
     "./merge": "./src/merge.ts",
     "./inapp": "./src/inapp.ts",
     "./plan-text": "./src/plan-text.ts",
+    "./moderation": "./src/moderation.ts",
+    "./report-reasons": "./src/report-reasons.ts",
     "./crews": "./src/crews.ts"
   },
   "scripts": {
@@ -26,5 +28,8 @@
   "devDependencies": {
     "typescript": "5.9.3",
     "vitest": "3.2.4"
+  },
+  "dependencies": {
+    "obscenity": "0.4.4"
   }
 }

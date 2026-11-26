@@ -28,6 +28,7 @@ import { cn } from "@/utils/cn";
 import { countdown, whenLong, whenParts } from "@/lib/dates";
 import { usePlan } from "@/lib/use-plan";
 import { AppBar } from "@/components/dibby/app-bar";
+import { ReportPlan } from "@/components/dibby/report-plan";
 import { CrewOnPlan } from "@/components/dibby/crew-on-plan";
 import { CrewPrompt } from "@/components/dibby/crew-prompt";
 
@@ -168,6 +169,9 @@ function Plan({ slug, detail, apply }: { slug: string; detail: PlanDetail; apply
         {going && going.length ? <WhoRow going={going} me={me?.name ?? null} going_count={plan.going} capacity={plan.capacity} /> : null}
 
         <Vote slug={slug} detail={detail} apply={apply} />
+
+        {/* Apple 1.2 / Google UGC: report the plan or block whoever made it. Not on your own plan. */}
+        {!me?.host ? <ReportPlan slug={slug} /> : null}
       </ScrollView>
 
       {/* Pinned while it's still coming together, like the web's dock; once locked, Share is a round button. */}

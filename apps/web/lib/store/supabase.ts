@@ -4,7 +4,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { FORMER_MEMBER, makeSlug, pickColour } from "@dibs/shared/plans";
 import type { LoggedEvent } from "@dibs/shared/metrics";
 import { MULTI_VOTES, overLimit } from "@dibs/shared/votes";
-import type { Bill, BillShare, Message, NewMember, NewPlan, Plan, PlanMember, PlanOption, PlanPhoto, PlanTime, PushToken, Store, Subscription, TimeVote, Vote, RecapAnswer, Reaction } from "./types";
+import type { Bill, BillShare, Message, NewMember, NewPlan, Plan, PlanMember, PlanOption, PlanPhoto, PlanTime, PushToken, Store, Subscription, TimeVote, Vote, RecapAnswer, Reaction, Report } from "./types";
 
 const PHOTO_BUCKET = "plan-photos";
 
@@ -304,6 +304,51 @@ export const supabaseStore: Store = {
     for (const v of overLimit(rows, keep)) must(await admin().from("votes").delete().eq("option_id", v.option_id).eq("member_id", v.member_id));
   },
 
+  async deleteMessage(planId, messageId) {
+    must(await admin().from("messages").delete().eq("plan_id", planId).eq("id", messageId));
+  },
+  async deleteMessagesBy(memberId) {
+    must(await admin().from("messages").delete().eq("member_id", memberId));
+  },
+  async ejectMember(memberId) {
+    await this.removePhotosBy([memberId]);
+    must(await admin().from("plan_members").update({ display_name: FORMER_MEMBER, user_id: null, guest_id: null, rsvp: "out" }).eq("id", memberId));
+  },
+  async addReport({ kind, planId, targetId, targetPerson, reporter, reason, note, snapshot }) {
+    must(await admin().from("reports").insert({ kind, plan_id: planId, target_id: targetId, target_person: targetPerson, reporter, reason, note, snapshot }));
+  },
+  async listOpenReports() {
+    return must(await admin().from("reports").select("*").eq("status", "open").order("created_at")) as Report[];
+  },
+  async getReport(id) {
+    return must(await admin().from("reports").select("*").eq("id", id).maybeSingle()) as Report | null;
+  },
+  async resolveReport(id, status) {
+    must(await admin().from("reports").update({ status, resolved_at: new Date().toISOString() }).eq("id", id));
+  },
+  async listReportedTargets(reporter) {
+    const rows = must(await admin().from("reports").select("target_id").eq("reporter", reporter).not("target_id", "is", null)) as { target_id: string }[];
+    return rows.map((r) => r.target_id);
+  },
+  async addBlock(blocker, blocked, name) {
+    must(await admin().from("blocks").upsert({ blocker, blocked, blocked_name: name }, { onConflict: "blocker,blocked" }));
+  },
+  async removeBlock(blocker, blocked) {
+    must(await admin().from("blocks").delete().eq("blocker", blocker).eq("blocked", blocked));
+  },
+  async listBlocks(blocker) {
+    const rows = must(await admin().from("blocks").select("blocked, blocked_name").eq("blocker", blocker).order("created_at")) as { blocked: string; blocked_name: string }[];
+    return rows.map((r) => ({ person: r.blocked, name: r.blocked_name }));
+  },
+  async addBan(person, planId) {
+    if (await this.isBanned(person, planId)) return;
+    must(await admin().from("bans").insert({ person, plan_id: planId }));
+  },
+  async isBanned(person, planId) {
+    const q = admin().from("bans").select("id").eq("person", person);
+    const rows = must(await (planId ? q.or(`plan_id.is.null,plan_id.eq.${planId}`) : q.is("plan_id", null)).limit(1)) as unknown[];
+    return rows.length > 0;
+  },
   async listMessages(planId, limit = 100) {
     const rows = must(await admin().from("messages").select("*").eq("plan_id", planId).order("created_at", { ascending: false }).limit(limit)) as Message[];
     return rows.reverse();

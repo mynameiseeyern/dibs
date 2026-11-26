@@ -1,5 +1,6 @@
 "use server";
 
+import { FILTERED_NOTE, isFiltered } from "@dibs/shared/moderation";
 import { FORMER_MEMBER, MAX_SPOTS, MIN_SPOTS } from "@dibs/shared/plans";
 import { fillFromWaitlist } from "@/lib/plan-ops";
 import { MULTI_VOTES, maxVotes } from "@dibs/shared/votes";
@@ -55,6 +56,7 @@ export async function setTitle(slug: string, raw: string): Promise<Result> {
   if (!isView(view)) return view;
   const title = clean(raw);
   if (!title) return { error: "Give it a name, like \u201cFriday dinner\u201d." };
+  if (isFiltered(title)) return { error: FILTERED_NOTE };
   if (title === view.plan.title) return {};
   await announce(slug, view, { title }, `Now called ${title}.`);
   return {};
@@ -83,6 +85,7 @@ export async function setDescription(slug: string, raw: string): Promise<Result>
   const view = await editable(slug);
   if (!isView(view)) return view;
   const description = cleanDescription(raw);
+  if (isFiltered(description)) return { error: FILTERED_NOTE };
   if (description === view.plan.description) return {};
   await announce(slug, view, { description }, description ? "Updated the details." : "Took the details off.");
   return {};
@@ -216,6 +219,7 @@ export async function setPlace(slug: string, pick: string | CustomPlace): Promis
   } else {
     const custom = cleanCustomPlace(pick.name, pick.address);
     if (!custom) return { error: "Give the place a name." };
+    if (isFiltered(custom.name, custom.address)) return { error: FILTERED_NOTE };
     venue = { name: custom.name, placeId: null, address: custom.address };
   }
   const same = plan.status === "locked" && plan.venue_name === venue.name && plan.venue_place_id === venue.placeId && (plan.venue_address ?? null) === venue.address;

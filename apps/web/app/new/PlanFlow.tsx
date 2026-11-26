@@ -11,6 +11,7 @@ import { PlaceCard } from "@/components/PlaceCard";
 import { DayStrip, dateLabel, sydneyToday, timeLabel } from "@/components/DateTime";
 import { DibbyMark } from "@/components/Logo";
 import { DibbyWorking } from "@/components/DibbyWorking";
+import { AgreeLine } from "@/components/AgreeLine";
 import { Chip, SearchChips, type SearchValue } from "./chips";
 import { useCyclingPlaceholder } from "./DibbyBubble";
 import type { Organising } from "./Organiser";
@@ -481,7 +482,7 @@ export function PlanFlow({ organising, searchPass, initialAsk }: { organising: O
                 setSearch(v);
               }}
             />
-            <p className="paragraph-xs muted">Dibby finds spots, not a day or time. What you type goes to an AI provider.</p>
+            <p className="paragraph-xs muted">Dibby finds spots, not a day or time. What you type goes to Anthropic, the AI company behind Dibby, so it can find spots. It&rsquo;s not used to train their models.</p>
             {pending && <DibbyWorking where={search.near ? "near you" : null} />}
           </>
         )}
@@ -504,6 +505,7 @@ export function PlanFlow({ organising, searchPass, initialAsk }: { organising: O
             <p className="paragraph-sm muted">
               Got an account? <a href="/login?next=/new">Sign in</a>
             </p>
+            <AgreeLine />
             {pending && where === "dibby" && <DibbyWorking where={search.near ? "near you" : null} />}
           </>
         )}

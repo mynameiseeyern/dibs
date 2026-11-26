@@ -324,6 +324,10 @@ importers:
         version: 5.9.3
 
   packages/shared:
+    dependencies:
+      obscenity:
+        specifier: 0.4.4
+        version: 0.4.4
     devDependencies:
       typescript:
         specifier: 5.9.3
@@ -4140,6 +4144,10 @@ packages:
   object-hash@3.0.0:
     resolution: {integrity: sha512-RSn9F68PjH9HqtltsSnqYC1XXoWe9Bju5+213R98cNGttag9q9yAOTzdbsqvIa7aNm5WffBZFpWYr2aWrklWAw==}
     engines: {node: '>= 6'}
+
+  obscenity@0.4.4:
+    resolution: {integrity: sha512-z5bgosYRNzu95yIkRggCznD6UNGZ9jB35/GDtTu+eDOVmtnHfLJ+rBMpQxsQLKe+WrMdvzvkdlg2NLYaDxWFWA==}
+    engines: {node: '>=18.0.0'}
 
   on-finished@2.3.0:
     resolution: {integrity: sha512-ikqdkGAAyf/X/gPhXGvfgAytDZtDbr+bkNUJ0N9h5MI/dmdgCs3l6hoHrcUv41sRKew3jIwrp4qQDXiK99Utww==}
@@ -9349,6 +9357,8 @@ snapshots:
   object-assign@4.1.1: {}
 
   object-hash@3.0.0: {}
+
+  obscenity@0.4.4: {}
 
   on-finished@2.3.0:
     dependencies:

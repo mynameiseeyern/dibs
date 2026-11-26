@@ -6,6 +6,7 @@ import { Field, FormError } from "@/components/Field";
 import * as Button from "@/components/ui/button";
 import * as Hint from "@/components/ui/hint";
 import * as Checkbox from "@/components/ui/checkbox";
+import { AgreeLine } from "@/components/AgreeLine";
 
 export function OnboardingForm({ next }: { next: string }) {
   const [state, action, pending] = useActionState(saveProfile, undefined);
@@ -33,6 +34,7 @@ export function OnboardingForm({ next }: { next: string }) {
         </Hint.Root>
       </div>
       <FormError error={state?.error} />
+      <AgreeLine />
       <Button.Root size="large" block disabled={pending}>
         {pending ? "Saving…" : "Let's go"}
       </Button.Root>

@@ -18,6 +18,8 @@ import { resetCalendarLink } from "./calendar-actions";
 import { feedPath } from "@/lib/calendar";
 import { siteUrl } from "@/lib/site";
 import * as Button from "@/components/ui/button";
+import { BlockedPeople } from "./BlockedPeople";
+import { unblockPerson } from "@/app/p/[slug]/moderation-actions";
 
 export const metadata = { title: "You" };
 export const dynamic = "force-dynamic";
@@ -25,6 +27,8 @@ export const dynamic = "force-dynamic";
 export default async function Account() {
   const here = await whoIsHere();
   const { organiser, guest, name } = here;
+  const viewer = organiser ? `u:${organiser.id}` : guest ? `g:${guest.id}` : null;
+  const blocked = viewer ? await store.listBlocks(viewer).catch(() => []) : [];
   // Fails soft so the page still works if the mailing_list migration hasn't run yet.
   const betaUpdates = organiser ? await store.getSubscription(BETA_LIST, { userId: organiser.id }).catch(() => null) : null;
   // Accounts only: the link is made the first time they open this page. Fails soft if the
@@ -152,6 +156,7 @@ export default async function Account() {
           )}
         </section>
       )}
+      <BlockedPeople people={blocked} unblock={unblockPerson} />
       <SiteFooter />
     </main>
   );

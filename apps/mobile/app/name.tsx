@@ -1,3 +1,4 @@
+import { AgreeLine } from "@/components/dibby/agree-line";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
 import { router } from "expo-router";
@@ -64,6 +65,7 @@ export default function Name() {
               {error}
             </Hint.Root>
           ) : null}
+          <AgreeLine />
         </ScrollView>
         <View className="p-4">
           <Button.Root size="large" block disabled={busy} onPress={save}>

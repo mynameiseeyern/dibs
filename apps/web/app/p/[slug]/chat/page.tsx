@@ -11,6 +11,8 @@ import { planPreview } from "@/lib/plan-preview";
 import { markChatSeen, postMessage, toggleDibbyMute, toggleReaction } from "../actions";
 import { MarkSeen } from "./MarkSeen";
 import { Thread } from "../Thread";
+import { personKey } from "@dibs/shared/moderation";
+import { screenFor } from "@/lib/moderation";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   return planPreview((await params).slug, { label: "Chat", path: "/chat" });
@@ -29,6 +31,10 @@ export default async function Chat({ params }: { params: Promise<{ slug: string 
   const readOnly = access.level === "read" ? READ_ONLY_NOTE[access.why] : null;
   const [messages, reactions, options] = await Promise.all([store.listMessages(plan.id, 100), store.listReactions(plan.id), store.listOptions(plan.id)]);
   const wrapped = plan.status === "wrapped";
+  // Blocked people and anything you've reported are gone from your view, not everyone's.
+  const screen = await screenFor(personKey(me));
+  const authors = new Map(members.map((m) => [m.id, personKey(m)]));
+  const shown = messages.filter((m) => !screen.reported.has(m.id) && !(m.member_id && screen.blocked.has(authors.get(m.member_id) ?? "")));
 
   return (
     <>
@@ -54,7 +60,7 @@ export default async function Chat({ params }: { params: Promise<{ slug: string 
           )}
         </header>
         <Thread
-          messages={me.dibby_muted ? messages.filter((m) => !m.auto) : messages}
+          messages={me.dibby_muted ? shown.filter((m) => !m.auto) : shown}
           vibe={plan.vibe}
           reactions={reactions}
           react={me.user_id && !readOnly ? toggleReaction.bind(null, slug) : undefined}
@@ -65,6 +71,8 @@ export default async function Chat({ params }: { params: Promise<{ slug: string 
           readOnly={readOnly}
           placeNames={Object.fromEntries(options.filter((o) => o.place_id).map((o) => [o.place_id!, o.label]))}
           post={postMessage.bind(null, slug)}
+          slug={slug}
+          isHost={view.isHost}
           emailGate={me.guest_id && !me.user_id ? { planId: plan.id, demo: !usingSupabase } : undefined}
         />
       </main>

@@ -1,5 +1,6 @@
 import type { AppEvent, LoggedEvent } from "@dibs/shared/metrics";
 import type { MergePlan } from "@dibs/shared/merge";
+import type { ReportKind } from "@dibs/shared/moderation";
 import type { Bill, BillShare, Message, Plan, PlanMember, PlanOption, PlanPhoto, PlanTime, Rsvp, TimeVote, Vibe, Role, Vote } from "@dibs/shared/types";
 
 export interface Profile {
@@ -20,6 +21,20 @@ export interface Subscription {
   email: string;
   token: string;
   subscribed: boolean;
+}
+
+export interface Report {
+  id: string;
+  kind: ReportKind;
+  plan_id: string | null;
+  target_id: string | null;
+  target_person: string | null;
+  reporter: string | null;
+  reason: string;
+  note: string | null;
+  snapshot: string | null;
+  status: "open" | "actioned" | "dismissed";
+  created_at: string;
 }
 
 export interface Guest {
@@ -142,6 +157,22 @@ export interface Store {
   trimVotes(planId: string, keep: number): Promise<void>;
 
   listMessages(planId: string, limit?: number): Promise<Message[]>;
+  deleteMessage(planId: string, messageId: string): Promise<void>;
+  deleteMessagesBy(memberId: string): Promise<void>;
+  /** Off the plan: no way back in through their account or guest pass. Bills still add up, under "Former member". */
+  ejectMember(memberId: string): Promise<void>;
+  addReport(r: { kind: ReportKind; planId: string | null; targetId: string | null; targetPerson: string | null; reporter: string | null; reason: string; note: string | null; snapshot: string | null }): Promise<void>;
+  listOpenReports(): Promise<Report[]>;
+  getReport(id: string): Promise<Report | null>;
+  resolveReport(id: string, status: "actioned" | "dismissed"): Promise<void>;
+  /** Target IDs this person has reported, hidden for them straight away. */
+  listReportedTargets(reporter: string): Promise<string[]>;
+  addBlock(blocker: string, blocked: string, name: string): Promise<void>;
+  removeBlock(blocker: string, blocked: string): Promise<void>;
+  listBlocks(blocker: string): Promise<{ person: string; name: string }[]>;
+  /** planId null: off the whole service. */
+  addBan(person: string, planId: string | null): Promise<void>;
+  isBanned(person: string, planId: string | null): Promise<boolean>;
   addMessage(m: { planId: string; memberId: string | null; kind: Message["kind"]; body: string; mentionsDibby?: boolean; auto?: boolean; template?: unknown }): Promise<Message>;
 
   listBills(planId: string): Promise<Bill[]>;

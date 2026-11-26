@@ -1,4 +1,4 @@
-import { useMemo, useState, type ComponentProps } from "react";
+import { useEffect, useMemo, useState, type ComponentProps } from "react";
 import { Platform, Pressable, ScrollView, Share, Text, TextInput, View } from "react-native";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { Image } from "expo-image";
@@ -16,6 +16,8 @@ import * as Datepicker from "@/components/ui/datepicker";
 import { PushAsk } from "@/components/dibby/push-ask";
 import { DibbyHero, HERO_SIZE, StepBar } from "@/components/dibby/hero";
 import { KeyboardRoot, KeyboardSpacer } from "@/components/dibby/keyboard-spacer";
+import { AgreeLine } from "@/components/dibby/agree-line";
+import { AiConsent, hasAiConsent } from "@/components/dibby/ai-consent";
 import * as Button from "@/components/ui/button";
 import * as Hint from "@/components/ui/hint";
 import { Icon } from "@/components/ui/icon";
@@ -99,6 +101,14 @@ function PlanFlow() {
   const [where, setWhere] = useState<Where | null>(null);
   /** Dibby was picked on the first question ("Not sure? Let Dibby plan it"), not on "where". */
   const [viaDibby, setViaDibby] = useState(false);
+  // Apple 5.1.2(i): say who gets it and ask before anything goes to the AI provider. Once per phone.
+  const [aiOk, setAiOk] = useState(false);
+  const [askingAi, setAskingAi] = useState<null | (() => void)>(null);
+  useEffect(() => {
+    hasAiConsent().then(setAiOk);
+  }, []);
+  /** Runs `then` straight away if they've said OK to Dibby's AI, otherwise once they do. */
+  const withAiOk = (then: () => void) => (aiOk ? then() : setAskingAi(() => then));
   const [placeName, setPlaceName] = useState("");
   const [placeAddress, setPlaceAddress] = useState("");
   /** Set when the spot was picked from the map: the server checks it with Google and uses Google's name. */
@@ -208,6 +218,7 @@ function PlanFlow() {
       place: w === "place" ? (placeId ? { name: placeName.trim(), place_id: placeId } : { name: placeName.trim(), address: placeAddress.trim() || null }) : null,
       ask: w === "dibby" ? ask.trim() : undefined,
       spend: w === "dibby" ? spend : null,
+      ai_consent: w === "dibby" ? aiOk : undefined,
       area: w !== "place" ? area.trim() || null : null,
       ...(crewId ? { crew_id: crewId } : {}),
       ...(needName ? { first: first.trim(), last: last.trim() } : {}),
@@ -301,11 +312,13 @@ function PlanFlow() {
               </View>
               <Pressable
                 accessibilityRole="button"
-                onPress={() => {
-                  setWhere("dibby");
-                  setViaDibby(true);
-                  go("when");
-                }}
+                onPress={() =>
+                  withAiOk(() => {
+                    setWhere("dibby");
+                    setViaDibby(true);
+                    go("when");
+                  })
+                }
                 className="min-h-11 flex-row items-center gap-2 self-start active:opacity-70"
               >
                 <Image source={DIBBY.face} style={{ width: 28, height: 28, borderRadius: 14 }} contentFit="cover" accessible={false} />
@@ -366,7 +379,7 @@ function PlanFlow() {
                 }}
               />
               <Option icon="bar-chart-2-line" title="Let the crew vote" body="Everyone chucks in ideas. Most votes wins" selected={where === "vote"} onPress={() => (setWhere("vote"), setError(null))} />
-              <Option dibby title="Ask Dibby" body="Three real spots for the crew to vote on" selected={where === "dibby"} onPress={() => (setWhere("dibby"), setError(null))} />
+              <Option dibby title="Ask Dibby" body="Three real spots for the crew to vote on" selected={where === "dibby"} onPress={() => withAiOk(() => (setWhere("dibby"), setError(null)))} />
               <PlacePicker
                 open={picking}
                 onOpenChange={setPicking}
@@ -396,7 +409,7 @@ function PlanFlow() {
                   <Choice key={x.id} label={x.label} selected={spend === x.id} onPress={() => setSpend(spend === x.id ? null : x.id)} />
                 ))}
               </View>
-              <Text className="text-paragraph-xs text-text-soft-400">Dibby finds spots, not a day or time. What you type goes to an AI provider.</Text>
+              <Text className="text-paragraph-xs text-text-soft-400">Dibby finds spots, not a day or time. What you type goes to Anthropic, the AI company behind Dibby.</Text>
             </>
           ) : null}
 
@@ -410,6 +423,7 @@ function PlanFlow() {
                   Sign in
                 </LinkButton.Root>
               </View>
+              <AgreeLine />
             </>
           ) : null}
 
@@ -417,6 +431,15 @@ function PlanFlow() {
         </Animated.View>
       </ScrollView>
 
+      <AiConsent
+        open={askingAi !== null}
+        onOpenChange={(o) => !o && setAskingAi(null)}
+        onAllow={() => {
+          setAiOk(true);
+          askingAi?.();
+          setAskingAi(null);
+        }}
+      />
       <View className="px-4 pt-3" style={{ paddingBottom: bottom }}>
         <Button.Root variant={isLast ? "dibs" : "primary"} size="large" block disabled={!ready} onPress={next}>
           {label}

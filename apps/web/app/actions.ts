@@ -14,6 +14,8 @@ import { localToIso } from "@/lib/time";
 import { resolveStart } from "@dibs/shared/when";
 import { siteUrl } from "@/lib/site";
 import { BETA_LIST } from "@dibs/email";
+import { FILTERED_NOTE, isFiltered } from "@dibs/shared/moderation";
+import { BANNED_NOTE, isBanned } from "@/lib/moderation";
 import { cleanCategory, cleanCustomPlace, cleanDescription, extrasOffFrom, rememberCategory } from "@dibs/shared/plans";
 import { getPlace } from "@/lib/places";
 import { withPlaces } from "@/lib/place-ids";
@@ -133,6 +135,7 @@ export async function saveProfile(_prev: FormState, form: FormData): Promise<For
   const last = clean(form.get("last_name"), 40);
   const payid = clean(form.get("payid"), 100) || null;
   if (!first || !last) return { error: "We need your first and last name." };
+  if (isFiltered(first, last)) return { error: FILTERED_NOTE };
   const isNew = !(await store.getProfile(me.id).catch(() => null));
   try {
     await store.upsertProfile({ user_id: me.id, first_name: first, last_name: last, dob: null, payid, payid_name: payid ? `${first} ${last}` : null });
@@ -164,6 +167,9 @@ export async function saveProfile(_prev: FormState, form: FormData): Promise<For
 export async function createPlan(_prev: FormState, form: FormData): Promise<FormState> {
   const host = await whoIsOrganising(form);
   if ("error" in host) return host;
+  if (isFiltered(form.get("title") as string | null, form.get("description") as string | null, form.get("area") as string | null, form.get("venue_custom_name") as string | null, form.get("venue_custom_address") as string | null)) {
+    return { error: FILTERED_NOTE, field: "title" };
+  }
 
   const where = String(form.get("where") ?? "vote");
   const picks = readPicks(form);
@@ -210,7 +216,7 @@ export async function createPlan(_prev: FormState, form: FormData): Promise<Form
       planId: plan.id,
       memberId: null,
       kind: "system",
-      body: "Heads up: messages that tag @dibby are sent to an AI provider so Dibby can reply. Dibby only reads messages it's tagged in.",
+      body: "Heads up: when you tag @dibby, your message and the last 20 in this chat go to Anthropic, the AI company behind Dibby, so it can reply. Dibby doesn't do anything until it's tagged.",
     });
     await afterCreate(host, category);
     const tail = draft.venues.length ? "Vote's open for 24 hours." : "Couldn't find spots for that on Maps, so add a few from the map and the vote opens.";
@@ -267,6 +273,7 @@ type Host = {
 async function whoIsOrganising(form: FormData): Promise<Host | { error: string; field: string }> {
   const me = await currentOrganiser();
   if (me) {
+    if (await isBanned(`u:${me.id}`, null)) return { error: BANNED_NOTE, field: "title" };
     const profile = await store.getProfile(me.id);
     if (!profile) redirect("/onboarding?next=/new");
     return {
@@ -281,6 +288,7 @@ async function whoIsOrganising(form: FormData): Promise<Host | { error: string; 
   if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { error: "That email doesn't look right. Leave it blank to skip it.", field: "email" };
   const guest = await currentGuest();
   if (guest) {
+    if (await isBanned(`g:${guest.id}`, null)) return { error: BANNED_NOTE, field: "title" };
     return {
       name: `${guest.first_name} ${guest.last_name}`,
       ids: async () => ({ organiserUserId: null, organiserGuestId: guest.id }),
@@ -293,6 +301,7 @@ async function whoIsOrganising(form: FormData): Promise<Host | { error: string; 
   const last = clean(form.get("last_name"), 40);
   if (!first) return { error: "Add your first name.", field: "first_name" };
   if (!last) return { error: "Add your last name.", field: "last_name" };
+  if (isFiltered(first, last)) return { error: FILTERED_NOTE, field: "first_name" };
   let made: Guest | null = null;
   return {
     name: `${first} ${last}`,
