@@ -268,3 +268,17 @@ export function withPlusOne(name: string, m: { plus_one: boolean; plus_one_name?
   if (!m.plus_one) return name;
   return m.plus_one_name ? `${name} & ${m.plus_one_name}` : `${name} + 1`;
 }
+
+/** How Dibby talks on a plan. The web's VibePick has the same three. */
+export const VIBES = [
+  { id: "chill", name: "Chill", note: "“You in?”" },
+  { id: "extra", name: "Extra", note: "“you in?? 👀”" },
+  { id: "straight", name: "Straight up", note: "“Are you going?”" },
+] as const;
+
+/** How chatty Dibby's automatic messages are. The web's Edit has the same three. */
+export const DIBBY_VOLUMES = [
+  { id: "quiet", label: "Quiet", hint: "Just the useful stuff: vote closing, the day before, and wrapping up. One a day at most." },
+  { id: "normal", label: "Normal", hint: "Also chases replies and maybes, and says when someone pulls out. Up to three a day." },
+  { id: "loud", label: "Loud", hint: "Everything Normal does, up to five a day." },
+] as const;

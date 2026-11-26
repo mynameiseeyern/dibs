@@ -86,6 +86,7 @@ function Plan({ slug, detail, apply }: { slug: string; detail: PlanDetail; apply
         {detail.calendar ? <CircleAction icon="calendar-line" label="Calendar" onPress={() => Linking.openURL(detail.calendar!)} /> : null}
         {detail.directions ? <CircleAction icon="direction-line" label="Directions" onPress={() => Linking.openURL(detail.directions!)} /> : null}
         {chat ? <CircleAction icon="chat-3-line" label="Chat" badge={detail.unread || undefined} onPress={() => router.push(`/p/${slug}/chat`)} /> : null}
+        {me.host ? <CircleAction icon="edit-line" label="Edit" onPress={() => router.push(`/p/${slug}/edit`)} /> : null}
       </View>
     ) : null;
 
