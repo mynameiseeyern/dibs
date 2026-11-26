@@ -7,24 +7,25 @@ import { siteUrl } from "./site";
 /**
  * Crews data (P-ARV-2), kept apart from lib/store so crew work doesn't touch the main store files.
  * Supabase with the service key when it's set up, in memory otherwise, like lib/store.
- * The service key skips row-level security: callers check the rules in @dibs/shared/crews first.
+ * The service key skips row-level security: callers check the rules in @dibs/shared/crews first
+ * (lib/crew-ops.ts does, for the routes).
  */
 
-interface CrewRow {
+export interface CrewRow {
   id: string;
   name: string;
   emoji: string;
   created_by: string | null;
   created_at: string;
 }
-interface MemberRow {
+export interface MemberRow {
   crew_id: string;
   user_id: string;
   role: CrewRole;
   muted: boolean;
   joined_at: string;
 }
-interface InviteRow {
+export interface InviteRow {
   id: string;
   crew_id: string;
   token_hash: string;
@@ -36,21 +37,57 @@ interface InviteRow {
   revoked_at: string | null;
   created_at: string;
 }
+export type RequestStatus = "pending" | "approved" | "declined" | "cancelled";
+export interface RequestRow {
+  id: string;
+  crew_id: string;
+  user_id: string;
+  invite_id: string | null;
+  status: RequestStatus;
+  created_at: string;
+  decided_at: string | null;
+  decided_by: string | null;
+}
 
 export interface CrewStore {
   createCrew(userId: string, crew: { name: string; emoji: string }): Promise<CrewSummary>;
   myCrews(userId: string): Promise<CrewSummary[]>;
+  getCrew(crewId: string): Promise<CrewRow | null>;
   /** Your role in a crew, or null if you're not in it. */
   roleIn(crewId: string, userId: string): Promise<CrewRole | null>;
+  listMembers(crewId: string): Promise<MemberRow[]>;
+  addMember(crewId: string, userId: string, role: CrewRole): Promise<void>;
+
   createInvite(i: { crewId: string; userId: string; role: CrewRole; expiry: InviteExpiry; maxUses: InviteMaxUses }): Promise<CrewInviteLink>;
+  /** The invite behind a link, by its token (we look it up by hash). */
+  inviteByToken(token: string): Promise<InviteRow | null>;
+  getInvite(inviteId: string): Promise<InviteRow | null>;
+  listInvites(crewId: string): Promise<InviteRow[]>;
+  useInvite(inviteId: string): Promise<void>;
+  revokeInvite(inviteId: string): Promise<void>;
+
+  addRequest(r: { crewId: string; userId: string; inviteId: string }): Promise<RequestRow>;
+  getRequest(requestId: string): Promise<RequestRow | null>;
+  /** A person's requests to one crew, newest first. */
+  requestsBy(crewId: string, userId: string): Promise<RequestRow[]>;
+  pendingRequests(crewId: string): Promise<RequestRow[]>;
+  /** How many pending requests this person has open, across every crew. */
+  pendingCountFor(userId: string): Promise<number>;
+  decideRequest(requestId: string, status: "approved" | "declined", by: string): Promise<void>;
+  removedAt(crewId: string, userId: string): Promise<string | null>;
+  clearRemoval(crewId: string, userId: string): Promise<void>;
 }
 
 /** The link carries a random token; only its hash is stored. */
 const hashToken = (t: string) => createHash("sha256").update(t).digest("hex");
 const newToken = () => randomBytes(24).toString("base64url");
 export const inviteUrl = (token: string) => `${siteUrl()}/c/${token}`;
+/** A token is base64url, 32 characters. Anything else isn't worth a lookup. */
+export const looksLikeToken = (t: string) => /^[A-Za-z0-9_-]{20,64}$/.test(t);
 
 const summary = (c: CrewRow, role: CrewRole, members: number): CrewSummary => ({ id: c.id, name: c.name, emoji: c.emoji, role, members });
+const byName = (a: CrewSummary, b: CrewSummary) => a.name.localeCompare(b.name);
+const isUuid = (s: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
 
 // ---------- Supabase ----------
 
@@ -87,9 +124,20 @@ const supabaseCrews: CrewStore = {
     const roles = new Map(mine.map((m) => [m.crew_id, m.role]));
     return crews.map((c) => summary(c, roles.get(c.id)!, counts.get(c.id) ?? 1)).sort(byName);
   },
+  async getCrew(crewId) {
+    if (!isUuid(crewId)) return null;
+    return must(await admin().from("crews").select("*").eq("id", crewId).maybeSingle()) as CrewRow | null;
+  },
   async roleIn(crewId, userId) {
+    if (!isUuid(crewId)) return null;
     const row = must(await admin().from("crew_members").select("role").eq("crew_id", crewId).eq("user_id", userId).maybeSingle()) as Pick<MemberRow, "role"> | null;
     return row?.role ?? null;
+  },
+  async listMembers(crewId) {
+    return must(await admin().from("crew_members").select("*").eq("crew_id", crewId).order("joined_at")) as MemberRow[];
+  },
+  async addMember(crewId, userId, role) {
+    must(await admin().from("crew_members").upsert({ crew_id: crewId, user_id: userId, role }, { onConflict: "crew_id,user_id", ignoreDuplicates: true }));
   },
   async createInvite({ crewId, userId, role, expiry, maxUses }) {
     const token = newToken();
@@ -106,6 +154,51 @@ const supabaseCrews: CrewStore = {
     );
     return { url: inviteUrl(token), expires_at: expires?.toISOString() ?? null, max_uses: maxUses };
   },
+  async inviteByToken(token) {
+    return must(await admin().from("crew_invites").select("*").eq("token_hash", hashToken(token)).maybeSingle()) as InviteRow | null;
+  },
+  async getInvite(inviteId) {
+    if (!isUuid(inviteId)) return null;
+    return must(await admin().from("crew_invites").select("*").eq("id", inviteId).maybeSingle()) as InviteRow | null;
+  },
+  async listInvites(crewId) {
+    return must(await admin().from("crew_invites").select("*").eq("crew_id", crewId).order("created_at", { ascending: false })) as InviteRow[];
+  },
+  async useInvite(inviteId) {
+    const row = must(await admin().from("crew_invites").select("uses").eq("id", inviteId).single()) as { uses: number };
+    must(await admin().from("crew_invites").update({ uses: row.uses + 1 }).eq("id", inviteId));
+  },
+  async revokeInvite(inviteId) {
+    must(await admin().from("crew_invites").update({ revoked_at: new Date().toISOString() }).eq("id", inviteId).is("revoked_at", null));
+  },
+  async addRequest({ crewId, userId, inviteId }) {
+    return must(await admin().from("crew_join_requests").insert({ crew_id: crewId, user_id: userId, invite_id: inviteId }).select("*").single()) as RequestRow;
+  },
+  async getRequest(requestId) {
+    if (!isUuid(requestId)) return null;
+    return must(await admin().from("crew_join_requests").select("*").eq("id", requestId).maybeSingle()) as RequestRow | null;
+  },
+  async requestsBy(crewId, userId) {
+    return must(await admin().from("crew_join_requests").select("*").eq("crew_id", crewId).eq("user_id", userId).order("created_at", { ascending: false })) as RequestRow[];
+  },
+  async pendingRequests(crewId) {
+    return must(await admin().from("crew_join_requests").select("*").eq("crew_id", crewId).eq("status", "pending").order("created_at")) as RequestRow[];
+  },
+  async pendingCountFor(userId) {
+    const res = await admin().from("crew_join_requests").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("status", "pending");
+    if (res.error) throw new Error(res.error.message);
+    return res.count ?? 0;
+  },
+  async decideRequest(requestId, status, by) {
+    must(await admin().from("crew_join_requests").update({ status, decided_at: new Date().toISOString(), decided_by: by }).eq("id", requestId).eq("status", "pending"));
+  },
+  async removedAt(crewId, userId) {
+    const row = must(await admin().from("crew_removals").select("removed_at").eq("crew_id", crewId).eq("user_id", userId).maybeSingle()) as { removed_at: string } | null;
+    return row?.removed_at ?? null;
+  },
+  async clearRemoval(crewId, userId) {
+    must(await admin().from("crew_removals").delete().eq("crew_id", crewId).eq("user_id", userId));
+  },
 };
 
 // ---------- In memory (local runs without Supabase) ----------
@@ -114,13 +207,18 @@ interface MemDb {
   crews: Map<string, CrewRow>;
   members: MemberRow[];
   invites: InviteRow[];
+  requests: RequestRow[];
+  removals: { crew_id: string; user_id: string; removed_at: string }[];
 }
 const g = globalThis as unknown as { __dibsCrews?: MemDb };
-const mem: MemDb = (g.__dibsCrews ??= { crews: new Map(), members: [], invites: [] });
+const mem: MemDb = (g.__dibsCrews ??= { crews: new Map(), members: [], invites: [], requests: [], removals: [] });
+mem.requests ??= [];
+mem.removals ??= [];
+const now = () => new Date().toISOString();
 
 const memoryCrews: CrewStore = {
   async createCrew(userId, { name, emoji }) {
-    const crew: CrewRow = { id: randomUUID(), name, emoji, created_by: userId, created_at: new Date().toISOString() };
+    const crew: CrewRow = { id: randomUUID(), name, emoji, created_by: userId, created_at: now() };
     mem.crews.set(crew.id, crew);
     mem.members.push({ crew_id: crew.id, user_id: userId, role: "owner", muted: false, joined_at: crew.created_at });
     return summary(crew, "owner", 1);
@@ -134,8 +232,17 @@ const memoryCrews: CrewStore = {
       })
       .sort(byName);
   },
+  async getCrew(crewId) {
+    return mem.crews.get(crewId) ?? null;
+  },
   async roleIn(crewId, userId) {
     return mem.members.find((m) => m.crew_id === crewId && m.user_id === userId)?.role ?? null;
+  },
+  async listMembers(crewId) {
+    return mem.members.filter((m) => m.crew_id === crewId);
+  },
+  async addMember(crewId, userId, role) {
+    if (!mem.members.some((m) => m.crew_id === crewId && m.user_id === userId)) mem.members.push({ crew_id: crewId, user_id: userId, role, muted: false, joined_at: now() });
   },
   async createInvite({ crewId, userId, role, expiry, maxUses }) {
     const token = newToken();
@@ -150,15 +257,57 @@ const memoryCrews: CrewStore = {
       max_uses: maxUses,
       uses: 0,
       revoked_at: null,
-      created_at: new Date().toISOString(),
+      created_at: now(),
     });
     return { url: inviteUrl(token), expires_at: expires?.toISOString() ?? null, max_uses: maxUses };
   },
+  async inviteByToken(token) {
+    const h = hashToken(token);
+    return mem.invites.find((i) => i.token_hash === h) ?? null;
+  },
+  async getInvite(inviteId) {
+    return mem.invites.find((i) => i.id === inviteId) ?? null;
+  },
+  async listInvites(crewId) {
+    return mem.invites.filter((i) => i.crew_id === crewId).reverse();
+  },
+  async useInvite(inviteId) {
+    const i = mem.invites.find((x) => x.id === inviteId);
+    if (i) i.uses += 1;
+  },
+  async revokeInvite(inviteId) {
+    const i = mem.invites.find((x) => x.id === inviteId);
+    if (i && !i.revoked_at) i.revoked_at = now();
+  },
+  async addRequest({ crewId, userId, inviteId }) {
+    if (mem.requests.some((r) => r.crew_id === crewId && r.user_id === userId && r.status === "pending")) throw new Error("duplicate key: one pending request");
+    const r: RequestRow = { id: randomUUID(), crew_id: crewId, user_id: userId, invite_id: inviteId, status: "pending", created_at: now(), decided_at: null, decided_by: null };
+    mem.requests.push(r);
+    return r;
+  },
+  async getRequest(requestId) {
+    return mem.requests.find((r) => r.id === requestId) ?? null;
+  },
+  async requestsBy(crewId, userId) {
+    return mem.requests.filter((r) => r.crew_id === crewId && r.user_id === userId).reverse();
+  },
+  async pendingRequests(crewId) {
+    return mem.requests.filter((r) => r.crew_id === crewId && r.status === "pending");
+  },
+  async pendingCountFor(userId) {
+    return mem.requests.filter((r) => r.user_id === userId && r.status === "pending").length;
+  },
+  async decideRequest(requestId, status, by) {
+    const r = mem.requests.find((x) => x.id === requestId && x.status === "pending");
+    if (r) Object.assign(r, { status, decided_at: now(), decided_by: by });
+  },
+  async removedAt(crewId, userId) {
+    return mem.removals.find((r) => r.crew_id === crewId && r.user_id === userId)?.removed_at ?? null;
+  },
+  async clearRemoval(crewId, userId) {
+    mem.removals = mem.removals.filter((r) => !(r.crew_id === crewId && r.user_id === userId));
+  },
 };
-
-function byName(a: CrewSummary, b: CrewSummary) {
-  return a.name.localeCompare(b.name);
-}
 
 const usingSupabase = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
 export const crews: CrewStore = usingSupabase ? supabaseCrews : memoryCrews;

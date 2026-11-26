@@ -1,9 +1,10 @@
 import { useCallback, useState } from "react";
-import { RefreshControl, ScrollView, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { CrewRole, CrewSummary } from "@dibs/shared/crews";
 import * as Button from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { TopBar } from "@/components/dibby/top-bar";
 import { NeedsAccount } from "@/components/dibby/crews-strip";
 import { getMyCrews } from "@/lib/crews";
@@ -13,7 +14,7 @@ type Load = { kind: "loading" } | { kind: "error"; message: string } | { kind: "
 
 const ROLE: Record<CrewRole, string | null> = { owner: "You run it", admin: "Admin", member: null };
 
-/** Your crews (ARV-90). Each crew's own page, with its plans, comes in ARV-92. */
+/** Your crews (ARV-90). Tap one for its members, requests and links (ARV-91); its plans come in ARV-92. */
 export default function Crews() {
   const { state } = useSession();
   const [load, setLoad] = useState<Load>({ kind: "loading" });
@@ -65,7 +66,13 @@ export default function Crews() {
           load.crews.map((c) => {
             const facts = [`${c.members} ${c.members === 1 ? "person" : "people"}`, ROLE[c.role]].filter(Boolean).join(" · ");
             return (
-              <View key={c.id} accessible accessibilityLabel={`${c.name}, ${facts}`} className="flex-row items-center gap-3 rounded-lg border border-stroke-soft-200 bg-bg-white-0 p-3">
+              <Pressable
+                key={c.id}
+                accessibilityRole="button"
+                accessibilityLabel={`${c.name}, ${facts}`}
+                onPress={() => router.push(`/crews/${c.id}`)}
+                className="flex-row items-center gap-3 rounded-lg border border-stroke-soft-200 bg-bg-white-0 p-3 active:opacity-80"
+              >
                 <View className="size-12 items-center justify-center rounded-lg bg-primary-lighter">
                   <Text className="text-[26px] leading-[32px]">{c.emoji}</Text>
                 </View>
@@ -75,7 +82,8 @@ export default function Crews() {
                   </Text>
                   <Text className="text-paragraph-sm text-text-sub-600">{facts}</Text>
                 </View>
-              </View>
+                <Icon name="arrow-right-s-line" className="text-[22px] leading-[24px] text-text-soft-400" />
+              </Pressable>
             );
           })
         )}

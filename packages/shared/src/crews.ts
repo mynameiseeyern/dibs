@@ -232,3 +232,66 @@ export interface NewCrewResponse {
 
 /** A few to pick from when naming a crew. Any single emoji works. */
 export const CREW_EMOJI = ["🥟", "🍜", "🍕", "🌮", "☕", "🍻", "🏀", "⚽", "🎮", "🎤", "🏖️", "🔥", "✨", "🫶", "👯", "🐸"] as const;
+
+/**
+ * `GET /api/v1/crews/invite/:token`: what an invite link shows (ARV-89). Anything but a working
+ * link is "expired", with nothing about the crew. The rest is the bare minimum: name, emoji,
+ * how many, who invited you. Never member names or plans.
+ */
+export interface CrewInvitePreview {
+  status: "ok" | "expired";
+  crew?: { name: string; emoji: string; members: number };
+  /** First name of whoever made the link. */
+  invited_by?: string | null;
+  /** Where the person on this phone stands. */
+  you?: "signed_out" | "member" | "pending" | "can_ask" | "cant_ask";
+  /** Set when `you` is "member", so the app can open the crew. */
+  crew_id?: string;
+  /** Why they can't ask, from JOIN_ASK_NOTE. */
+  note?: string;
+}
+
+export interface CrewMemberRow {
+  user_id: string;
+  name: string;
+  role: CrewRole;
+  you: boolean;
+}
+
+export interface CrewRequestRow {
+  id: string;
+  name: string;
+  asked_at: string;
+}
+
+export interface CrewInviteRow {
+  id: string;
+  /** Who made it, or null if their account's gone. */
+  made_by: string | null;
+  mine: boolean;
+  uses: number;
+  max_uses: number | null;
+  expires_at: string | null;
+}
+
+/** `GET /api/v1/crews/:id`: the crew, as a member sees it. Requests and everyone's invites only for the owner and admins. */
+export interface CrewDetail {
+  crew: CrewSummary;
+  members: CrewMemberRow[];
+  /** Pending asks. Empty unless you can manage requests. */
+  requests: CrewRequestRow[];
+  /** Working links: yours, or everyone's if you manage requests. */
+  invites: CrewInviteRow[];
+  can: CrewPermissions;
+}
+
+/** Labels for picking a link's expiry and uses. */
+export const INVITE_EXPIRY_LABEL: Record<InviteExpiry, string> = {
+  "30m": "30 minutes",
+  "1h": "1 hour",
+  "6h": "6 hours",
+  "12h": "12 hours",
+  "1d": "1 day",
+  "7d": "7 days",
+  never: "Never",
+};
