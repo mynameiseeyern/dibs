@@ -193,7 +193,14 @@ export interface PlanDetail {
     canPost: boolean;
   } | null;
   /** Who's going, for people in the plan who can see it. */
-  going: { name: string; host: boolean; waitlisted: boolean; colour: MonogramColour }[] | null;
+  going: {
+    /** Their spot on the plan, for Report or block (long-press). Missing from older servers. */
+    id?: string;
+    name: string;
+    host: boolean;
+    waitlisted: boolean;
+    colour: MonogramColour;
+  }[] | null;
   vote: {
     open: boolean;
     maxPicks: number;

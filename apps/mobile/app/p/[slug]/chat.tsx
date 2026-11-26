@@ -8,6 +8,7 @@ import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { PlanDetail } from "@dibs/shared/api";
 import { ChatMessage, ChatSystem, ChatTime, DibbyTyping } from "@/components/dibby/chat";
+import { ReportSheet, type ReportTarget } from "@/components/dibby/report-sheet";
 import { DIBBY } from "@/components/dibby/flow";
 import * as Button from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -58,7 +59,8 @@ function PlanChat() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const insets = useSafeAreaInsets();
   const spinner = useColour("primary-base");
-  const { state, apply } = usePlan(slug);
+  const { state, apply, refresh } = usePlan(slug);
+  const [reporting, setReporting] = useState<ReportTarget | null>(null);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState<string | null>(null);
 
@@ -173,7 +175,7 @@ function PlanChat() {
         renderItem={({ item: { m, first, stamp } }) => (
           <View className="gap-2">
             {stamp ? <ChatTime>{stamp}</ChatTime> : null}
-            <Row m={m} first={first} options={chat?.react ?? []} onReact={(e) => react(m.id, e)} />
+            <Row m={m} first={first} options={chat?.react ?? []} onReact={(e) => react(m.id, e)} onReport={setReporting} />
           </View>
         )}
       />
@@ -188,6 +190,7 @@ function PlanChat() {
   return (
     <View className="flex-1 bg-bg-white-0">
       <ChatBar title={detail.plan.title} muted={chat?.muted ?? null} onMute={mute} />
+      <ReportSheet slug={slug} target={reporting} onClose={() => setReporting(null)} onDone={refresh} />
       {KC ? (
         <>
           {thread}
@@ -387,13 +390,29 @@ function ReadOnly({ note }: { note: string }) {
   );
 }
 
-function Row({ m, first, options, onReact }: { m: Msg; first: boolean; options: string[]; onReact: (emoji: string) => void }) {
+function Row({ m, first, options, onReact, onReport }: { m: Msg; first: boolean; options: string[]; onReact: (emoji: string) => void; onReport: (t: ReportTarget) => void }) {
   if (m.kind === "system") return <ChatSystem>{m.body}</ChatSystem>;
   const from = m.kind === "dibby" ? "dibby" : m.mine ? "me" : "them";
-  return (
+  const bubble = (
     <ChatMessage from={from} name={m.author ?? undefined} colour={m.colour ?? undefined} first={first} below={<Reactions all={m.reactions ?? []} options={options} onReact={onReact} />}>
       {m.body}
     </ChatMessage>
+  );
+  // Someone else's message: long-press to report it or block them (Apple 1.2). Kept out of sight.
+  if (from !== "them") return bubble;
+  const open = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    onReport({ kind: "message", id: m.id, name: m.author ?? "them" });
+  };
+  return (
+    <Pressable
+      onLongPress={open}
+      delayLongPress={400}
+      accessibilityActions={[{ name: "report", label: "Report or block" }]}
+      onAccessibilityAction={(e) => e.nativeEvent.actionName === "report" && open()}
+    >
+      {bubble}
+    </Pressable>
   );
 }
 

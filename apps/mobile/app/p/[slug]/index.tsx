@@ -29,6 +29,7 @@ import { countdown, whenLong, whenParts } from "@/lib/dates";
 import { usePlan } from "@/lib/use-plan";
 import { AppBar } from "@/components/dibby/app-bar";
 import { ReportPlan } from "@/components/dibby/report-plan";
+import { ReportSheet, type ReportTarget } from "@/components/dibby/report-sheet";
 import { CrewOnPlan } from "@/components/dibby/crew-on-plan";
 import { CrewPrompt } from "@/components/dibby/crew-prompt";
 
@@ -40,7 +41,7 @@ import { CrewPrompt } from "@/components/dibby/crew-prompt";
 export default function PlanScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const spinner = useColour("primary-base");
-  const { state, apply } = usePlan(slug);
+  const { state, apply, refresh } = usePlan(slug);
 
   if (state.kind === "loading")
     return (
@@ -60,10 +61,10 @@ export default function PlanScreen() {
       </View>
     );
 
-  return <Plan slug={slug} detail={state.detail} apply={apply} />;
+  return <Plan slug={slug} detail={state.detail} apply={apply} refresh={refresh} />;
 }
 
-function Plan({ slug, detail, apply }: { slug: string; detail: PlanDetail; apply: (d: PlanDetail) => void }) {
+function Plan({ slug, detail, apply, refresh }: { slug: string; detail: PlanDetail; apply: (d: PlanDetail) => void; refresh: () => void }) {
   const { plan, me, going, chat } = detail;
   const off = plan.status === "cancelled";
   const locked = plan.status === "locked";
@@ -167,7 +168,7 @@ function Plan({ slug, detail, apply }: { slug: string; detail: PlanDetail; apply
         {!off && !me ? <Join slug={slug} apply={apply} /> : null}
         {!off && me && !me.host ? <Answer slug={slug} detail={detail} apply={apply} /> : null}
 
-        {going && going.length ? <WhoRow going={going} me={me?.name ?? null} going_count={plan.going} capacity={plan.capacity} /> : null}
+        {going && going.length ? <WhoRow slug={slug} going={going} me={me?.name ?? null} going_count={plan.going} capacity={plan.capacity} onBlocked={refresh} /> : null}
 
         <Vote slug={slug} detail={detail} apply={apply} />
 
@@ -191,8 +192,32 @@ function Plan({ slug, detail, apply }: { slug: string; detail: PlanDetail; apply
 /** Five faces fit across a phone; past that, four and a "+N" tile. Tap for everyone, in a sheet. */
 const FIT = 5;
 
-function WhoRow({ going, me, going_count, capacity }: { going: NonNullable<PlanDetail["going"]>; me: string | null; going_count: number; capacity: number | null }) {
+function WhoRow({
+  slug,
+  going,
+  me,
+  going_count,
+  capacity,
+  onBlocked,
+}: {
+  slug: string;
+  going: NonNullable<PlanDetail["going"]>;
+  me: string | null;
+  going_count: number;
+  capacity: number | null;
+  onBlocked: () => void;
+}) {
   const [open, setOpen] = useState(false);
+  const [reporting, setReporting] = useState<ReportTarget | null>(null);
+  // Long-press someone in the list to report or block them (Apple 1.2). Not yourself, and only
+  // once the server sends their spot's id. The list closes first: iOS shows one sheet at a time.
+  function report(g: NonNullable<PlanDetail["going"]>[number]) {
+    if (!g.id || (me && g.name === me)) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const target: ReportTarget = { kind: "member", id: g.id, name: g.name };
+    setOpen(false);
+    setTimeout(() => setReporting(target), 350);
+  }
   const waiting = going.filter((g) => g.waitlisted).length;
   const summary = [capacity ? `${going_count} of ${capacity} in` : `${going_count} in`, waiting ? `${waiting} waiting` : null].filter(Boolean).join(" · ");
   const shown = going.length <= FIT ? going : going.slice(0, FIT - 1);
@@ -244,19 +269,27 @@ function WhoRow({ going, me, going_count, capacity }: { going: NonNullable<PlanD
           <Modal.Body>
             <View className="gap-3">
               {going.map((g, i) => (
-                <View key={`${g.name}-${i}`} className="flex-row items-center gap-3">
+                <Pressable
+                  key={`${g.name}-${i}`}
+                  onLongPress={() => report(g)}
+                  delayLongPress={400}
+                  accessibilityActions={g.id && !(me && g.name === me) ? [{ name: "report", label: "Report or block" }] : undefined}
+                  onAccessibilityAction={(e) => e.nativeEvent.actionName === "report" && report(g)}
+                  className="min-h-11 flex-row items-center gap-3"
+                >
                   <Avatar.Root size="40" color={g.colour} name={g.name} />
                   <Text className="flex-1 text-label-md text-text-strong-950">
                     {g.name}
                     {me && g.name === me ? " (you)" : ""}
                   </Text>
                   {g.host ? <Text className="text-paragraph-sm text-text-sub-600">Organiser</Text> : g.waitlisted ? <Text className="text-paragraph-sm text-text-sub-600">Waitlist</Text> : null}
-                </View>
+                </Pressable>
               ))}
             </View>
           </Modal.Body>
         </Modal.Content>
       </Modal.Root>
+      <ReportSheet slug={slug} target={reporting} onClose={() => setReporting(null)} onDone={onBlocked} />
     </View>
   );
 }
