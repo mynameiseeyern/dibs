@@ -7,7 +7,8 @@ import type { PlanDetail } from "@dibs/shared/api";
 import { RSVP_LABEL, shareText } from "@dibs/shared/plans";
 import { splitLeaders, voteStep } from "@dibs/shared/votes";
 import * as Card from "@/components/dibby/card";
-import { CircleAction, PlanFacts, PlanHero, type HeroFact } from "@/components/dibby/plan-hero";
+import { CircleAction } from "@/components/dibby/plan-hero";
+import { PlanTicket, SelfieBanner, type TicketStub } from "@/components/dibby/selfie";
 import { PlacePhoto, PlacePicker, PlaceSheet, placeLine, type PlacePick } from "@/components/dibby/place";
 import { PlanCard, type PlanFact } from "@/components/dibby/plan-card";
 import * as Avatar from "@/components/ui/avatar";
@@ -85,28 +86,32 @@ function Plan({ slug, detail, apply }: { slug: string; detail: PlanDetail; apply
       </View>
     ) : null;
 
-  // The crew for the hero: who's in (not the waitlist), you raised in the middle if you're in, else the host.
+  // The crew for the selfie: who's in (not the waitlist), you first if you're in, else the host.
   const crew = (going ?? []).filter((g) => !g.waitlisted).map((g) => ({ name: g.name, colour: g.colour, host: g.host }));
   const iAmIn = Boolean(me && !me.waitlisted && (me.rsvp === "in" || me.host));
   const raised = (iAmIn ? crew.find((c) => c.name === me!.name) : null) ?? crew.find((c) => c.host) ?? null;
+  const shot = raised ? [raised, ...crew.filter((c) => c !== raised)] : crew;
 
   // When / Where / Going, as the web words them.
   const parts = whenParts(plan.starts_at);
   const left = countdown(plan.starts_at);
   const soon = left === "Tonight" || left === "Tomorrow";
-  const heroFacts: HeroFact[] = [
+  const stubs: TicketStub[] = [
     {
       label: "When",
+      icon: "calendar-line",
       main: parts ? (soon ? left! : parts.day) : "To be decided",
       sub: parts ? (soon ? `${parts.day} · ${parts.time}` : [parts.time, left?.toLowerCase()].filter(Boolean).join(" · ")) : null,
     },
     {
       label: "Where",
+      icon: "map-pin-line",
       main: plan.place ?? (plan.voting ? "Up for a vote" : (plan.area ?? "To be decided")),
       sub: !plan.place && plan.voting ? (plan.area ? `Around ${plan.area}` : null) : detail.address ? detail.address : plan.place && plan.area && !plan.place.toLowerCase().includes(plan.area.toLowerCase()) ? plan.area : null,
     },
     {
       label: "Going",
+      icon: "group-line",
       main: plan.capacity !== null ? `${plan.going} of ${plan.capacity}` : `${plan.going} ${plan.going === 1 ? "person" : "people"}`,
       sub:
         plan.capacity !== null
@@ -129,15 +134,8 @@ function Plan({ slug, detail, apply }: { slug: string; detail: PlanDetail; apply
       <ScrollView contentContainerClassName="gap-6 p-4 pb-8">
         {onePage ? (
           <View className="gap-6">
-            <PlanHero going={crew} raised={raised} isYou={iAmIn} />
-            <View className="items-center gap-1">
-              <Text accessibilityRole="header" className="text-center text-title-h2 text-text-strong-950">
-                {plan.title}
-              </Text>
-              {hostedBy ? <Text className="text-center text-paragraph-md text-text-sub-600">{hostedBy}</Text> : null}
-              {plan.description ? <Text className="pt-1 text-center text-paragraph-sm text-text-strong-950">{plan.description}</Text> : null}
-            </View>
-            <PlanFacts facts={heroFacts} />
+            <SelfieBanner slug={slug} crew={shot} isYou={iAmIn && Boolean(raised)} going={plan.going} capacity={plan.capacity} />
+            <PlanTicket title={plan.title} hostedBy={hostedBy} description={plan.description} stubs={stubs} />
             {actions}
           </View>
         ) : (
