@@ -5,6 +5,7 @@ import type { Plan, PlanMember } from "@dibs/shared/types";
 import { store } from "@/lib/store";
 import { formatShort } from "@/lib/time";
 import { previewMeta } from "@/lib/og";
+import { crews } from "@/lib/crews";
 
 /**
  * The link preview for a plan, or one of its pages ("Square up: Friday dumplings"). Only what the
@@ -14,6 +15,8 @@ import { previewMeta } from "@/lib/og";
 export async function planPreview(slug: string, page?: { label: string; path: string; blurb?: string }): Promise<Metadata> {
   const plan = await store.getPlanBySlug(slug);
   if (!plan) return { title: "Plan not found" };
+  // Crew-only: a generic preview. No title, time, place, crew or faces (ARV-89).
+  if ((await crews.planCrew(plan)).visibility === "crew") return previewMeta({ title: "A plan on Dibby", description: "For the crew only. Open it in the app.", path: `/p/${slug}${page?.path ?? ""}` });
   const members = await store.listMembers(plan.id);
   const n = countIn(members);
   const when = formatShort(plan.starts_at);

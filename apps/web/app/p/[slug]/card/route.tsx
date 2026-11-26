@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 import { countIn, monogram } from "@dibs/shared/plans";
 import { store } from "@/lib/store";
+import { crews } from "@/lib/crews";
 import { formatWhen } from "@/lib/time";
 import { OG, OG_FILL, OgMark, ogFonts } from "@/lib/og";
 
@@ -16,7 +17,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
 
 async function Image({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const plan = await store.getPlanBySlug(slug);
+  const found = await store.getPlanBySlug(slug);
+  // Crew-only plans draw the generic card, as for a wrong link: nothing about the plan (ARV-89).
+  const plan = found && (await crews.planCrew(found)).visibility === "crew" ? null : found;
   const members = plan ? await store.listMembers(plan.id) : [];
   const going = members.filter((m) => m.rsvp === "in" && !m.waitlisted);
   const shown = going.slice(0, 5);

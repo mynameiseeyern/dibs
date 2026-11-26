@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { toPlanSummary } from "@dibs/shared/api";
 import { personKey } from "@dibs/shared/moderation";
 import { apiGuest, apiOrganiser } from "@/lib/api-auth";
+import { crewGate } from "@/lib/crew-plans";
 import { screenFor } from "@/lib/moderation";
 import { store } from "@/lib/store";
 import { formatShort } from "@/lib/time";
@@ -27,5 +28,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
   const screen = await screenFor(viewer);
   const host = members.find((m) => m.role === "organiser");
   if (screen.reported.has(plan.id) || (host && screen.blocked.has(personKey(host) ?? ""))) return NextResponse.json({ error: "Plan not found." }, { status: 404 });
+  // Crew-only plans: the same 404 as a wrong link for anyone outside the crew.
+  const onPlan = Boolean(me && members.some((m) => m.user_id === me.id));
+  if (!(await crewGate(plan, { userId: me?.id ?? null, onPlan })).see) return NextResponse.json({ error: "Plan not found." }, { status: 404 });
   return NextResponse.json(toPlanSummary(plan, members, formatShort(plan.starts_at)), { headers: { "Cache-Control": "no-store" } });
 }

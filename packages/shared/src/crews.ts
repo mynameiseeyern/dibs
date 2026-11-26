@@ -232,3 +232,161 @@ export interface NewCrewResponse {
 
 /** A few to pick from when naming a crew. Any single emoji works. */
 export const CREW_EMOJI = ["🥟", "🍜", "🍕", "🌮", "☕", "🍻", "🏀", "⚽", "🎮", "🎤", "🏖️", "🔥", "✨", "🫶", "👯", "🐸"] as const;
+
+/**
+ * `GET /api/v1/crews/invite/:token`: what an invite link shows (ARV-89). Anything but a working
+ * link is "expired", with nothing about the crew. The rest is the bare minimum: name, emoji,
+ * how many, who invited you. Never member names or plans.
+ */
+export interface CrewInvitePreview {
+  status: "ok" | "expired";
+  crew?: { name: string; emoji: string; members: number };
+  /** First name of whoever made the link. */
+  invited_by?: string | null;
+  /** Where the person on this phone stands. */
+  you?: "signed_out" | "member" | "pending" | "can_ask" | "cant_ask";
+  /** Set when `you` is "member", so the app can open the crew. */
+  crew_id?: string;
+  /** Why they can't ask, from JOIN_ASK_NOTE. */
+  note?: string;
+  /** A personal invite for you (ARV-96): the owner picked you, so asking lets you straight in. */
+  personal?: boolean;
+}
+
+export interface CrewMemberRow {
+  user_id: string;
+  name: string;
+  role: CrewRole;
+  you: boolean;
+}
+
+export interface CrewRequestRow {
+  id: string;
+  name: string;
+  asked_at: string;
+}
+
+export interface CrewInviteRow {
+  id: string;
+  /** Who made it, or null if their account's gone. */
+  made_by: string | null;
+  mine: boolean;
+  uses: number;
+  max_uses: number | null;
+  expires_at: string | null;
+}
+
+/** `GET /api/v1/crews/:id`: the crew, as a member sees it. Requests and everyone's invites only for the owner and admins. */
+export interface CrewDetail {
+  crew: CrewSummary;
+  members: CrewMemberRow[];
+  /** Pending asks. Empty unless you can manage requests. */
+  requests: CrewRequestRow[];
+  /** Working links: yours, or everyone's if you manage requests. */
+  invites: CrewInviteRow[];
+  can: CrewPermissions;
+  /** The crew's plans (ARV-92). Missing on servers from before it. */
+  plans?: CrewPlanSections;
+  /** You've muted this crew's notifications (ARV-94). */
+  muted?: boolean;
+}
+
+/** `POST /api/v1/crews/:id/leave` and `DELETE /api/v1/crews/:id`: where you are afterwards. */
+export interface CrewGone {
+  /** The crew was deleted (the owner deleted it, or the last person left). */
+  deleted: boolean;
+}
+
+/** Labels for picking a link's expiry and uses. */
+export const INVITE_EXPIRY_LABEL: Record<InviteExpiry, string> = {
+  "30m": "30 minutes",
+  "1h": "1 hour",
+  "6h": "6 hours",
+  "12h": "12 hours",
+  "1d": "1 day",
+  "7d": "7 days",
+  never: "Never",
+};
+
+// ---------- The crew's plans (ARV-92) ----------
+
+/** A plan in the crew's list, as one member sees it. */
+export interface CrewPlanRow {
+  slug: string;
+  title: string;
+  status: "voting" | "locked" | "wrapped" | "cancelled";
+  /** ISO start, or null while the day's still being worked out. */
+  starts_at: string | null;
+  /** "Fri 7pm", Sydney time, from the server. */
+  when: string | null;
+  place: string | null;
+  area: string | null;
+  going: number;
+  /** What's still up for a vote. */
+  deciding: ("when" | "where")[];
+  /** You've voted on what's being decided. */
+  voted: boolean;
+  /** Your answer, or null if you're not on it yet. */
+  rsvp: "in" | "maybe" | "out" | null;
+  host: boolean;
+  visibility: PlanVisibility;
+  created_at: string;
+}
+
+export interface CrewPlanSections {
+  still_deciding: CrewPlanRow[];
+  coming_up: CrewPlanRow[];
+  past: CrewPlanRow[];
+}
+
+/** A plan stays in Coming up until six hours after it starts, like the home screen. */
+const STILL_ON_MS = 6 * 3600 * 1000;
+
+/**
+ * Still deciding (a vote's running and there's no day yet), Coming up (soonest first; a set plan
+ * with no day goes last), Past (newest first). Called off and wrapped plans are past.
+ */
+export function crewPlanSections(rows: readonly CrewPlanRow[], now: number): CrewPlanSections {
+  const live = (r: CrewPlanRow) => r.status === "voting" || r.status === "locked";
+  const t = (r: CrewPlanRow) => (r.starts_at ? Date.parse(r.starts_at) : null);
+  const still_deciding = rows.filter((r) => r.status === "voting" && !r.starts_at).sort((a, b) => a.created_at.localeCompare(b.created_at));
+  const coming_up = rows
+    .filter((r) => live(r) && !still_deciding.includes(r) && (t(r) === null || t(r)! > now - STILL_ON_MS))
+    .sort((a, b) => (t(a) ?? Infinity) - (t(b) ?? Infinity));
+  const past = rows
+    .filter((r) => !still_deciding.includes(r) && !coming_up.includes(r))
+    .sort((a, b) => (t(b) ?? Date.parse(b.created_at)) - (t(a) ?? Date.parse(a.created_at)));
+  return { still_deciding, coming_up, past };
+}
+
+// ---------- "Turn this into a crew?" (ARV-96) ----------
+
+/** People on this plan who've been on another of your plans too. Shown to the host. */
+export interface CrewSuggestion {
+  /** Stays the same for the same people, so "Not now" hides it for this group only. */
+  key: string;
+  people: { user_id: string; name: string }[];
+}
+
+/** The fewest repeat people worth suggesting a crew for. */
+export const CREW_SUGGEST_MIN = 2;
+
+/**
+ * Who to suggest: people with accounts on this plan (not you, not "can't go") who were also on at
+ * least one of your other plans. Null if that's fewer than CREW_SUGGEST_MIN, or if they're already
+ * all in one crew with you.
+ */
+export function suggestCrew(
+  thisPlan: { user_id: string | null; name: string; rsvp: string | null }[],
+  otherPlans: (string | null)[][],
+  myCrews: string[][],
+  me: string
+): CrewSuggestion | null {
+  const seen = new Set(otherPlans.flat().filter((x): x is string => Boolean(x)));
+  const people = new Map<string, string>();
+  for (const m of thisPlan) if (m.user_id && m.user_id !== me && m.rsvp !== "out" && seen.has(m.user_id)) people.set(m.user_id, m.name);
+  if (people.size < CREW_SUGGEST_MIN) return null;
+  const ids = [...people.keys()].sort();
+  if (myCrews.some((crew) => ids.every((id) => crew.includes(id)))) return null;
+  return { key: ids.join(","), people: ids.map((user_id) => ({ user_id, name: people.get(user_id)! })) };
+}

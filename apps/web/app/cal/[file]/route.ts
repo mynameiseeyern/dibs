@@ -1,4 +1,5 @@
 import { store } from "@/lib/store";
+import { dropLostCrewPlans } from "@/lib/crew-plans";
 import { feedIcs } from "@/lib/calendar";
 import { feedStatus } from "@dibs/shared/calendar";
 import { siteUrl } from "@/lib/site";
@@ -16,7 +17,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ file: s
   if (!userId) return new Response("Not found", { status: 404 });
 
   const base = siteUrl();
-  const events = (await store.listPlansForUser(userId)).flatMap(({ plan, member }) => {
+  // Crew-only plans you've been removed from drop off the feed (ARV-97).
+  const events = (await dropLostCrewPlans(userId, await store.listPlansForUser(userId))).flatMap(({ plan, member }) => {
     const status = feedStatus(plan, member);
     // They're in the plan, so a typed-in place's address can go in, like on the plan card.
     return status ? [{ plan, url: `${base}/p/${plan.slug}`, status }] : [];

@@ -4,6 +4,7 @@ import { currentOrganiser, type Organiser } from "./auth";
 import { currentGuest } from "./guest";
 import { store, type Guest, type Plan, type PlanMember } from "./store";
 import { apiHere } from "./api-viewer";
+import { crewGate } from "./crew-plans";
 
 export interface PlanView {
   plan: Plan;
@@ -66,5 +67,7 @@ export async function loadPlan(slug: string): Promise<PlanView | null> {
   const me =
     members.find((m) => organiser && m.user_id === organiser.id) ?? members.find((m) => guest && m.guest_id === guest.id) ?? null;
   if (expired && !me) return null;
+  // Crew-only plans: the crew alone. Anyone else gets what a wrong link gets (ARV-93).
+  if (!(await crewGate(plan, { userId: organiser?.id ?? null, onPlan: Boolean(me) })).see) return null;
   return { plan, members, me, organiser, guest, isHost: me?.role === "organiser" || me?.role === "cohost", here };
 }

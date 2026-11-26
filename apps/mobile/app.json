@@ -36,6 +36,11 @@
             {
               "scheme": "https",
               "host": "dibby.social",
+              "pathPrefix": "/c/"
+            },
+            {
+              "scheme": "https",
+              "host": "dibby.social",
               "pathPrefix": "/auth/app"
             }
           ],

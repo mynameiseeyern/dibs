@@ -2,6 +2,9 @@ import { apiError, apiGuest, apiJson, apiOrganiser, newApiGuest, readBody, text 
 import { checkNewPlan, makePlan, readNewPlan, type Host } from "@/lib/api-create-plan";
 import { FILTERED_NOTE, isFiltered } from "@dibs/shared/moderation";
 import { BANNED_NOTE, isBanned } from "@/lib/moderation";
+import { crewPermissions } from "@dibs/shared/crews";
+import { crews } from "@/lib/crews";
+import { pushToUsers } from "@/lib/push";
 import { store } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +25,12 @@ export async function POST(req: Request) {
   let host: Host;
   let guestToken: string | undefined;
   const me = await apiOrganiser(req);
+
+  // A crew plan (ARV-93): any member of the crew can make one. Crew only unless they say otherwise.
+  const crewId = typeof body.crew_id === "string" && body.crew_id ? body.crew_id : null;
+  const crewRow = crewId && me && crewPermissions(await crews.roleIn(crewId, me.id).catch(() => null)).makePlan ? await crews.getCrew(crewId) : null;
+  if (crewId && !crewRow) return apiError(me ? "Couldn't find that crew." : "Sign in to make a plan for your crew.", me ? 404 : 401);
+  const visibility = body.visibility === "link" ? "link" : "crew";
   if (me) {
     if (await isBanned(`u:${me.id}`, null)) return apiError(BANNED_NOTE, 403);
     const profile = await store.getProfile(me.id).catch(() => null);
@@ -45,6 +54,14 @@ export async function POST(req: Request) {
   try {
     const made = await makePlan(input, host);
     if ("error" in made) return apiJson(made, 502);
+    if (crewRow && me) {
+      const plan = await store.getPlanBySlug(made.slug);
+      if (plan) {
+        await crews.setPlanCrew(plan.id, { crewId: crewRow.id, visibility });
+        const others = (await crews.listMembers(crewRow.id)).filter((m) => m.user_id !== me.id && !m.muted).map((m) => m.user_id);
+        pushToUsers(store, others, { title: `${crewRow.emoji} ${crewRow.name}`, body: `${host.organiserName.split(" ")[0]} made a plan: ${plan.title}`, url: `/p/${plan.slug}` });
+      }
+    }
     return apiJson({ slug: made.slug, ...(guestToken ? { guest_token: guestToken } : {}) }, 201);
   } catch (e) {
     console.error("[api create plan]", e);

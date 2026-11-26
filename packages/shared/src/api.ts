@@ -99,6 +99,8 @@ export interface MyPlan extends PlanSummary {
   faces?: { name: string; colour: PlanMember["colour"] }[];
   /** The one thing to do next ("Wrap it up: who came?", "You owe $12."), or null. */
   nudge?: string | null;
+  /** The plan's crew, when you may see which (ARV-97): for the label and the crew filter. */
+  crew?: { id: string; name: string; emoji: string } | null;
 }
 
 export function toMyPlan(plan: Plan, members: readonly PlanMember[], me: PlanMember, when: string | null): MyPlan {
@@ -127,6 +129,10 @@ export interface MyPlans {
 /** `POST /api/v1/plans`. One question a screen in the app, all sent together at the end. */
 export interface NewPlanRequest {
   title: string;
+  /** Make it for a crew you're in (ARV-93). Accounts only. */
+  crew_id?: string | null;
+  /** Crew plans: "crew" (the default) for the crew alone, "link" for anyone with the link. */
+  visibility?: "crew" | "link";
   category?: string | null;
   /** "2026-11-14" and "19:00", Sydney wall clock. */
   date?: string | null;
@@ -158,6 +164,12 @@ export interface NewPlanResponse {
  */
 export interface PlanDetail {
   plan: PlanSummary;
+  /** The plan's crew, if it has one and you may see which (ARV-93). */
+  crew?: { id: string; name: string; emoji: string; /** You're in it, so it can open the crew. */ member?: boolean } | null;
+  /** Crew plans only: "crew" for the crew alone, "link" for anyone with the link. Null for other plans. */
+  visibility?: "crew" | "link" | null;
+  /** Hosts, on a plan with no crew: the same people as your other plans, so "Turn this into a crew?" (ARV-96). */
+  crew_suggestion?: { key: string; people: { user_id: string; name: string }[] } | null;
   /** The organiser's first name, for "Hosted by Ee". */
   host_name?: string | null;
   /** Google Maps directions to the set place (a typed-in address only for people in the plan). */

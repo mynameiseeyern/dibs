@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Wordmark } from "@/components/Logo";
 import { guestKeyOk, memberKeyOk, parseRejoinKey } from "@/lib/rejoin";
+import { crews } from "@/lib/crews";
 import { store } from "@/lib/store";
 import { RejoinForm } from "./RejoinForm";
 
@@ -18,7 +19,8 @@ export default async function Rejoin({ params }: { params: Promise<{ key: string
   } else if (key?.kind === "m") {
     const m = await store.getMember(key.id);
     const plan = m && !m.user_id && memberKeyOk(key, m) ? await store.getPlanById(m.plan_id) : null;
-    if (m && plan) who = { name: m.display_name, plan: plan.title };
+    // A crew-only plan's title stays hidden here too: the rejoin link is a guest's, never the crew's.
+    if (m && plan) who = { name: m.display_name, plan: (await crews.planCrew(plan)).visibility === "crew" ? undefined : plan.title };
   }
 
   return (

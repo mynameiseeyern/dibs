@@ -36,6 +36,8 @@ import { JoinForm } from "./JoinForm";
 import { LinkOpened } from "@/components/LinkOpened";
 import { ShareButton } from "./ShareButton";
 import { GetTheApp } from "./GetTheApp";
+import { CrewPromptLine } from "./CrewPromptLine";
+import { crewSuggestionFor } from "@/lib/crew-plans";
 import { CameraCard } from "./CameraCard";
 import { PhotoRoll } from "./PhotoRoll";
 import { ContentMenu } from "@/components/ContentMenu";
@@ -78,6 +80,9 @@ export default async function PlanPage({ params, searchParams }: Props) {
   // Votes close themselves once the deadline passes.
   if (await closeIfDue(view.plan)) view = (await loadPlan(slug))!;
   const { plan, members, me, isHost } = view;
+  // "Turn this into a crew?" (ARV-96): the same people keep turning up. Hosts with an account only.
+  const crewSuggestion = await crewSuggestionFor(plan, members, view.organiser?.id ?? null, isHost).catch(() => null);
+  const crewWho = crewSuggestion ? crewSuggestion.people.map((p) => p.name.split(" ")[0]).join(", ").replace(/, ([^,]*)$/, " and $1") : "";
   // Going (or hosting): take part. Maybe, not replied, waitlisted: read along. Can't go: hidden.
   const access = me ? planAccess(me) : null;
   const readOnly = access?.level === "read" ? READ_ONLY_NOTE[access.why] : null;
@@ -321,6 +326,7 @@ export default async function PlanPage({ params, searchParams }: Props) {
               ])
           )}
       </ul>
+      {crewSuggestion && <CrewPromptLine suggestionKey={crewSuggestion.key} who={crewWho} />}
       {!wrapped && isHost && twins.size > 0 && (
         <p className="paragraph-xs muted who__cap">Same person on here twice? Tap the menu on the extra spot and merge it.</p>
       )}
@@ -651,7 +657,7 @@ export default async function PlanPage({ params, searchParams }: Props) {
         {me?.guest_id && view.guest && me.guest_id === view.guest.id && (
           <footer className="plan-foot">
             {/* One app prompt at a time, and not while they've still got a vote to make. */}
-            {showAppPrompt && <GetTheApp onTap={appInterest.bind(null, slug)} />}
+            {showAppPrompt && <GetTheApp onTap={appInterest.bind(null, slug)} slug={slug} />}
             {!view.organiser && !showAppPrompt && (
               <a className="label-sm" href="/account">
                 <i className="ri-smartphone-line db-icon" aria-hidden="true" /> Keep this plan on your other devices

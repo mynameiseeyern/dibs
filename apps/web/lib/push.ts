@@ -62,9 +62,18 @@ export function pushForJoin(store: Store, joined: PlanMember) {
   });
 }
 
+/** Straight to accounts, for things that aren't on a plan (crews: a join request, a yes or no). */
+export function pushToUsers(store: Store, userIds: string[], msg: { title: string; body: string; url: string }) {
+  later(() => sendTo(store, [...new Set(userIds)], [], { ...msg, body: clip(msg.body) }));
+}
+
 async function send(store: Store, to: PlanMember[], msg: { title: string; body: string; url: string }) {
   const userIds = [...new Set(to.map((x) => x.user_id).filter((x): x is string => Boolean(x)))];
   const guestIds = [...new Set(to.filter((x) => !x.user_id).map((x) => x.guest_id).filter((x): x is string => Boolean(x)))];
+  await sendTo(store, userIds, guestIds, msg);
+}
+
+async function sendTo(store: Store, userIds: string[], guestIds: string[], msg: { title: string; body: string; url: string }) {
   if (!userIds.length && !guestIds.length) return;
   const tokens = await store.listPushTokens({ userIds, guestIds });
   if (!tokens.length) return;

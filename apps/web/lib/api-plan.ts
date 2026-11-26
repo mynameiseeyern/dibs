@@ -11,6 +11,7 @@ import { mapsLink } from "./places";
 import { siteUrl } from "./site";
 import { formatShort, formatWhen } from "./time";
 import { loadPlan } from "./viewer";
+import { crewGate, crewSuggestionFor } from "./crew-plans";
 
 /** Runs `fn` as the app's person (sign-in, guest pass, or nobody yet), so plan actions see them. */
 export async function forApp<T>(req: Request, fn: () => Promise<T>): Promise<T> {
@@ -42,8 +43,12 @@ export async function planDetail(slug: string): Promise<PlanDetail | null> {
   // The web's Directions button: a place from the map, or a typed-in address for people in the plan.
   const directions = plan.venue_place_id && plan.venue_name ? mapsLink(plan.venue_place_id, plan.venue_name) : me && plan.venue_address ? mapsLink(null, plan.venue_address) : null;
 
+  const gate = await crewGate(plan, { userId: view.organiser?.id ?? null, onPlan: Boolean(me) });
   return {
     plan: toPlanSummary(plan, members, formatShort(plan.starts_at)),
+    crew: gate.crew ? { ...gate.crew, member: gate.crewRole !== null } : null,
+    visibility: gate.crewId ? gate.visibility : null,
+    crew_suggestion: await crewSuggestionFor(plan, members, view.organiser?.id ?? null, view.isHost).catch(() => null),
     host_name: host ? host.display_name.split(" ")[0] : null,
     directions,
     // A typed-in place's address, under its name: only for people in the plan.

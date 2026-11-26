@@ -17,6 +17,7 @@ import { Icon } from "@/components/ui/icon";
 import * as LinkButton from "@/components/ui/link-button";
 import { getMyPlans } from "@/lib/api";
 import { CrewsStrip } from "@/components/dibby/crews-strip";
+import { Choice } from "@/components/dibby/flow";
 import { useSession } from "@/lib/session";
 import { whenLong } from "@/lib/dates";
 import { useColour } from "@/lib/theme";
@@ -154,6 +155,8 @@ function Welcome({ ready }: { ready: boolean }) {
 type Load = { kind: "loading" } | { kind: "error"; message: string } | { kind: "ok"; upcoming: MyPlan[]; sortOut: MyPlan[]; past: MyPlan[] };
 
 function MyPlans({ signedIn }: { signedIn: boolean }) {
+  // Crew filter (ARV-97): All, or one crew's plans. Only the crews your plans are in.
+  const [picked, setCrewFilter] = useState<string | null>(null);
   const [load, setLoad] = useState<Load>({ kind: "loading" });
   const [refreshing, setRefreshing] = useState(false);
 
@@ -175,6 +178,12 @@ function MyPlans({ signedIn }: { signedIn: boolean }) {
       fetchPlans();
     }, [fetchPlans])
   );
+
+  const allRows = load.kind === "ok" ? [...load.upcoming, ...load.sortOut, ...load.past] : [];
+  const crewsIn = [...new Map(allRows.flatMap((p) => (p.crew ? [[p.crew.id, p.crew] as const] : []))).values()];
+  // A crew that's no longer in your plans (left, deleted) falls back to All.
+  const crewFilter = picked && crewsIn.some((c) => c.id === picked) ? picked : null;
+  const shown = (rows: MyPlan[]) => (crewFilter ? rows.filter((p) => p.crew?.id === crewFilter) : rows);
 
   return (
     <SafeAreaView className="flex-1" edges={["top", "bottom"]}>
@@ -206,6 +215,14 @@ function MyPlans({ signedIn }: { signedIn: boolean }) {
           </Pressable>
         ) : null}
         {signedIn ? <CrewsStrip /> : null}
+        {load.kind === "ok" && crewsIn.length > 0 ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2" accessibilityLabel="Show plans from">
+            <Choice label="All" selected={crewFilter === null} onPress={() => setCrewFilter(null)} />
+            {crewsIn.map((c) => (
+              <Choice key={c.id} label={`${c.emoji} ${c.name}`} selected={crewFilter === c.id} onPress={() => setCrewFilter(c.id)} />
+            ))}
+          </ScrollView>
+        ) : null}
         {load.kind === "ok" && load.upcoming.length > 0 ? <PushAsk /> : null}
         {load.kind === "loading" ? (
           <>
@@ -223,9 +240,12 @@ function MyPlans({ signedIn }: { signedIn: boolean }) {
           </View>
         ) : (
           <>
-            {load.upcoming.length > 0 ? <Section title="Up next" lead plans={load.upcoming} /> : null}
-            {load.sortOut.length > 0 ? <Section title="To sort out" plans={load.sortOut} /> : null}
-            {load.past.length > 0 ? <Section title="Been and done" plans={load.past} quiet /> : null}
+            {shown(load.upcoming).length > 0 ? <Section title="Up next" lead plans={shown(load.upcoming)} /> : null}
+            {shown(load.sortOut).length > 0 ? <Section title="To sort out" plans={shown(load.sortOut)} /> : null}
+            {shown(load.past).length > 0 ? <Section title="Been and done" plans={shown(load.past)} quiet /> : null}
+            {crewFilter && shown(load.upcoming).length + shown(load.sortOut).length + shown(load.past).length === 0 ? (
+              <Text className="text-paragraph-md text-text-sub-600">Nothing from this crew yet.</Text>
+            ) : null}
           </>
         )}
       </ScrollView>
@@ -258,6 +278,7 @@ function Section({ title, plans, lead, quiet }: { title: string; plans: MyPlan[]
             status={p.status}
             statusLabel={p.status_label}
             meta={p.role_label ?? (p.host ? "Hosting" : "Going")}
+            byline={p.crew ? `${p.crew.emoji} ${p.crew.name}` : null}
             facts={facts(p)}
             footer={
               <View className="w-full gap-3">
