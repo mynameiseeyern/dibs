@@ -251,7 +251,7 @@ export interface ThreadContext {
 export interface ThreadResult {
   reply: string;
   addOptions: Venue[];
-  /** A separate plan Dibby set up, for the action to create. At most one per ask. */
+  /** A separate plan Dibby drafted. The asker confirms before it's made (ARV-59). At most one per ask. */
   newPlan: PlanDraft | null;
   /** The last venue search this turn, to remember for the next ask. */
   searched: SearchMemo | null;
@@ -375,7 +375,8 @@ export async function replyInThread(ctx: ThreadContext, ask: string): Promise<Th
         results.push({
           type: "tool_result",
           tool_use_id: c.id,
-          content: `New plan "${newPlan.title}" is set up with a vote on: ${where}. Everyone from this plan is invited. A button to open it appears under your reply, so don't paste a link. Reply in one short line.`,
+          // ARV-59: nothing's made until the asker says so. They get a card under your reply.
+          content: `Drafted a new plan "${newPlan.title}" with a vote on: ${where}. It isn't made yet and nobody's invited: the asker gets a card under your reply to set it up or skip it. Reply in one short line saying what you drafted, without saying it's done, and don't paste a link.`,
         });
       }
     }

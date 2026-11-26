@@ -5,6 +5,7 @@ import { locate } from "@/lib/locate";
 import * as Button from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
 import type { FormState } from "./actions";
+import { useAiConsent } from "@/components/AiConsent";
 
 /**
  * Where Dibby looks, under its latest message, so the crew can steer it in one tap.
@@ -29,11 +30,15 @@ export function WhereChips({
 }) {
   const [open, setOpen] = useState(mode === "ask");
   const [pending, start] = useTransition();
+  const consent = useAiConsent();
   const others = areas.filter((a) => a.toLowerCase() !== (lookedIn ?? "").toLowerCase());
 
-  const send = (where: string | "near") =>
+  const send = async (where: string | "near") => {
+    // A chip posts an @dibby message, so it asks first too (ARV-59).
+    if (!(await consent.ensure())) return;
     start(async () => {
       const f = new FormData();
+      f.set("ai_consent", "1");
       if (where === "near") {
         const here = await locate({ ask: true });
         if (!here) {
@@ -50,9 +55,11 @@ export function WhereChips({
       if (r?.error) toast.error(r.error);
       else setOpen(false);
     });
+  };
 
   return (
     <div className="where">
+      {consent.dialog}
       {mode === "brief" && (
         <p className="where__brief paragraph-xs">
           <i className="ri-search-line db-icon" aria-hidden="true" />

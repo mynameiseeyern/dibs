@@ -14,7 +14,9 @@ import * as Button from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import * as Input from "@/components/ui/input";
 import { toast } from "@/components/ui/toast";
-import { reactTo, sendMessage, toggleDibbyMute } from "@/lib/api";
+import { dibbyAction, reactTo, sendMessage, toggleDibbyMute } from "@/lib/api";
+import { AI_CONSENT_CHAT, AiConsent, hasAiConsent } from "@/components/dibby/ai-consent";
+import * as LinkButton from "@/components/ui/link-button";
 import { chatStamp } from "@/lib/dates";
 import { useColour } from "@/lib/theme";
 import { usePlan } from "@/lib/use-plan";
@@ -61,6 +63,8 @@ function PlanChat() {
   const spinner = useColour("primary-base");
   const { state, apply, refresh } = usePlan(slug);
   const [reporting, setReporting] = useState<ReportTarget | null>(null);
+  // An @dibby message waits here while we ask before it goes to the AI (ARV-59, Apple 5.1.2(i)).
+  const [consentFor, setConsentFor] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState<string | null>(null);
 
@@ -88,14 +92,21 @@ function PlanChat() {
   const { me, chat } = detail;
   const canPost = Boolean(me?.canPost && me.access === "full");
 
-  async function send() {
-    const body = draft.trim();
+  async function send(allowed = false) {
+    const body = (consentFor ?? draft).trim();
     if (!body || sending) return;
+    const tagged = /(^|\s)@dibby\b/i.test(body);
+    const ok = tagged && (allowed || (await hasAiConsent()));
+    if (tagged && !ok) {
+      setConsentFor(body);
+      return;
+    }
+    setConsentFor(null);
     setSending(body);
     setDraft("");
     Haptics.selectionAsync();
     try {
-      apply(await sendMessage(slug, body));
+      apply(await sendMessage(slug, body, ok));
     } catch (e) {
       setDraft(body);
       toast.error((e as Error).message);
@@ -108,6 +119,17 @@ function PlanChat() {
     Haptics.selectionAsync();
     try {
       apply(await toggleDibbyMute(slug));
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  }
+
+  async function dibby(id: string, action: "make" | "skip" | "undo") {
+    Haptics.selectionAsync();
+    try {
+      apply(await dibbyAction(slug, id, action));
+      if (action === "make") toast.success("It's set up", { description: "Everyone from here is invited. Open it under Dibby's reply." });
+      if (action === "undo") toast.success("Taken off the vote");
     } catch (e) {
       toast.error((e as Error).message);
     }
@@ -131,7 +153,7 @@ function PlanChat() {
   ) : !me.canPost ? (
     <EmailGate slug={slug} />
   ) : (
-    <Composer value={draft} onChange={setDraft} onSend={send} busy={Boolean(sending)} />
+    <Composer value={draft} onChange={setDraft} onSend={() => send()} busy={Boolean(sending)} />
   );
 
   const empty = rows.length === 0 && !sending;
@@ -175,7 +197,7 @@ function PlanChat() {
         renderItem={({ item: { m, first, stamp } }) => (
           <View className="gap-2">
             {stamp ? <ChatTime>{stamp}</ChatTime> : null}
-            <Row m={m} first={first} options={chat?.react ?? []} onReact={(e) => react(m.id, e)} onReport={setReporting} />
+            <Row m={m} first={first} options={chat?.react ?? []} onReact={(e) => react(m.id, e)} onReport={setReporting} onDibby={(a) => dibby(m.id, a)} />
           </View>
         )}
       />
@@ -191,6 +213,7 @@ function PlanChat() {
     <View className="flex-1 bg-bg-white-0">
       <ChatBar title={detail.plan.title} muted={chat?.muted ?? null} onMute={mute} />
       <ReportSheet slug={slug} target={reporting} onClose={() => setReporting(null)} onDone={refresh} />
+      <AiConsent open={consentFor !== null} onOpenChange={(o) => !o && setConsentFor(null)} onAllow={() => send(true)} body={AI_CONSENT_CHAT} />
       {KC ? (
         <>
           {thread}
@@ -390,11 +413,31 @@ function ReadOnly({ note }: { note: string }) {
   );
 }
 
-function Row({ m, first, options, onReact, onReport }: { m: Msg; first: boolean; options: string[]; onReact: (emoji: string) => void; onReport: (t: ReportTarget) => void }) {
+function Row({
+  m,
+  first,
+  options,
+  onReact,
+  onReport,
+  onDibby,
+}: {
+  m: Msg;
+  first: boolean;
+  options: string[];
+  onReact: (emoji: string) => void;
+  onReport: (t: ReportTarget) => void;
+  onDibby: (action: "make" | "skip" | "undo") => Promise<void>;
+}) {
   if (m.kind === "system") return <ChatSystem>{m.body}</ChatSystem>;
   const from = m.kind === "dibby" ? "dibby" : m.mine ? "me" : "them";
+  const below = (
+    <>
+      {from === "dibby" ? <DibbyExtras m={m} onDibby={onDibby} /> : null}
+      <Reactions all={m.reactions ?? []} options={options} onReact={onReact} />
+    </>
+  );
   const bubble = (
-    <ChatMessage from={from} name={m.author ?? undefined} colour={m.colour ?? undefined} first={first} below={<Reactions all={m.reactions ?? []} options={options} onReact={onReact} />}>
+    <ChatMessage from={from} name={m.author ?? undefined} colour={m.colour ?? undefined} first={first} below={below}>
       {m.body}
     </ChatMessage>
   );
@@ -413,6 +456,51 @@ function Row({ m, first, options, onReact, onReport }: { m: Msg; first: boolean;
     >
       {bubble}
     </Pressable>
+  );
+}
+
+/**
+ * Under Dibby's reply (ARV-59): Open for a plan it set up, the confirm card for one it drafted
+ * (only for whoever asked; nothing's made until they say so), and Undo for its places.
+ */
+function DibbyExtras({ m, onDibby }: { m: Msg; onDibby: (action: "make" | "skip" | "undo") => Promise<void> }) {
+  const [busy, setBusy] = useState(false);
+  const act = async (a: "make" | "skip" | "undo") => {
+    setBusy(true);
+    await onDibby(a);
+    setBusy(false);
+  };
+  const undo = m.undo ?? 0;
+  if (!m.plan_link && !m.confirm && !undo) return null;
+  return (
+    <View className="mt-2 gap-2">
+      {m.plan_link ? (
+        <Button.Root size="small" className="self-start" onPress={() => router.push(`/p/${m.plan_link}`)}>
+          <Button.Icon name="arrow-right-up-line" />
+          Open the new plan
+        </Button.Root>
+      ) : null}
+      {m.confirm ? (
+        <View className="gap-1 rounded-lg border border-stroke-soft-200 bg-bg-white-0 p-3" accessibilityLabel={`New plan: ${m.confirm.title}`}>
+          <Text className="text-label-sm text-text-strong-950">New plan: {m.confirm.title}</Text>
+          {m.confirm.facts ? <Text className="text-paragraph-xs text-text-sub-600">{m.confirm.facts}</Text> : null}
+          <Text className="text-paragraph-xs text-text-sub-600">Everyone here gets invited once you set it up.</Text>
+          <View className="mt-2 flex-row gap-2">
+            <Button.Root className="min-h-11" disabled={busy} onPress={() => act("make")}>
+              Set it up
+            </Button.Root>
+            <Button.Root variant="neutral" mode="stroke" className="min-h-11" disabled={busy} onPress={() => act("skip")}>
+              Not now
+            </Button.Root>
+          </View>
+        </View>
+      ) : null}
+      {undo ? (
+        <LinkButton.Root variant="gray" className="min-h-11 self-start" disabled={busy} onPress={() => act("undo")}>
+          {undo === 1 ? "Undo this place" : "Undo these places"}
+        </LinkButton.Root>
+      ) : null}
+    </View>
   );
 }
 

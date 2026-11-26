@@ -1,5 +1,6 @@
 import "server-only";
 import { toPlanSummary, type PlanDetail } from "@dibs/shared/api";
+import type { Message } from "@dibs/shared/types";
 import { countIn, extraOn, planAccess, READ_ONLY_NOTE, unreadCount } from "@dibs/shared/plans";
 import { picksAllowed } from "@dibs/shared/votes";
 import { personKey } from "@dibs/shared/moderation";
@@ -14,6 +15,9 @@ import { formatShort, formatWhen } from "./time";
 import { loadPlan } from "./viewer";
 import { crewGate, crewSuggestionFor } from "./crew-plans";
 import { screenFor } from "./moderation";
+import { byOf, canUndo, pendingFacts, pendingOf, undoneOf } from "./dibby-card";
+import { placesOf } from "./place-ids";
+import { splitPlanLink } from "./thread-links";
 
 /** Runs `fn` as the app's person (sign-in, guest pass, or nobody yet), so plan actions see them. */
 export async function forApp<T>(req: Request, fn: () => Promise<T>): Promise<T> {
@@ -52,6 +56,7 @@ export async function planDetail(slug: string): Promise<PlanDetail | null> {
   // The web's Directions button: a place from the map, or a typed-in address for people in the plan.
   const directions = plan.venue_place_id && plan.venue_name ? mapsLink(plan.venue_place_id, plan.venue_name) : me && plan.venue_address ? mapsLink(null, plan.venue_address) : null;
 
+  const onVote = new Set(options.map((o) => o.place_id).filter((id): id is string => Boolean(id)));
   const gate = await crewGate(plan, { userId: view.organiser?.id ?? null, onPlan: Boolean(me) });
   return {
     plan: toPlanSummary(plan, members, formatShort(plan.starts_at)),
@@ -111,7 +116,8 @@ export async function planDetail(slug: string): Promise<PlanDetail | null> {
               .map((m) => ({
                 id: m.id,
                 kind: m.kind,
-                body: m.body,
+                body: m.kind === "dibby" ? splitPlanLink(m.body).text : m.body,
+                ...(m.kind === "dibby" ? dibbyExtras(m, me!, view.isHost, plan.status === "voting", onVote) : {}),
                 author: m.kind === "dibby" ? "Dibby" : m.member_id ? (byId.get(m.member_id)?.display_name ?? "Former member") : null,
                 colour: m.member_id ? (byId.get(m.member_id)?.colour ?? null) : null,
                 mine: m.member_id === me!.id,
@@ -127,5 +133,16 @@ export async function planDetail(slug: string): Promise<PlanDetail | null> {
             react: canReact ? [...REACTIONS] : [],
           }
         : null,
+  };
+}
+
+/** Dibby's message for the app: the new-plan link, the confirm card (for the asker) and Undo (ARV-59). */
+function dibbyExtras(m: Message, me: { id: string; user_id: string | null }, isHost: boolean, voting: boolean, onVote: Set<string>) {
+  const pending = me.user_id && byOf(m.template) === me.id ? pendingOf(m.template) : null;
+  const undoable = placesOf(m.template).filter((id) => onVote.has(id)).length;
+  return {
+    plan_link: splitPlanLink(m.body).slug,
+    confirm: pending ? { title: pending.title, facts: pendingFacts(pending) } : null,
+    undo: voting && !undoneOf(m.template) && canUndo(m.template, me, isHost) ? undoable : 0,
   };
 }

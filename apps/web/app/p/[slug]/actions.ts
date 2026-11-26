@@ -14,10 +14,11 @@ import { loadPlan } from "@/lib/viewer";
 import { formatWhen, isoToLocal, localToIso } from "@/lib/time";
 import { MAX_TIMES, sydneyDate, startOnDay } from "@dibs/shared/when";
 import { picksAllowed, voteStep } from "@dibs/shared/votes";
-import { DIBBY_HEADS_UP, planLinkLine } from "@/lib/thread-links";
+import { DIBBY_HEADS_UP } from "@/lib/thread-links";
 import { getPlace } from "@/lib/places";
 import { readNear } from "@/lib/near";
 import { withPlaces } from "@/lib/place-ids";
+import { withBy, withPending, type PendingPlan } from "@/lib/dibby-card";
 import { areaChoices, withAsk } from "@/lib/area";
 import { track } from "@/lib/events";
 import { report } from "@/lib/report";
@@ -31,6 +32,8 @@ function revalidatePlan(slug: string) {
   revalidatePath(`/p/${slug}`);
   revalidatePath(`/p/${slug}/chat`);
 }
+
+const AI_CONSENT_NOTE = "Dibby needs your OK before it reads this. Tap Allow when it asks.";
 
 const clean = (v: FormDataEntryValue | null, max = 40) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, max);
 
@@ -203,6 +206,9 @@ export async function postMessage(slug: string, _prev: FormState, form: FormData
   if (isFiltered(body)) return { error: FILTERED_NOTE };
   if (await isBanned(personKey(view.me), view.plan.id)) return { error: BANNED_NOTE };
   const tagged = mentionsDibby(body);
+  // Nothing goes to the AI without the person's OK (ARV-59, App Store 5.1.2(i)). The composer
+  // and the app ask first and send ai_consent; without it, the message isn't posted.
+  if (tagged && form.get("ai_consent") !== "1") return { error: AI_CONSENT_NOTE };
   await store.addMessage({ planId: view.plan.id, memberId: view.me.id, kind: "text", body, mentionsDibby: tagged });
 
   if (tagged) {
@@ -245,50 +251,30 @@ async function runDibby(planId: string, slug: string, ask: string, asker: PlanMe
       await store.addOption({ planId, label: v.name, placeId: v.placeId, note: v.address });
       added.push(v.placeId);
     }
-    let body = out.reply;
-    if (out.newPlan && asker.user_id) {
-      const created = await createFromThread(out.newPlan, asker, view.members, ask);
-      body = `${out.reply}\n${planLinkLine(created.slug)}`;
-    }
     // Remember where Dibby looked, so "how about korean?" next time searches the same place.
     // The places it added show as tiles under its reply; if it asked where, the areas show as chips.
     const where = out.ask ? { ...out.ask, areas: areasSeen(recent, view.plan.area) } : null;
-    await store.addMessage({ planId, memberId: null, kind: "dibby", body, template: withAsk(withPlaces(out.searched, added), where) });
+    // A new plan isn't made yet: the asker gets a card under Dibby's reply (ARV-59).
+    let template: object | undefined = withBy(withAsk(withPlaces(out.searched, added), where), asker.id);
+    if (out.newPlan && asker.user_id) template = withPending(template, draftToPending(out.newPlan, ask));
+    await store.addMessage({ planId, memberId: null, kind: "dibby", body: out.reply, template });
   } catch (e) {
     report("dibby", e);
     await store.addMessage({ planId, memberId: null, kind: "dibby", body: BRB });
   }
 }
 
-/**
- * A new plan Dibby set up from a thread: the asker organises it, everyone else from the
- * current plan is invited without an RSVP, and the vote opens on Dibby's venues.
- */
-async function createFromThread(draft: PlanDraft, asker: PlanMember, crew: PlanMember[], ask: string) {
-  const plan = await store.createPlan({
-    organiserUserId: asker.user_id!,
-    organiserName: asker.display_name,
-    title: draft.title,
-    area: draft.area,
-    startsAt: draft.startsAtLocal ? localToIso(draft.startsAtLocal) : null,
-    vibe: draft.vibe,
-    plusOnes: false,
-  });
-  for (const m of crew) {
-    if (m.id === asker.id || (!m.user_id && !m.guest_id)) continue;
-    await store.addMember({ planId: plan.id, userId: m.user_id ?? undefined, guestId: m.guest_id ?? undefined, name: m.display_name, role: "guest" });
-  }
-  for (const v of draft.venues) {
-    await store.addOption({ planId: plan.id, label: v.name, placeId: v.placeId, note: v.address });
-  }
-  const members = await store.listMembers(plan.id);
-  const organiser = members.find((m) => m.user_id === asker.user_id) ?? null;
-  await store.addMessage({ planId: plan.id, memberId: organiser?.id ?? null, kind: "text", body: ask, mentionsDibby: true });
-  await store.addMessage({ planId: plan.id, memberId: null, kind: "system", body: DIBBY_HEADS_UP });
-  const tail = draft.venues.length ? "Vote's open for 24 hours." : "Couldn't find spots for that on Maps, so add a few from the map and the vote opens.";
-  await store.addMessage({ planId: plan.id, memberId: null, kind: "dibby", body: `${draft.reply} ${tail}`, template: withPlaces(null, draft.venues.map((v) => v.placeId)) });
-  revalidatePath(`/p/${plan.slug}`);
-  return plan;
+/** Dibby's draft, trimmed to what a message keeps: place IDs, not Google's names (lib/dibby-card.ts). */
+function draftToPending(d: PlanDraft, ask: string): PendingPlan {
+  return {
+    title: d.title,
+    area: d.area,
+    startsAtLocal: d.startsAtLocal,
+    vibe: d.vibe,
+    reply: d.reply,
+    ask: ask.slice(0, 2000),
+    venues: d.venues.map((v) => (v.placeId ? { placeId: v.placeId } : { name: v.name })),
+  };
 }
 
 /** Hide or show Dibby's automatic nudges for yourself. Replies to tags always show. */

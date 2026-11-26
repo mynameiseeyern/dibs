@@ -21,6 +21,9 @@ import { WhereChips } from "./WhereChips";
 import { ContentMenu } from "@/components/ContentMenu";
 import { canDeleteMessage, personKey, type ReportReason } from "@dibs/shared/moderation";
 import { blockMember, deleteMessage, reportThing } from "./moderation-actions";
+import { answerDibbyPlan, undoDibbyPlaces } from "./dibby-actions";
+import { ConfirmPlanCard, UndoPlaces } from "./DibbyCard";
+import { byOf, canUndo, pendingFacts, pendingOf, undoneOf } from "@/lib/dibby-card";
 
 const time = (iso: string) => new Intl.DateTimeFormat("en-AU", { timeZone: TZ, weekday: "short", hour: "numeric", minute: "2-digit" }).format(new Date(iso));
 
@@ -39,6 +42,7 @@ export function Thread({
   emailGate,
   slug,
   isHost = false,
+  voting = false,
 }: {
   vibe: Vibe;
   reactions?: Reaction[];
@@ -60,6 +64,8 @@ export function Thread({
   /** Report, block and delete need to know the plan and who's running it. */
   slug: string;
   isHost?: boolean;
+  /** The vote's open: Dibby's places can still be undone. */
+  voting?: boolean;
 }) {
   const byId = new Map(members.map((m) => [m.id, m]));
   let lastStamp = 0;
@@ -107,8 +113,9 @@ export function Thread({
                         </div>
                         <DibbyBody body={dibbyText(m, vibe)} />
                         <PlaceTiles
-                          places={placesOf(m.template).map((id) => ({ placeId: id, name: placeNames?.[id] ?? "A place Dibby found", onVote: Boolean(placeNames?.[id]) }))}
+                          places={(undoneOf(m.template) ? [] : placesOf(m.template)).map((id) => ({ placeId: id, name: placeNames?.[id] ?? "A place Dibby found", onVote: Boolean(placeNames?.[id]) }))}
                         />
+                        {canPost && !readOnly && <DibbyActions m={m} meId={meId} isHost={isHost} voting={voting} placeNames={placeNames} slug={slug} />}
                         {canPost && !readOnly && m.id === lastDibby?.id && <Where template={m.template} areas={areasUsed} post={post} />}
                         <div className="msg-foot">
                           <Reactions messageId={m.id} all={reactions} meId={meId} react={react} />
@@ -176,6 +183,23 @@ function Where({ template, areas, post }: { template: unknown; areas: string[]; 
   const memo = memoOf(template);
   if (!memo) return null;
   return <WhereChips mode="brief" query={memo.query} lookedIn={memo.area} areas={areas} post={post} />;
+}
+
+/**
+ * Under Dibby's reply (ARV-59): the confirm card for a new plan it drafted (only for whoever
+ * asked), and Undo for the places it put on the vote (them or a host, while voting's open).
+ */
+function DibbyActions({ m, meId, isHost, voting, placeNames, slug }: { m: Message; meId: string | null; isHost: boolean; voting: boolean; placeNames?: Record<string, string>; slug: string }) {
+  const pending = meId && byOf(m.template) === meId ? pendingOf(m.template) : null;
+  const onVote = placesOf(m.template).filter((id) => placeNames?.[id]).length;
+  const undo = voting && onVote > 0 && !undoneOf(m.template) && canUndo(m.template, meId ? { id: meId } : null, isHost);
+  if (!pending && !undo) return null;
+  return (
+    <>
+      {pending && <ConfirmPlanCard title={pending.title} facts={pendingFacts(pending)} answer={answerDibbyPlan.bind(null, slug, m.id)} />}
+      {undo && <UndoPlaces count={onVote} undo={undoDibbyPlaces.bind(null, slug, m.id)} />}
+    </>
+  );
 }
 
 /** Dibby's message, with a button when it points to another plan. */

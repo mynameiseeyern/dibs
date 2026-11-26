@@ -307,6 +307,11 @@ export const supabaseStore: Store = {
   async deleteMessage(planId, messageId) {
     must(await admin().from("messages").delete().eq("plan_id", planId).eq("id", messageId));
   },
+  async updateMessage(planId, messageId, patch, unless) {
+    let q = admin().from("messages").update(patch).eq("plan_id", planId).eq("id", messageId);
+    if (unless) q = q.is(`template->>${unless}`, null);
+    return (must(await q.select("id")) as { id: string }[]).length > 0;
+  },
   async deleteMessagesBy(memberId) {
     must(await admin().from("messages").delete().eq("member_id", memberId));
   },

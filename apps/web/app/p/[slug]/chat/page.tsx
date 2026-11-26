@@ -73,6 +73,7 @@ export default async function Chat({ params }: { params: Promise<{ slug: string 
           post={postMessage.bind(null, slug)}
           slug={slug}
           isHost={view.isHost}
+          voting={plan.status === "voting"}
           emailGate={me.guest_id && !me.user_id ? { planId: plan.id, demo: !usingSupabase } : undefined}
         />
       </main>
