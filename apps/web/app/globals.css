@@ -77,6 +77,8 @@
 
 .empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--space-4); padding: var(--space-12) var(--space-4); }
 .empty svg { width: 140px; height: auto; }
+/* A crew's emoji on its web invite page (app/c/[token]). */
+.crew-invite__emoji { display: grid; place-items: center; width: 96px; height: 96px; border-radius: var(--radius-full); background: var(--primary-lighter); font-size: 52px; line-height: 1; }
 
 /* Dibby, the character (components/Dibby.tsx). Sizes match DibbySize; xs sits in a chat line. */
 .dibby { display: block; flex: none; object-fit: contain; }
