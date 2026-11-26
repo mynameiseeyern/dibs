@@ -1,5 +1,5 @@
 import type { PlanDetail } from "@dibs/shared/api";
-import type { CrewGone, CrewDetail, CrewInviteLink, CrewInvitePreview, InviteExpiry, InviteMaxUses, MyCrews, NewCrewResponse } from "@dibs/shared/crews";
+import type { CrewGone, CrewSummary, CrewDetail, CrewInviteLink, CrewInvitePreview, InviteExpiry, InviteMaxUses, MyCrews, NewCrewResponse } from "@dibs/shared/crews";
 import { call } from "./api";
 
 // Crews (P-ARV-2): accounts only, app only. Kept out of lib/api.ts so crew work doesn't clash with it.
@@ -20,6 +20,10 @@ export const revokeInvite = (id: string, inviteId: string) => call<CrewDetail>(c
 /** Hosts: put a plan into one of your crews, or take it out (null). `moved.visibility` says how it went in (ARV-95). */
 export const movePlanToCrew = (slug: string, crewId: string | null) =>
   call<{ detail: PlanDetail; moved: { visibility: "crew" | "link" | null } }>(`/api/v1/plans/${encodeURIComponent(slug)}/crew`, { method: "POST", body: { crew_id: crewId } });
+
+/** "Turn this into a crew?" (ARV-96): the crew, this plan in it, and personal invites to the people suggested. */
+export const makeCrewFromPlan = (slug: string, name: string, emoji: string) =>
+  call<{ crew: CrewSummary; invited: number; detail: PlanDetail }>(`/api/v1/plans/${encodeURIComponent(slug)}/make-crew`, { method: "POST", body: { name, emoji } });
 
 /** Hosts of a crew plan: the crew alone, or anyone with the link. */
 export const setVisibility = (slug: string, visibility: "crew" | "link") =>

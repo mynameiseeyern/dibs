@@ -58,7 +58,7 @@ export default function Invite() {
       </Button.Root>
     ) : p.you === "can_ask" ? (
       <Button.Root size="large" block disabled={busy} onPress={ask}>
-        {busy ? "Asking…" : "Ask to join"}
+        {busy ? (p.personal ? "Joining…" : "Asking…") : p.personal ? "Join the crew" : "Ask to join"}
       </Button.Root>
     ) : null;
 
@@ -80,6 +80,8 @@ export default function Invite() {
           </Hint.Root>
         ) : p.you === "member" ? (
           <Text className="text-paragraph-md text-text-sub-600">You&apos;re in this crew.</Text>
+        ) : p.personal ? (
+          <Text className="text-center text-paragraph-md text-text-sub-600">{p.invited_by ?? "They"} picked you, so you&apos;re straight in.</Text>
         ) : p.you === "cant_ask" && p.note ? (
           <Text className="text-center text-paragraph-md text-text-sub-600">{p.note}</Text>
         ) : p.you === "signed_out" ? (

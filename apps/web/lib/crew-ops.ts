@@ -86,12 +86,23 @@ async function joinCheck(invite: InviteRow, userId: string) {
 export async function previewInvite(token: string, userId: string | null): Promise<CrewInvitePreview> {
   const invite = await workingInvite(token);
   const crew = invite ? await crews.getCrew(invite.crew_id) : null;
-  if (!invite || !crew) return { status: "expired" };
+  if (!invite || !crew) {
+    // Your own personal invite, used to join: open the crew rather than "expired".
+    const used = userId && looksLikeToken(token) ? await crews.inviteByToken(token) : null;
+    if (used?.for_user === userId && userId && (await crews.roleIn(used.crew_id, userId))) {
+      const c = await crews.getCrew(used.crew_id);
+      if (c) return previewOf(used, c, userId);
+    }
+    return { status: "expired" };
+  }
   return previewOf(invite, crew, userId);
 }
 
 /** What the link shows, for a link already checked (asking can use up its last use, so don't check again). */
 async function previewOf(invite: InviteRow, crew: CrewRow, userId: string | null): Promise<CrewInvitePreview> {
+  // A personal invite is someone else's: to anyone else signed in, it's expired (nothing about the crew).
+  if (invite.for_user && userId && invite.for_user !== userId) return { status: "expired" };
+  const personal = Boolean(invite.for_user && invite.for_user === userId);
   const members = (await crews.listMembers(crew.id)).length;
   const base: CrewInvitePreview = {
     status: "ok",
@@ -102,6 +113,7 @@ async function previewOf(invite: InviteRow, crew: CrewRow, userId: string | null
   const { role, pending, result } = await joinCheck(invite, userId);
   if (role) return { ...base, you: "member", crew_id: crew.id };
   if (pending) return { ...base, you: "pending" };
+  if (personal) return { ...base, you: "can_ask", personal: true };
   return result.ok ? { ...base, you: "can_ask" } : { ...base, you: "cant_ask", note: JOIN_ASK_NOTE[result.why] };
 }
 
@@ -109,8 +121,22 @@ export async function askToJoin(token: string, userId: string): Promise<CrewInvi
   const invite = await workingInvite(token);
   const crew = invite ? await crews.getCrew(invite.crew_id) : null;
   if (!invite || !crew) throw new CrewError("This invite's expired. Ask for a new one.", 410);
+  if (invite.for_user && invite.for_user !== userId) throw new CrewError("This invite's expired. Ask for a new one.", 410);
   const { role, pending, result } = await joinCheck(invite, userId);
-  if (role || pending) return previewOf(invite, crew, userId);
+  if (role) return previewOf(invite, crew, userId);
+
+  // Personal invite (ARV-96): the owner picked them, so they're straight in.
+  if (invite.for_user === userId) {
+    await crews.addMember(crew.id, userId, "member");
+    await crews.clearRemoval(crew.id, userId);
+    await crews.useInvite(invite.id);
+    const lead = invite.created_by;
+    const who = (await nameOf(userId, true)) ?? "Someone";
+    if (lead) pushToUsers(store, [lead], { title: `${crew.emoji} ${crew.name}`, body: `${who} joined the crew`, url: `/crews/${crew.id}` });
+    return previewOf(invite, crew, userId);
+  }
+
+  if (pending) return previewOf(invite, crew, userId);
   if (!result.ok) throw new CrewError(JOIN_ASK_NOTE[result.why], 409);
 
   try {

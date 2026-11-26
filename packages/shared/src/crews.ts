@@ -249,6 +249,8 @@ export interface CrewInvitePreview {
   crew_id?: string;
   /** Why they can't ask, from JOIN_ASK_NOTE. */
   note?: string;
+  /** A personal invite for you (ARV-96): the owner picked you, so asking lets you straight in. */
+  personal?: boolean;
 }
 
 export interface CrewMemberRow {
@@ -355,4 +357,36 @@ export function crewPlanSections(rows: readonly CrewPlanRow[], now: number): Cre
     .filter((r) => !still_deciding.includes(r) && !coming_up.includes(r))
     .sort((a, b) => (t(b) ?? Date.parse(b.created_at)) - (t(a) ?? Date.parse(a.created_at)));
   return { still_deciding, coming_up, past };
+}
+
+// ---------- "Turn this into a crew?" (ARV-96) ----------
+
+/** People on this plan who've been on another of your plans too. Shown to the host. */
+export interface CrewSuggestion {
+  /** Stays the same for the same people, so "Not now" hides it for this group only. */
+  key: string;
+  people: { user_id: string; name: string }[];
+}
+
+/** The fewest repeat people worth suggesting a crew for. */
+export const CREW_SUGGEST_MIN = 2;
+
+/**
+ * Who to suggest: people with accounts on this plan (not you, not "can't go") who were also on at
+ * least one of your other plans. Null if that's fewer than CREW_SUGGEST_MIN, or if they're already
+ * all in one crew with you.
+ */
+export function suggestCrew(
+  thisPlan: { user_id: string | null; name: string; rsvp: string | null }[],
+  otherPlans: (string | null)[][],
+  myCrews: string[][],
+  me: string
+): CrewSuggestion | null {
+  const seen = new Set(otherPlans.flat().filter((x): x is string => Boolean(x)));
+  const people = new Map<string, string>();
+  for (const m of thisPlan) if (m.user_id && m.user_id !== me && m.rsvp !== "out" && seen.has(m.user_id)) people.set(m.user_id, m.name);
+  if (people.size < CREW_SUGGEST_MIN) return null;
+  const ids = [...people.keys()].sort();
+  if (myCrews.some((crew) => ids.every((id) => crew.includes(id)))) return null;
+  return { key: ids.join(","), people: ids.map((user_id) => ({ user_id, name: people.get(user_id)! })) };
 }

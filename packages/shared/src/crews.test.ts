@@ -5,6 +5,7 @@ import {
   canRevokeInvite,
   cleanCrew,
   crewPlanSections,
+  suggestCrew,
   crewPermissions,
   crewPlanAccess,
   genericPreview,
@@ -185,5 +186,33 @@ describe("crewPlanSections", () => {
     expect(still_deciding.map((r) => r.slug)).toEqual(["vote-no-day"]);
     expect(coming_up.map((r) => r.slug)).toEqual(["tonight-started", "tomorrow", "fri", "set-no-day"]);
     expect(past.map((r) => r.slug)).toEqual(["off", "wrapped", "last-week"]);
+  });
+});
+
+describe("suggestCrew", () => {
+  const plan = [
+    { user_id: "me", name: "Ee", rsvp: "in" },
+    { user_id: "mia", name: "Mia", rsvp: "in" },
+    { user_id: "sam", name: "Sam", rsvp: "maybe" },
+    { user_id: "jo", name: "Jo", rsvp: "out" },
+    { user_id: null, name: "Guest", rsvp: "in" },
+    { user_id: "new", name: "New", rsvp: "in" },
+  ];
+  it("people with accounts who were on another of your plans, not you or can't-go", () => {
+    expect(suggestCrew(plan, [["me", "mia", "sam", "jo"]], [], "me")).toEqual({
+      key: "mia,sam",
+      people: [
+        { user_id: "mia", name: "Mia" },
+        { user_id: "sam", name: "Sam" },
+      ],
+    });
+  });
+  it("needs at least two repeat people", () => expect(suggestCrew(plan, [["mia"]], [], "me")).toBeNull());
+  it("not if they're already all in one of your crews", () => {
+    expect(suggestCrew(plan, [["mia", "sam"]], [["me", "mia", "sam", "jo"]], "me")).toBeNull();
+    expect(suggestCrew(plan, [["mia", "sam"]], [["me", "mia"]], "me")).not.toBeNull();
+  });
+  it("the same people give the same key, whatever the order", () => {
+    expect(suggestCrew([...plan].reverse(), [["sam", "mia"]], [], "me")?.key).toBe("mia,sam");
   });
 });
