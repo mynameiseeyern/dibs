@@ -16,7 +16,8 @@
     "./calendar": "./src/calendar.ts",
     "./merge": "./src/merge.ts",
     "./inapp": "./src/inapp.ts",
-    "./plan-text": "./src/plan-text.ts"
+    "./plan-text": "./src/plan-text.ts",
+    "./crews": "./src/crews.ts"
   },
   "scripts": {
     "test": "vitest run",

@@ -1,0 +1,198 @@
+/**
+ * Crews (ARV-88, ARV-89): a group of friends who keep making plans together. Accounts only.
+ *
+ * The server reads the database with the service key, so these rules are the real gate. Check
+ * them in every route and server action that touches a crew or a crew plan, like planAccess.
+ */
+
+export type CrewRole = "owner" | "admin" | "member";
+/** "crew": only the crew (and, once a crew is deleted, the people already on it). "link": anyone with the link, as every plan is today. */
+export type PlanVisibility = "crew" | "link";
+
+export const CREW_LIMITS = {
+  name: 40,
+  /** Pending join requests one person can have open, across every crew. */
+  pendingPerPerson: 5,
+  /** Pending join requests one crew can have waiting at once. */
+  pendingPerCrew: 20,
+  /** How long a declined person waits before asking the same crew again. */
+  askAgainAfterDays: 7,
+} as const;
+
+// ---------- What each role can do ----------
+
+export interface CrewPermissions {
+  makePlan: boolean;
+  makeInvite: boolean;
+  /** Approve or decline join requests, reset or revoke anyone's invites. */
+  manageRequests: boolean;
+  /** Make or remove admins, hand over, rename, delete. */
+  manageCrew: boolean;
+}
+
+export function crewPermissions(role: CrewRole | null): CrewPermissions {
+  if (!role) return { makePlan: false, makeInvite: false, manageRequests: false, manageCrew: false };
+  return {
+    makePlan: true,
+    makeInvite: true,
+    manageRequests: role === "owner" || role === "admin",
+    manageCrew: role === "owner",
+  };
+}
+
+/** The owner can remove anyone but themselves; admins can remove members, not other admins. */
+export function canRemoveFromCrew(actor: CrewRole | null, target: CrewRole): boolean {
+  if (actor === "owner") return target !== "owner";
+  if (actor === "admin") return target === "member";
+  return false;
+}
+
+/** The owner hands over first, unless they're the last one left (then leaving deletes the crew). */
+export function leaveCrew(role: CrewRole, othersInCrew: number): { ok: true; deletesCrew: boolean } | { ok: false; why: "hand_over_first" } {
+  if (role !== "owner") return { ok: true, deletesCrew: false };
+  if (othersInCrew > 0) return { ok: false, why: "hand_over_first" };
+  return { ok: true, deletesCrew: true };
+}
+
+// ---------- Crew plans ----------
+
+export interface CrewPlanViewer {
+  /** The viewer's role in the plan's crew, or null if they're not in it (or signed out). */
+  crewRole: CrewRole | null;
+  /** Whether they already have a spot on the plan. */
+  onPlan: boolean;
+}
+
+/**
+ * Can this person see the plan at all? "blocked" shows the blocked page, the same page as for a
+ * plan that doesn't exist, so it can't be used to check which links are real.
+ */
+export function crewPlanAccess(
+  plan: { crewId: string | null; visibility: PlanVisibility },
+  viewer: CrewPlanViewer,
+): "see" | "blocked" {
+  if (plan.visibility === "link") return "see";
+  // Crew deleted: its crew-only plans stay with the people already on them.
+  if (!plan.crewId) return viewer.onPlan ? "see" : "blocked";
+  // In the crew. Being on the plan isn't enough: someone removed from the crew loses it straight away.
+  return viewer.crewRole ? "see" : "blocked";
+}
+
+/** The crew's name and emoji follow the plan's visibility: shown on link plans, only to the crew on crew-only ones. */
+export function showCrewOnPlan(plan: { crewId: string | null; visibility: PlanVisibility }, viewer: Pick<CrewPlanViewer, "crewRole">): boolean {
+  if (!plan.crewId) return false;
+  return plan.visibility === "link" || viewer.crewRole !== null;
+}
+
+/** Link previews (WhatsApp, iMessage, Messenger) are generic for crew-only plans: no title, place, time, crew or photo. */
+export function genericPreview(plan: { visibility: PlanVisibility }): boolean {
+  return plan.visibility === "crew";
+}
+
+// ---------- Invite links (Discord-style) ----------
+
+export const INVITE_EXPIRY = ["30m", "1h", "6h", "12h", "1d", "7d", "never"] as const;
+export type InviteExpiry = (typeof INVITE_EXPIRY)[number];
+export const DEFAULT_INVITE_EXPIRY: InviteExpiry = "7d";
+
+/** Null = no limit. */
+export const INVITE_MAX_USES = [1, 5, 10, 25, null] as const;
+export type InviteMaxUses = (typeof INVITE_MAX_USES)[number];
+
+const EXPIRY_MS: Record<Exclude<InviteExpiry, "never">, number> = {
+  "30m": 30 * 60_000,
+  "1h": 60 * 60_000,
+  "6h": 6 * 60 * 60_000,
+  "12h": 12 * 60 * 60_000,
+  "1d": 24 * 60 * 60_000,
+  "7d": 7 * 24 * 60 * 60_000,
+};
+
+/** When an invite made now runs out. Null = never. */
+export function inviteExpiresAt(choice: InviteExpiry, now: Date): Date | null {
+  return choice === "never" ? null : new Date(now.getTime() + EXPIRY_MS[choice]);
+}
+
+export interface CrewInvite {
+  expiresAt: Date | null;
+  maxUses: number | null;
+  uses: number;
+  revokedAt: Date | null;
+}
+
+/** Anything but "ok" opens the "This invite's expired" page, which shows nothing about the crew. */
+export function inviteStatus(invite: CrewInvite, now: Date): "ok" | "revoked" | "expired" | "used_up" {
+  if (invite.revokedAt) return "revoked";
+  if (invite.expiresAt && invite.expiresAt.getTime() <= now.getTime()) return "expired";
+  if (invite.maxUses !== null && invite.uses >= invite.maxUses) return "used_up";
+  return "ok";
+}
+
+/** Members see and revoke their own invites; the owner and admins see and revoke all of them. */
+export function canRevokeInvite(actor: { userId: string; role: CrewRole | null }, invite: { createdBy: string | null }): boolean {
+  if (!actor.role) return false;
+  return crewPermissions(actor.role).manageRequests || invite.createdBy === actor.userId;
+}
+
+// ---------- Asking to join ----------
+
+export interface JoinAsk {
+  alreadyMember: boolean;
+  /** Pending requests this person has open, across every crew. */
+  pendingForPerson: number;
+  /** Pending requests this crew has waiting. */
+  pendingForCrew: number;
+  /** Their last declined request to this crew, if any. */
+  lastDeclinedAt: Date | null;
+  /** When they were removed from this crew, if they were. */
+  removedAt: Date | null;
+  /** The invite they came through: who made it (their role then) and when. */
+  invite: { createdByRole: CrewRole; createdAt: Date };
+}
+
+export type JoinAskResult =
+  | { ok: true }
+  | { ok: false; why: "already_member" | "too_many_pending" | "crew_queue_full" | "declined_recently" | "removed" };
+
+export function canAskToJoin(ask: JoinAsk, now: Date): JoinAskResult {
+  if (ask.alreadyMember) return { ok: false, why: "already_member" };
+  // Removed: only a fresh invite from the owner or an admin, made after the removal.
+  if (ask.removedAt) {
+    const fromLead = ask.invite.createdByRole === "owner" || ask.invite.createdByRole === "admin";
+    if (!fromLead || ask.invite.createdAt.getTime() <= ask.removedAt.getTime()) return { ok: false, why: "removed" };
+  }
+  if (ask.lastDeclinedAt) {
+    const waitMs = CREW_LIMITS.askAgainAfterDays * 24 * 60 * 60_000;
+    if (now.getTime() - ask.lastDeclinedAt.getTime() < waitMs) return { ok: false, why: "declined_recently" };
+  }
+  if (ask.pendingForPerson >= CREW_LIMITS.pendingPerPerson) return { ok: false, why: "too_many_pending" };
+  if (ask.pendingForCrew >= CREW_LIMITS.pendingPerCrew) return { ok: false, why: "crew_queue_full" };
+  return { ok: true };
+}
+
+/** What the person sees when they can't ask. Never says they were removed or declined. */
+export const JOIN_ASK_NOTE: Record<Exclude<JoinAskResult, { ok: true }>["why"], string> = {
+  already_member: "You're already in this crew.",
+  too_many_pending: "You've got a few requests waiting already. Try again once one's sorted.",
+  crew_queue_full: "Heaps of people are waiting to get in. Try again soon.",
+  declined_recently: "You can't ask to join this crew right now.",
+  removed: "You can't ask to join this crew right now.",
+};
+
+// ---------- Name and emoji ----------
+
+const segmenter = typeof Intl !== "undefined" && "Segmenter" in Intl ? new Intl.Segmenter(undefined, { granularity: "grapheme" }) : null;
+
+/** Tidies a crew's name and checks the emoji is exactly one emoji. Null if either is no good. */
+export function cleanCrew(name: unknown, emoji: unknown): { name: string; emoji: string } | null {
+  const n = String(name ?? "").replace(/\s+/g, " ").trim().slice(0, CREW_LIMITS.name);
+  const e = String(emoji ?? "").trim();
+  if (!n || !isSingleEmoji(e)) return null;
+  return { name: n, emoji: e };
+}
+
+export function isSingleEmoji(s: string): boolean {
+  if (!s || s.length > 16) return false;
+  const graphemes = segmenter ? [...segmenter.segment(s)].length : 1;
+  return graphemes === 1 && /\p{Extended_Pictographic}|\p{Regional_Indicator}/u.test(s);
+}
