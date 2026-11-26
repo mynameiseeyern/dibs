@@ -99,6 +99,8 @@ export interface MyPlan extends PlanSummary {
   faces?: { name: string; colour: PlanMember["colour"] }[];
   /** The one thing to do next ("Wrap it up: who came?", "You owe $12."), or null. */
   nudge?: string | null;
+  /** The plan's crew, when you may see which (ARV-97): for the label and the crew filter. */
+  crew?: { id: string; name: string; emoji: string } | null;
 }
 
 export function toMyPlan(plan: Plan, members: readonly PlanMember[], me: PlanMember, when: string | null): MyPlan {

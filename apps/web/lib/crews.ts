@@ -82,6 +82,8 @@ export interface CrewStore {
   setPlanCrew(planId: string, crew: PlanCrew): Promise<void>;
   /** The ids of every plan in a crew. */
   crewPlanIds(crewId: string): Promise<string[]>;
+  /** Plan slug → its crew, for the plans that have one. */
+  crewsBySlug(slugs: string[]): Promise<Map<string, PlanCrew>>;
 
   // Managing a crew (ARV-94). lib/crew-ops.ts checks who may do each.
   updateCrew(crewId: string, patch: { name?: string; emoji?: string }): Promise<void>;
@@ -238,6 +240,11 @@ const supabaseCrews: CrewStore = {
     if (!isUuid(crewId)) return [];
     return (must(await admin().from("plans").select("id").eq("crew_id", crewId)) as { id: string }[]).map((r) => r.id);
   },
+  async crewsBySlug(slugs) {
+    if (slugs.length === 0) return new Map();
+    const rows = must(await admin().from("plans").select("slug, crew_id, visibility").in("slug", slugs).not("crew_id", "is", null)) as { slug: string; crew_id: string; visibility: PlanVisibility }[];
+    return new Map(rows.map((r) => [r.slug, { crewId: r.crew_id, visibility: r.visibility }]));
+  },
   async updateCrew(crewId, patch) {
     must(await admin().from("crews").update(patch).eq("id", crewId));
   },
@@ -386,6 +393,15 @@ const memoryCrews: CrewStore = {
   },
   async crewPlanIds(crewId) {
     return [...mem.planCrews].filter(([, c]) => c.crewId === crewId).map(([id]) => id);
+  },
+  async crewsBySlug(slugs) {
+    const out = new Map<string, PlanCrew>();
+    for (const slug of slugs) {
+      const plan = await (await import("./store")).store.getPlanBySlug(slug);
+      const c = plan ? mem.planCrews.get(plan.id) : undefined;
+      if (c && (c.crewId || c.visibility === "crew")) out.set(slug, c);
+    }
+    return out;
   },
   async updateCrew(crewId, patch) {
     const c = mem.crews.get(crewId);

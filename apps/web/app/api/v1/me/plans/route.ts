@@ -1,5 +1,6 @@
 import { toMyPlan, type MyPlan } from "@dibs/shared/api";
 import { apiError, apiGuest, apiJson, apiOrganiser } from "@/lib/api-auth";
+import { withCrews } from "@/lib/crew-plans";
 import { track } from "@/lib/events";
 import { store } from "@/lib/store";
 import { formatShort } from "@/lib/time";
@@ -34,7 +35,8 @@ export async function GET(req: Request) {
     console.error("[api claim guests]", e);
   }
 
-  return apiJson({ ...(await listed(await store.listPlansForUser(me.id))), claimed });
+  // Crew labels, and crew-only plans you've lost dropped (ARV-97).
+  return apiJson({ ...(await withCrews(me.id, await listed(await store.listPlansForUser(me.id)))), claimed });
 }
 
 /**

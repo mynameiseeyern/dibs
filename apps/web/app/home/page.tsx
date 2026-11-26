@@ -8,6 +8,7 @@ import { Dibby } from "@/components/Dibby";
 import { MonogramStack } from "@/components/Monogram";
 import { AccountButton } from "@/components/AccountButton";
 import { store } from "@/lib/store";
+import { dropLostCrewPlans } from "@/lib/crew-plans";
 import { formatWhen } from "@/lib/time";
 import { whoIsHere } from "@/lib/viewer";
 import { planStatus } from "@/lib/status";
@@ -36,7 +37,8 @@ export default async function Home() {
   if (!organiser && !guest) redirect("/login?next=/home");
 
   // Everything you're on: as your account, plus anything joined as a guest on this browser.
-  const mine = organiser ? await store.listPlansForUser(organiser.id) : [];
+  // Crew-only plans you've been removed from drop off (ARV-97).
+  const mine = organiser ? await dropLostCrewPlans(organiser.id, await store.listPlansForUser(organiser.id)) : [];
   const onThisBrowser = guest ? await store.listPlansForGuest(guest.id) : [];
   const seen = new Set(mine.map((r) => r.plan.id));
   const memberships = [...mine, ...onThisBrowser.filter((r) => !seen.has(r.plan.id))];
