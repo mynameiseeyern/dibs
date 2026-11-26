@@ -9,7 +9,7 @@ export async function WeatherFact({ plan }: { plan: Plan }) {
   const hint = wet ? "Bring a brolly" : f.rainChance !== null && f.rainChance >= 20 ? `${f.rainChance}% chance of rain` : "Forecast, may change";
   return (
     <div className="plan-fact">
-      <dt>Weather</dt>
+      <dt><i className="ri-sun-cloudy-line" aria-hidden="true" /> Weather</dt>
       <dd className="plan-fact__main">
         <i className={`${f.icon} db-icon`} aria-hidden="true" /> {f.label}, {f.kind === "hour" ? `${f.tempC}°` : `${f.lowC}–${f.highC}°`}
       </dd>

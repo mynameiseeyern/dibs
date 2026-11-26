@@ -8,7 +8,8 @@ import { Wordmark } from "@/components/Logo";
 import { AccountButton } from "@/components/AccountButton";
 import { Suspense } from "react";
 import { Weather, WeatherFact } from "./Weather";
-import { LockedHero } from "./LockedHero";
+import { SelfieBanner } from "./SelfieBanner";
+import "./plan-top.css";
 import { RsvpPicker } from "./RsvpPicker";
 import { HostMenu, type MergeTarget } from "./HostMenu";
 import { InAppBanner } from "@/components/InAppBanner";
@@ -149,6 +150,9 @@ export default async function PlanPage({ params, searchParams }: Props) {
   const unread = me ? unreadCount(me.dibby_muted ? messages.filter((m) => !m.auto) : messages, me) : 0;
   const voteOpen = plan.status === "voting";
   const iAmIn = Boolean(me && me.rsvp === "in" && !me.waitlisted);
+  // The group selfie: you first if you're in, else the host, then the rest of the crew.
+  const selfieFirst = (iAmIn && me ? going.find((m) => m.id === me.id) : null) ?? (host ? going.find((m) => m.id === host.id) : null);
+  const selfieCrew = selfieFirst ? [selfieFirst, ...going.filter((m) => m !== selfieFirst)] : going;
   const line = members.filter((m) => m.waitlisted && m.rsvp === "in").sort((a, b) => (a.waitlisted_at ?? a.joined_at).localeCompare(b.waitlisted_at ?? b.joined_at));
   const waitlistPlace = me?.waitlisted ? line.findIndex((m) => m.id === me.id) + 1 || null : null;
   const showAppPrompt = iAmIn && (!voteOpen || voteRows.some((r) => r.mine));
@@ -338,20 +342,23 @@ export default async function PlanPage({ params, searchParams }: Props) {
         {/* 1. The event: what, when, where, who's hosting. Edit, calendar and directions live on it. */}
         {onePage ? (
           <section className="locked" aria-labelledby="plan-h">
-            <LockedHero going={going} raisedId={iAmIn && me ? me.id : (host?.id ?? null)} isYou={iAmIn} label={lockedView ? "Locked in." : "Still deciding where."} />
-            <div className="locked__head">
-              <h1 id="plan-h" className="title-h2 plan-title">{plan.title}</h1>
+            <SelfieBanner slug={plan.slug} crew={selfieCrew} isYou={iAmIn} going={inCount} capacity={plan.capacity} />
+            {/* The plan as a ticket: title and host, a tear line, then the stubs. */}
+            <div className="ticket">
+            <div className="ticket__head">
+              <h1 id="plan-h" className="title-h3 plan-title">{plan.title}</h1>
               {hostedBy && <p className="paragraph-md muted">{hostedBy}</p>}
               {plan.description && <p className="paragraph-sm plan-desc">{plan.description}</p>}
             </div>
-            <dl className="plan-facts">
+            <div className="ticket__tear" aria-hidden="true" />
+            <dl className="plan-facts ticket__stubs">
               <div className="plan-fact">
-                <dt>When</dt>
+                <dt><i className="ri-calendar-line" aria-hidden="true" /> When</dt>
                 <dd className="plan-fact__main">{whenMain ?? "To be decided"}</dd>
                 {whenSub && <dd className="plan-fact__sub">{whenSub}</dd>}
               </div>
               <div className="plan-fact">
-                <dt>Where</dt>
+                <dt><i className="ri-map-pin-line" aria-hidden="true" /> Where</dt>
                 <dd className="plan-fact__main">{plan.venue_name ?? (voteOpen ? "Up for a vote" : (plan.area ?? "To be decided"))}</dd>
                 {/* A typed-in place's address is only for people in the plan. */}
                 {!plan.venue_name && voteOpen ? (
@@ -363,7 +370,7 @@ export default async function PlanPage({ params, searchParams }: Props) {
                 ) : null}
               </div>
               <div className="plan-fact">
-                <dt>Going</dt>
+                <dt><i className="ri-group-line" aria-hidden="true" /> Going</dt>
                 <dd className="plan-fact__main">{plan.capacity !== null ? `${inCount} of ${plan.capacity}` : `${inCount} ${inCount === 1 ? "person" : "people"}`}</dd>
                 {(full || spotsLeft !== null || maybes > 0) && (
                   <dd className="plan-fact__sub">
@@ -375,6 +382,7 @@ export default async function PlanPage({ params, searchParams }: Props) {
                 <WeatherFact plan={plan} />
               </Suspense>
             </dl>
+            </div>
             {planActions}
           </section>
         ) : (
