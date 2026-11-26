@@ -163,17 +163,33 @@ export function SelfieBanner({ slug, crew, isYou, going, capacity }: { slug: str
 export type TicketStub = { label: string; icon: IconName; main: string; sub?: string | null };
 
 /** The plan as a ticket: title and host on top, a tear line, When / Where / Going below. */
-export function PlanTicket({ title, hostedBy, description, stubs }: { title: string; hostedBy: string | null; description?: string | null; stubs: TicketStub[] }) {
+export function PlanTicket({
+  title,
+  hostedBy,
+  description,
+  stubs,
+  menu,
+}: {
+  title: string;
+  hostedBy: string | null;
+  description?: string | null;
+  stubs: TicketStub[];
+  /** The host's ⋯ (plan-menu.tsx), top right beside the title. */
+  menu?: ReactNode;
+}) {
   const shadow = useShadow("clay-sm");
   return (
     <MotionView entering={FadeIn.delay(250).duration(360)}>
       <View className="overflow-hidden rounded-[24px] border border-stroke-soft-200 bg-bg-white-0" style={shadow}>
-        <View className="gap-1 px-5 pb-4 pt-5">
-          <Text accessibilityRole="header" className="text-title-h3 text-text-strong-950">
-            {title}
-          </Text>
-          {hostedBy ? <Text className="text-paragraph-md text-text-sub-600">{hostedBy}</Text> : null}
-          {description ? <Text className="pt-1 text-paragraph-sm text-text-strong-950">{description}</Text> : null}
+        <View className="flex-row gap-2 px-5 pb-4 pt-5">
+          <View className="flex-1 gap-1">
+            <Text accessibilityRole="header" className="text-title-h3 text-text-strong-950">
+              {title}
+            </Text>
+            {hostedBy ? <Text className="text-paragraph-md text-text-sub-600">{hostedBy}</Text> : null}
+            {description ? <Text className="pt-1 text-paragraph-sm text-text-strong-950">{description}</Text> : null}
+          </View>
+          {menu ? <View className="-mr-2 -mt-1">{menu}</View> : null}
         </View>
 
         {/* The tear line: a notch cut out of each side, dashes between. */}

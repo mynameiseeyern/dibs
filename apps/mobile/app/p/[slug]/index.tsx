@@ -31,6 +31,7 @@ import { AppBar } from "@/components/dibby/app-bar";
 import { ReportPlan } from "@/components/dibby/report-plan";
 import { ReportSheet, type ReportTarget } from "@/components/dibby/report-sheet";
 import { CrewOnPlan } from "@/components/dibby/crew-on-plan";
+import { PlanMenu } from "@/components/dibby/plan-menu";
 import { CrewPrompt } from "@/components/dibby/crew-prompt";
 
 /**
@@ -78,6 +79,9 @@ function Plan({ slug, detail, apply, refresh }: { slug: string; detail: PlanDeta
     Share.share({ message }).catch(() => {});
   };
 
+  // Edit and the crew settings, for hosts, in the ⋯ on the details card.
+  const menu = <PlanMenu slug={slug} detail={detail} apply={apply} />;
+
   // The round buttons (.plan-actions). Share is one of them once it's locked in; while it's still
   // coming together it's the pinned button instead, like the web.
   const actions =
@@ -87,7 +91,6 @@ function Plan({ slug, detail, apply, refresh }: { slug: string; detail: PlanDeta
         {detail.calendar ? <CircleAction icon="calendar-line" label="Calendar" onPress={() => Linking.openURL(detail.calendar!)} /> : null}
         {detail.directions ? <CircleAction icon="direction-line" label="Directions" onPress={() => Linking.openURL(detail.directions!)} /> : null}
         {chat ? <CircleAction icon="chat-3-line" label="Chat" badge={detail.unread || undefined} onPress={() => router.push(`/p/${slug}/chat`)} /> : null}
-        {me.host ? <CircleAction icon="edit-line" label="Edit" onPress={() => router.push(`/p/${slug}/edit`)} /> : null}
       </View>
     ) : null;
 
@@ -138,11 +141,11 @@ function Plan({ slug, detail, apply, refresh }: { slug: string; detail: PlanDeta
       <AppBar />
       <ScrollView contentContainerClassName="gap-6 p-4 pb-8">
         <CrewPrompt slug={slug} detail={detail} apply={apply} />
-        <CrewOnPlan slug={slug} detail={detail} apply={apply} />
+        <CrewOnPlan detail={detail} />
         {onePage ? (
           <View className="gap-6">
             <SelfieBanner slug={slug} crew={shot} isYou={iAmIn && Boolean(raised)} going={plan.going} capacity={plan.capacity} />
-            <PlanTicket title={plan.title} hostedBy={hostedBy} description={plan.description} stubs={stubs} />
+            <PlanTicket title={plan.title} hostedBy={hostedBy} description={plan.description} stubs={stubs} menu={menu} />
             {actions}
           </View>
         ) : (
@@ -153,6 +156,7 @@ function Plan({ slug, detail, apply, refresh }: { slug: string; detail: PlanDeta
             category={plan.category}
             byline={hostedBy}
             facts={facts}
+            menu={menu}
             footer={
               plan.description || actions ? (
                 <View className="w-full gap-4">
