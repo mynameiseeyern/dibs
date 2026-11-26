@@ -645,7 +645,7 @@ export default async function PlanPage({ params, searchParams }: Props) {
         {me?.guest_id && view.guest && me.guest_id === view.guest.id && (
           <footer className="plan-foot">
             {/* One app prompt at a time, and not while they've still got a vote to make. */}
-            {showAppPrompt && <GetTheApp onTap={appInterest.bind(null, slug)} />}
+            {showAppPrompt && <GetTheApp onTap={appInterest.bind(null, slug)} slug={slug} />}
             {!view.organiser && !showAppPrompt && (
               <a className="label-sm" href="/account">
                 <i className="ri-smartphone-line db-icon" aria-hidden="true" /> Keep this plan on your other devices

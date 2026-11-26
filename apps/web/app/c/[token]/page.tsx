@@ -3,6 +3,7 @@ import { Dibby } from "@/components/Dibby";
 import * as Button from "@/components/ui/button";
 import { previewInvite } from "@/lib/crew-ops";
 import { previewMeta } from "@/lib/og";
+import { inApp } from "@/lib/beta";
 
 export const dynamic = "force-dynamic";
 
@@ -46,9 +47,13 @@ export default async function Invite({ params }: { params: Promise<{ token: stri
         </span>
         <h1 className="title-h3">{crew.name}</h1>
         <p className="paragraph-lg muted">{lead}</p>
-        <p className="muted">Crews live in the app. Get it, sign in, then tap this link again to ask to join.</p>
+        <p className="muted">Crews live in the app. Get it, sign in, then tap Open your invite to ask to join.</p>
         <Button.Root asChild size="large" block>
-          <a href="/app">Get the Dibby app to join</a>
+          <a href={`/app?next=${encodeURIComponent(`/c/${token}`)}`}>Get the Dibby app to join</a>
+        </Button.Root>
+        {/* Opened in a browser with the app already in (a link pasted into Safari, say): open it there. */}
+        <Button.Root asChild variant="neutral" mode="lighter">
+          <a href={inApp(`/c/${token}`)}>Got the app? Open it</a>
         </Button.Root>
       </section>
     </main>

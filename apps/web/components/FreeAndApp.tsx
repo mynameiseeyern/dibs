@@ -59,7 +59,7 @@ const APP = [
   "See when everyone’s free from their calendars",
 ];
 
-export function BrowserOrApp({ appLink = true }: { appLink?: boolean }) {
+export function BrowserOrApp({ appLink = true, appStatus = "Coming to iPhone and Android" }: { appLink?: boolean; appStatus?: string }) {
   return (
     <section className="section" aria-labelledby="where-h">
       <h2 id="where-h" className="title-h4">
@@ -84,7 +84,7 @@ export function BrowserOrApp({ appLink = true }: { appLink?: boolean }) {
           <h3 className="label-lg">
             <i className="ri-smartphone-line db-icon" aria-hidden="true" /> In the app
           </h3>
-          <span className="paragraph-xs muted">Coming to iPhone and Android</span>
+          <span className="paragraph-xs muted">{appStatus}</span>
           <ul>
             {APP.map((b, i) => (
               <li key={b} className={`paragraph-sm${i === 0 ? " landing__plus" : ""}`}>
