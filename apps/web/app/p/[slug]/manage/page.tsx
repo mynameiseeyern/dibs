@@ -1,9 +1,9 @@
 import { notFound, redirect } from "next/navigation";
 import { TZ, formatWhen } from "@/lib/time";
-import { countIn, wrapState } from "@dibs/shared/plans";
+import { canDeletePlan, countIn, wrapState } from "@dibs/shared/plans";
 import { loadPlan } from "@/lib/viewer";
 import { maxVotes } from "@dibs/shared/votes";
-import { cancelPlan, openVote, setArea, setExtra, setCategory, setDescription, setCapacity, setDibbyVolume, setMultiVote, setPlace, setPlusOnes, setTitle, setVibe, setVoteDeadline, setWhen } from "./actions";
+import { cancelPlan, deletePlan, openVote, setArea, setExtra, setCategory, setDescription, setCapacity, setDibbyVolume, setMultiVote, setPlace, setPlusOnes, setTitle, setVibe, setVoteDeadline, setWhen } from "./actions";
 import { store } from "@/lib/store";
 import { EditPlan } from "./EditPlan";
 import * as Button from "@/components/ui/button";
@@ -41,6 +41,8 @@ export default async function Manage({ params }: { params: Promise<{ slug: strin
   const wrapped = plan.status === "wrapped";
   const locked = plan.status === "locked";
   const optionCount = (await store.listOptions(plan.id)).length;
+  // A plan that's the organiser's alone, no bills: Delete instead of Call it off.
+  const deletable = canDeletePlan(view.me, view.members, (await store.listBills(plan.id)).length);
   const profile = view.organiser ? await store.getProfile(view.organiser.id) : null;
 
   return (
@@ -96,6 +98,7 @@ export default async function Manage({ params }: { params: Promise<{ slug: strin
           setVibe: setVibe.bind(null, slug),
           setVolume: setDibbyVolume.bind(null, slug),
           cancel: cancelPlan.bind(null, slug),
+          remove: deletable ? deletePlan.bind(null, slug) : undefined,
         }}
       />
     </main>

@@ -10,6 +10,7 @@ import * as Button from "@/components/ui/button";
 import * as Modal from "@/components/ui/modal";
 import * as Switch from "@/components/ui/switch";
 import { toast } from "@/components/ui/toast";
+import { useRouter } from "next/navigation";
 import { PlaceSection } from "./PlaceSection";
 import { CategoryPick } from "@/app/new/CategoryPick";
 import { DESCRIPTION_MAX, MAX_SPOTS, MIN_SPOTS, PLAN_EXTRAS, type PlanExtra } from "@dibs/shared/plans";
@@ -68,6 +69,8 @@ export interface EditPlanProps {
     setVibe: (v: Vibe) => Promise<void>;
     setVolume: (v: DibbyVolume) => Promise<void>;
     cancel: () => Promise<void>;
+    /** Only while the plan's the organiser's alone with no bills (canDeletePlan): delete it for good. */
+    remove?: () => Promise<{ error?: string }>;
   };
 }
 
@@ -77,7 +80,7 @@ const VOLUME = {
   loud: { label: "Loud", hint: "Everything Normal does, up to five a day." },
 } as const;
 
-type SheetId = "title" | "category" | "description" | "when" | "where" | "deadline" | "spots" | "vibe" | "volume" | "cancel";
+type SheetId = "title" | "category" | "description" | "when" | "where" | "deadline" | "spots" | "vibe" | "volume" | "cancel" | "delete";
 
 /**
  * The edit screen as a settings list: each row shows the current value and opens a sheet to
@@ -136,9 +139,17 @@ export function EditPlan(p: EditPlanProps) {
             </a>
           </Button.Root>
         )}
-        <Button.Root type="button" variant="error" mode="ghost" onClick={() => setSheet("cancel")}>
-          Call it off
-        </Button.Root>
+        {/* Just you on it: delete it. Anyone else on it: call it off, so they see what happened. */}
+        {p.actions.remove ? (
+          <Button.Root type="button" variant="error" mode="ghost" onClick={() => setSheet("delete")}>
+            <i className="ri-delete-bin-line db-icon" aria-hidden="true" />
+            Delete plan
+          </Button.Root>
+        ) : (
+          <Button.Root type="button" variant="error" mode="ghost" onClick={() => setSheet("cancel")}>
+            Call it off
+          </Button.Root>
+        )}
       </div>
 
       <TextSheet
@@ -256,6 +267,8 @@ export function EditPlan(p: EditPlanProps) {
         </Modal.Content>
       </Modal.Root>
 
+      {p.actions.remove && <DeleteSheet open={sheet === "delete"} onClose={close} remove={p.actions.remove} />}
+
       <Modal.Root open={sheet === "cancel"} onOpenChange={(o) => !o && close()}>
         <Modal.Content>
           <Modal.Header title="Call it off?" />
@@ -275,6 +288,43 @@ export function EditPlan(p: EditPlanProps) {
         </Modal.Content>
       </Modal.Root>
     </>
+  );
+}
+
+/** Delete a plan that's yours alone, after a check. Then home. */
+function DeleteSheet({ open, onClose, remove }: { open: boolean; onClose: () => void; remove: () => Promise<{ error?: string }> }) {
+  const [pending, start] = useTransition();
+  const router = useRouter();
+  return (
+    <Modal.Root open={open} onOpenChange={(o) => !o && !pending && onClose()}>
+      <Modal.Content>
+        <Modal.Header title="Delete this plan?" />
+        <Modal.Body>It&rsquo;s gone for good, with its vote and chat, and the link stops working. Nobody else has joined, so nobody loses it.</Modal.Body>
+        <Modal.Footer>
+          <Button.Root
+            variant="error"
+            size="large"
+            block
+            disabled={pending}
+            onClick={() =>
+              start(async () => {
+                const r = await remove();
+                if (r.error) return void toast.error(r.error);
+                toast.success("Deleted");
+                router.push("/");
+              })
+            }
+          >
+            Yep, delete it
+          </Button.Root>
+          <Modal.Close asChild>
+            <Button.Root variant="neutral" mode="lighter" size="large" block disabled={pending}>
+              Keep it
+            </Button.Root>
+          </Modal.Close>
+        </Modal.Footer>
+      </Modal.Content>
+    </Modal.Root>
   );
 }
 
