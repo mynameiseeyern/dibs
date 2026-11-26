@@ -1,21 +1,59 @@
-// A crew plan's crew, at the top of the plan (ARV-93): "🥟 Dumpling Gang · Crew only". Members tap
-// it to open the crew. Hosts switch who can see the plan: the crew alone, or anyone with the link.
+// A plan's crew, at the top of the plan. With a crew (ARV-93): "🥟 Dumpling Gang · Crew only";
+// members tap it to open the crew, and hosts switch who can see it or take it out of the crew
+// (ARV-95). Without one, hosts can add it to one of their crews.
 
-import { useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Alert, Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import type { PlanDetail } from "@dibs/shared/api";
+import type { CrewSummary } from "@dibs/shared/crews";
 import { Icon } from "@/components/ui/icon";
+import * as LinkButton from "@/components/ui/link-button";
+import * as Modal from "@/components/ui/modal";
 import { toast } from "@/components/ui/toast";
 import { Choice } from "@/components/dibby/flow";
-import { setVisibility } from "@/lib/crews";
+import { getMyCrews, movePlanToCrew, setVisibility } from "@/lib/crews";
+import { useSession } from "@/lib/session";
 
 export function CrewOnPlan({ slug, detail, apply }: { slug: string; detail: PlanDetail; apply: (d: PlanDetail) => void }) {
   const [busy, setBusy] = useState(false);
+  const [picking, setPicking] = useState(false);
+  const { state } = useSession();
   const { crew, visibility } = detail;
-  if (!crew) return null;
-  const who = visibility === "crew" ? "Crew only" : "Anyone with the link";
   const host = Boolean(detail.me?.host);
+  const signedIn = state.status === "signedIn";
+
+  // No crew: hosts with an account can add it to one.
+  if (!crew) {
+    if (!host || !signedIn || detail.plan.status === "wrapped" || detail.plan.status === "cancelled") return null;
+    return (
+      <>
+        <LinkButton.Root variant="primary" className="self-start" onPress={() => setPicking(true)}>
+          <LinkButton.Icon name="group-line" />
+          Add to a crew
+        </LinkButton.Root>
+        <PickCrew
+          open={picking}
+          onOpenChange={setPicking}
+          onPick={async (c) => {
+            setPicking(false);
+            try {
+              const { detail: next, moved } = await movePlanToCrew(slug, c.id);
+              apply(next);
+              toast.success(
+                `Added to ${c.emoji} ${c.name}`,
+                moved.visibility === "link" ? { description: "Some people on it aren't in the crew, so anyone with the link can still get in. Switch to crew only if you want." } : { description: "Crew only now." }
+              );
+            } catch (e) {
+              toast.error("Couldn't add it", { description: (e as Error).message });
+            }
+          }}
+        />
+      </>
+    );
+  }
+
+  const who = visibility === "crew" ? "Crew only" : "Anyone with the link";
 
   async function pick(v: "crew" | "link") {
     if (v === visibility || busy) return;
@@ -28,6 +66,23 @@ export function CrewOnPlan({ slug, detail, apply }: { slug: string; detail: Plan
     } finally {
       setBusy(false);
     }
+  }
+
+  function takeOut() {
+    Alert.alert(`Take it out of ${crew!.name}?`, "It goes back to an ordinary plan: anyone with the link can get in, and it's off the crew's page.", [
+      { text: "Keep it", style: "cancel" },
+      {
+        text: "Take it out",
+        onPress: async () => {
+          try {
+            apply((await movePlanToCrew(slug, null)).detail);
+            toast.success("Taken out of the crew");
+          } catch (e) {
+            toast.error("Couldn't take it out", { description: (e as Error).message });
+          }
+        },
+      },
+    ]);
   }
 
   return (
@@ -56,8 +111,77 @@ export function CrewOnPlan({ slug, detail, apply }: { slug: string; detail: Plan
           <Text className="text-paragraph-xs text-text-soft-400">
             {visibility === "crew" ? "Only the crew can open the link. Switch to let mates outside the crew join." : "Anyone with the link can join, guests too. Switching back drops anyone not in the crew."}
           </Text>
+          {crew.member ? (
+            <LinkButton.Root variant="gray" className="self-start" onPress={takeOut}>
+              Take it out of the crew
+            </LinkButton.Root>
+          ) : null}
         </View>
       ) : null}
     </View>
+  );
+}
+
+/** Your crews, to put this plan in one. */
+function PickCrew({ open, onOpenChange, onPick }: { open: boolean; onOpenChange: (o: boolean) => void; onPick: (c: CrewSummary) => void }) {
+  const [crews, setCrews] = useState<CrewSummary[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    let live = true;
+    setError(null);
+    getMyCrews()
+      .then((r) => live && setCrews(r.crews))
+      .catch((e) => live && setError((e as Error).message));
+    return () => {
+      live = false;
+    };
+  }, [open]);
+
+  return (
+    <Modal.Root open={open} onOpenChange={onOpenChange}>
+      <Modal.Content>
+        <Modal.Header title="Add to a crew" description="It shows up on the crew's page, and the crew hears about it." />
+        <Modal.Body>
+          {error ? (
+            <Text className="text-paragraph-md text-text-sub-600">{error}</Text>
+          ) : crews === null ? null : crews.length === 0 ? (
+            <View className="gap-2">
+              <Text className="text-paragraph-md text-text-sub-600">You're not in any crews yet.</Text>
+              <LinkButton.Root
+                variant="primary"
+                className="self-start"
+                onPress={() => {
+                  onOpenChange(false);
+                  router.push("/crews/new");
+                }}
+              >
+                Make a crew
+              </LinkButton.Root>
+            </View>
+          ) : (
+            <View className="gap-2">
+              {crews.map((c) => (
+                <Pressable
+                  key={c.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Add to ${c.name}`}
+                  onPress={() => onPick(c)}
+                  className="min-h-12 flex-row items-center gap-3 rounded-lg border border-stroke-soft-200 bg-bg-white-0 p-3 active:opacity-80"
+                >
+                  <Text className="text-[22px] leading-[28px]">{c.emoji}</Text>
+                  <Text numberOfLines={1} className="flex-1 text-label-md text-text-strong-950">
+                    {c.name}
+                  </Text>
+                  <Text className="text-paragraph-sm text-text-sub-600">
+                    {c.members} {c.members === 1 ? "person" : "people"}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
+        </Modal.Body>
+      </Modal.Content>
+    </Modal.Root>
   );
 }

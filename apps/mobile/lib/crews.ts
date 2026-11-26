@@ -17,6 +17,10 @@ export const removeMember = (id: string, userId: string) => call<CrewDetail>(cre
 export const decideRequest = (id: string, requestId: string, approve: boolean) => call<CrewDetail>(crew(id, `/requests/${encodeURIComponent(requestId)}`), { method: "POST", body: { approve } });
 export const revokeInvite = (id: string, inviteId: string) => call<CrewDetail>(crew(id, `/invites/${encodeURIComponent(inviteId)}`), { method: "DELETE" });
 
+/** Hosts: put a plan into one of your crews, or take it out (null). `moved.visibility` says how it went in (ARV-95). */
+export const movePlanToCrew = (slug: string, crewId: string | null) =>
+  call<{ detail: PlanDetail; moved: { visibility: "crew" | "link" | null } }>(`/api/v1/plans/${encodeURIComponent(slug)}/crew`, { method: "POST", body: { crew_id: crewId } });
+
 /** Hosts of a crew plan: the crew alone, or anyone with the link. */
 export const setVisibility = (slug: string, visibility: "crew" | "link") =>
   call<PlanDetail>(`/api/v1/plans/${encodeURIComponent(slug)}/visibility`, { method: "PUT", body: { visibility } });
