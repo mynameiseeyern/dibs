@@ -6,6 +6,9 @@ import { crewGate } from "@/lib/crew-plans";
 import { screenFor } from "@/lib/moderation";
 import { store } from "@/lib/store";
 import { formatShort } from "@/lib/time";
+import { apiError, apiJson } from "@/lib/api-auth";
+import { forApp } from "@/lib/api-plan";
+import { deletePlan } from "@/app/p/[slug]/manage/actions";
 
 export const dynamic = "force-dynamic";
 
@@ -32,4 +35,16 @@ export async function GET(req: Request, { params }: { params: Promise<{ slug: st
   const onPlan = Boolean(me && members.some((m) => m.user_id === me.id));
   if (!(await crewGate(plan, { userId: me?.id ?? null, onPlan })).see) return NextResponse.json({ error: "Plan not found." }, { status: 404 });
   return NextResponse.json(toPlanSummary(plan, members, formatShort(plan.starts_at)), { headers: { "Cache-Control": "no-store" } });
+}
+
+/**
+ * `DELETE`: the organiser deletes the plan for good, while it's theirs alone with no bills
+ * (`PlanDetail.can_delete`). Otherwise 403 with what to do instead (call it off). → `{ deleted: true }`.
+ */
+export async function DELETE(req: Request, { params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  return forApp(req, async () => {
+    const res = await deletePlan(slug);
+    return res.error ? apiError(res.error, 403) : apiJson({ deleted: true });
+  });
 }

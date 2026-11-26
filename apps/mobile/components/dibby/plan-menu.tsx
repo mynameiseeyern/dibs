@@ -1,6 +1,8 @@
 // The ⋯ on the plan's details card: the host's things to change about the plan, kept out of the
-// way of the round buttons (Share, Calendar, Directions, Chat). Edit, and the crew: add it to
-// one, who can see it, or take it out (ARV-93, ARV-95). Nothing for people who aren't hosts.
+// way of the round buttons (Share, Calendar, Directions, Chat). Edit; the crew: add it to one,
+// who can see it, or take it out (ARV-93, ARV-95); and ending it: call it off (the page stays
+// up, marked called off) or, while it's yours alone with no bills, delete it for good. Both ask
+// first. Nothing for people who aren't hosts.
 
 import { useState } from "react";
 import { Alert } from "react-native";
@@ -11,6 +13,7 @@ import * as Dropdown from "@/components/ui/dropdown";
 import { toast } from "@/components/ui/toast";
 import { PickCrew, WhoCanSee } from "@/components/dibby/crew-on-plan";
 import { movePlanToCrew } from "@/lib/crews";
+import { deletePlan, editPlan } from "@/lib/api";
 import { useSession } from "@/lib/session";
 
 /** iOS shows one sheet at a time: let the menu close before the next one opens. */
@@ -28,7 +31,10 @@ export function PlanMenu({ slug, detail, apply }: { slug: string; detail: PlanDe
   const canAddToCrew = !crew && !done && state.status === "signedIn";
   const canSwitch = Boolean(crew && visibility);
   const canTakeOut = Boolean(crew?.member);
-  if (!canEdit && !canAddToCrew && !canSwitch && !canTakeOut) return null;
+  // Just you on it: delete it. Anyone else on it: call it off, so they see what happened.
+  const canDelete = Boolean(detail.can_delete);
+  const canCallOff = !canDelete && (plan.status === "voting" || plan.status === "locked");
+  if (!canEdit && !canAddToCrew && !canSwitch && !canTakeOut && !canCallOff && !canDelete) return null;
 
   const later = (fn: () => void) => setTimeout(fn, AFTER_MENU);
 
@@ -43,6 +49,43 @@ export function PlanMenu({ slug, detail, apply }: { slug: string; detail: PlanDe
             toast.success("Taken out of the crew");
           } catch (e) {
             toast.error("Couldn't take it out", { description: (e as Error).message });
+          }
+        },
+      },
+    ]);
+  }
+
+  function callOff() {
+    Alert.alert("Call it off?", "Everyone sees it's not happening, and nobody owes anything for it. The plan stays up so no one's left wondering.", [
+      { text: "Keep it", style: "cancel" },
+      {
+        text: "Call it off",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            apply((await editPlan(slug, { field: "cancel" })).detail);
+            toast.success("Called off");
+          } catch (e) {
+            toast.error("Couldn't call it off", { description: (e as Error).message });
+          }
+        },
+      },
+    ]);
+  }
+
+  function remove() {
+    Alert.alert("Delete this plan?", "It's gone for good, with its vote and chat, and the link stops working. Nobody else has joined, so nobody loses it.", [
+      { text: "Keep it", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await deletePlan(slug);
+            toast.success("Deleted");
+            router.dismissTo("/");
+          } catch (e) {
+            toast.error("Couldn't delete it", { description: (e as Error).message });
           }
         },
       },
@@ -78,13 +121,23 @@ export function PlanMenu({ slug, detail, apply }: { slug: string; detail: PlanDe
             </Dropdown.Item>
           ) : null}
           {canTakeOut ? (
-            <>
-              <Dropdown.Separator />
-              <Dropdown.Item onSelect={() => later(takeOut)}>
-                <Dropdown.ItemIcon name="logout-box-r-line" />
-                Take it out of the crew
-              </Dropdown.Item>
-            </>
+            <Dropdown.Item onSelect={() => later(takeOut)}>
+              <Dropdown.ItemIcon name="logout-box-r-line" />
+              Take it out of the crew
+            </Dropdown.Item>
+          ) : null}
+          {canCallOff || canDelete ? <Dropdown.Separator /> : null}
+          {canCallOff ? (
+            <Dropdown.Item destructive onSelect={() => later(callOff)}>
+              <Dropdown.ItemIcon name="close-circle-line" />
+              Call it off
+            </Dropdown.Item>
+          ) : null}
+          {canDelete ? (
+            <Dropdown.Item destructive onSelect={() => later(remove)}>
+              <Dropdown.ItemIcon name="delete-bin-line" />
+              Delete plan
+            </Dropdown.Item>
           ) : null}
         </Dropdown.Content>
       </Dropdown.Root>

@@ -192,6 +192,8 @@ export interface PlanDetail {
     /** Chat needs an account (guests read along). */
     canPost: boolean;
   } | null;
+  /** The organiser can delete it for good: it's theirs alone, no bills (`DELETE /api/v1/plans/:slug`). Otherwise they call it off. */
+  can_delete?: boolean;
   /** Who's going, for people in the plan who can see it. */
   going: {
     /** Their spot on the plan, for Report or block (long-press). Missing from older servers. */
