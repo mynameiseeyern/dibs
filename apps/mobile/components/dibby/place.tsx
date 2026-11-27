@@ -15,6 +15,7 @@ import * as Label from "@/components/ui/label";
 import * as LinkButton from "@/components/ui/link-button";
 import * as Modal from "@/components/ui/modal";
 import { searchPlaces } from "@/lib/api";
+import { locate, locationBlocked, type Coords } from "@/lib/locate";
 import { usePlace } from "@/lib/places";
 import { useColour } from "@/lib/theme";
 import { cn } from "@/utils/cn";
@@ -230,6 +231,22 @@ export function PlacePicker({
   const seq = useRef(0);
   const spinner = useColour("primary-base");
   const search = useRef<ComponentRef<typeof TextInput>>(null);
+  // Where you are, asked for when the sheet opens (the first time, iOS shows its prompt). The
+  // plan's area wins when it has one. Without either, the server leans towards Sydney.
+  const [coords, setCoords] = useState<Coords | null>(null);
+  const [blocked, setBlocked] = useState(false);
+  useEffect(() => {
+    if (!open || area) return;
+    let live = true;
+    locate({ ask: true }).then(async (c) => {
+      if (!live) return;
+      setCoords(c);
+      setBlocked(!c && (await locationBlocked()));
+    });
+    return () => {
+      live = false;
+    };
+  }, [open, area]);
 
   // Focus the search once the sheet has slid up (SheetFrame takes 250ms), not as it mounts: the
   // keyboard arriving first meant the sheet missed it and sat hidden behind the keyboard, leaving
@@ -259,7 +276,7 @@ export function PlacePicker({
     const t = setTimeout(async () => {
       setSearching(true);
       try {
-        const found = await searchPlaces(q.trim(), { area });
+        const found = await searchPlaces(q.trim(), { area, coords });
         if (n === seq.current) {
           setHits(found);
           setProblem(null);
@@ -271,12 +288,20 @@ export function PlacePicker({
       }
     }, 350);
     return () => clearTimeout(t);
-  }, [q, typing, area]);
+  }, [q, typing, area, coords]);
 
   return (
     <Modal.Root open={open} onOpenChange={onOpenChange}>
       <Modal.Content>
-        <Modal.Header title={title} description={typing ? "Someone's place, a spot in a park: anything that's not on the map." : area ? `Searching around ${area}.` : "Real places, open now."} />
+        <Modal.Header title={title} description={
+            typing
+              ? "Someone's place, a spot in a park: anything that's not on the map."
+              : area
+                ? `Searching around ${area}.`
+                : coords
+                  ? "Real places near you, open now."
+                  : "Real places around Sydney, open now."
+          } />
         <Modal.Body>
           {typing ? (
             <View className="gap-3">
@@ -310,6 +335,14 @@ export function PlacePicker({
                   <Input.Input ref={search} value={q} onChangeText={setQ} placeholder="Thai, bowling, Bondi Icebergs" autoCorrect={false} returnKeyType="search" />
                 </Input.Wrapper>
               </Input.Root>
+              {blocked && !area ? (
+                <Pressable accessibilityRole="button" onPress={() => Linking.openSettings()} className="min-h-11 flex-row items-center gap-2 active:opacity-70">
+                  <Icon name="map-pin-line" className="text-[16px] leading-[18px] text-text-sub-600" />
+                  <Text className="flex-1 text-paragraph-xs text-text-sub-600">
+                    Location&apos;s off, so this searches around Sydney. <Text className="text-label-xs text-primary-base">Turn it on</Text>
+                  </Text>
+                </Pressable>
+              ) : null}
               {searching && !hits ? <ActivityIndicator color={spinner} className="py-4" /> : null}
               {problem ? <Text className="text-paragraph-sm text-text-sub-600">{problem}</Text> : null}
               {hits && hits.length === 0 ? <Text className="py-2 text-paragraph-sm text-text-sub-600">Nothing open by that name. Try another word, or type it in.</Text> : null}

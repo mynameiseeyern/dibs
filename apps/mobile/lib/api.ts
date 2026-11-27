@@ -116,16 +116,18 @@ const placesQuery = async (params: Record<string, string>) => {
   if (!guestSource() && !(await tokenSource())) p.set("pass", await placesPass());
   return p.toString();
 };
-export async function searchPlaces(q: string, near?: { area?: string | null }): Promise<PlaceHit[]> {
-  const res = await call<{ places: PlaceHit[] }>(`/api/v1/places?${await placesQuery({ q, ...(near?.area ? { area: near.area } : {}) })}`);
+/** Near the plan's area when it has one, else near you (`coords`, rounded), else Sydney (the server's default). */
+export async function searchPlaces(q: string, near?: { area?: string | null; coords?: { lat: number; lng: number } | null }): Promise<PlaceHit[]> {
+  const where: Record<string, string> = near?.area ? { area: near.area } : near?.coords ? { lat: String(near.coords.lat), lng: String(near.coords.lng) } : {};
+  const res = await call<{ places: PlaceHit[] }>(`/api/v1/places?${await placesQuery({ q, ...where })}`);
   return res.places;
 }
 export async function getPlaceInfo(placeId: string, full = false): Promise<PlaceInfo> {
   return call<PlaceInfo>(`/api/v1/places/${encodeURIComponent(placeId)}?${await placesQuery({})}${full ? "&full=1" : ""}`);
 }
 /** `aiConsent`: they said OK to an @dibby message going to the AI (the server refuses one without it). */
-export const sendMessage = (slug: string, body: string, aiConsent = false) =>
-  call<PlanDetail>(plan(slug, "/messages"), { method: "POST", body: aiConsent ? { body, ai_consent: true } : { body } });
+export const sendMessage = (slug: string, body: string, aiConsent = false, near: { lat: number; lng: number } | null = null) =>
+  call<PlanDetail>(plan(slug, "/messages"), { method: "POST", body: { body, ...(aiConsent ? { ai_consent: true } : {}), ...(near ? { near } : {}) } });
 /** Answer Dibby's confirm card (make or skip the plan it drafted), or undo the places it added. */
 export const dibbyAction = (slug: string, messageId: string, action: "make" | "skip" | "undo") =>
   call<PlanDetail>(plan(slug, `/dibby/${encodeURIComponent(messageId)}`), { method: "POST", body: { action } });

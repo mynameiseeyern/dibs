@@ -3,7 +3,7 @@
     "name": "Dibby",
     "slug": "dibby-social",
     "scheme": "dibby",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -69,6 +69,17 @@
       "@react-native-community/datetimepicker",
       "expo-secure-store",
       "expo-image",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Your location finds places near you when you plan. It’s only used for the search, never saved or shared.",
+          "locationAlwaysAndWhenInUsePermission": false,
+          "locationAlwaysPermission": false,
+          "isIosBackgroundLocationEnabled": false,
+          "isAndroidBackgroundLocationEnabled": false,
+          "motionUsagePermission": false
+        }
+      ],
       [
         "expo-notifications",
         {
