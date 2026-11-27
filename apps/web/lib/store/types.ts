@@ -180,6 +180,8 @@ export interface Store {
   isBanned(person: string, planId: string | null): Promise<boolean>;
   addMessage(m: { planId: string; memberId: string | null; kind: Message["kind"]; body: string; mentionsDibby?: boolean; auto?: boolean; template?: unknown }): Promise<Message>;
 
+  /** Gone for good: the plan and everything on it (members, vote, chat, photos). Check canDeletePlan first. */
+  deletePlan(planId: string): Promise<void>;
   listBills(planId: string): Promise<Bill[]>;
   createBill(b: Omit<Bill, "id" | "created_at" | "seed" | "roulette_entrants" | "roulette_loser_id"> & { seed: string }, shares: Omit<BillShare, "bill_id" | "says_paid_at" | "confirmed_at">[]): Promise<Bill>;
   updateBill(billId: string, patch: Partial<Pick<Bill, "roulette_entrants" | "roulette_loser_id">>): Promise<void>;

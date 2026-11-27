@@ -364,6 +364,12 @@ export const supabaseStore: Store = {
     ) as Message;
   },
 
+  async deletePlan(planId) {
+    // Photos live in storage too; everything else goes with the plan (on delete cascade).
+    const photos = must(await admin().from("plan_photos").select("path").eq("plan_id", planId)) as { path: string }[];
+    if (photos.length) await admin().storage.from(PHOTO_BUCKET).remove(photos.map((p) => p.path));
+    must(await admin().from("plans").delete().eq("id", planId));
+  },
   async listBills(planId) {
     return must(await admin().from("bills").select("*").eq("plan_id", planId).order("created_at")) as Bill[];
   },

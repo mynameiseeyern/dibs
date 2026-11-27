@@ -1,7 +1,7 @@
 import "server-only";
 import { toPlanSummary, type PlanDetail } from "@dibs/shared/api";
 import type { Message } from "@dibs/shared/types";
-import { countIn, extraOn, planAccess, READ_ONLY_NOTE, unreadCount } from "@dibs/shared/plans";
+import { canDeletePlan, countIn, extraOn, planAccess, READ_ONLY_NOTE, unreadCount } from "@dibs/shared/plans";
 import { picksAllowed } from "@dibs/shared/votes";
 import { personKey } from "@dibs/shared/moderation";
 import { apiGuest, apiOrganiser } from "./api-auth";
@@ -62,6 +62,7 @@ export async function planDetail(slug: string): Promise<PlanDetail | null> {
     plan: toPlanSummary(plan, members, formatShort(plan.starts_at)),
     crew: gate.crew ? { ...gate.crew, member: gate.crewRole !== null } : null,
     visibility: gate.crewId ? gate.visibility : null,
+    can_delete: view.isHost && me?.role === "organiser" ? canDeletePlan(me, members, (await store.listBills(plan.id)).length) : false,
     crew_suggestion: await crewSuggestionFor(plan, members, view.organiser?.id ?? null, view.isHost).catch(() => null),
     host_name: host ? host.display_name.split(" ")[0] : null,
     directions,

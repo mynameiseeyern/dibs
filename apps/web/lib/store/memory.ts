@@ -393,6 +393,20 @@ export const memoryStore: Store = {
     return m;
   },
 
+  async deletePlan(planId) {
+    const members = new Set([...db.members.values()].filter((m) => m.plan_id === planId).map((m) => m.id));
+    const options = new Set([...db.options.values()].filter((o) => o.plan_id === planId).map((o) => o.id));
+    db.plans.delete(planId);
+    for (const id of members) db.members.delete(id);
+    for (const id of options) db.options.delete(id);
+    db.votes = db.votes.filter((v) => !options.has(v.option_id));
+    db.messages = db.messages.filter((m) => m.plan_id !== planId);
+    db.reactions = db.reactions.filter((r) => r.plan_id !== planId);
+    db.times = db.times.filter((t) => t.plan_id !== planId);
+    db.timeVotes = db.timeVotes.filter((t) => t.plan_id !== planId);
+    db.photos = db.photos.filter((p) => p.photo.plan_id !== planId);
+    db.nudges = db.nudges.filter((n) => n.plan_id !== planId);
+  },
   async listBills(planId) {
     return [...db.bills.values()].filter((b) => b.plan_id === planId).sort((a, b) => a.created_at.localeCompare(b.created_at));
   },
