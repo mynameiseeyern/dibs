@@ -33,6 +33,8 @@ export interface NewPlanInput {
   spend: 1 | 2 | 3 | null;
   /** Said yes to sending this to Anthropic. The app asks first (Apple 5.1.2(i)). */
   aiConsent: boolean;
+  /** Where the organiser is, rounded, for Dibby to search near (only a bias; never saved or sent to the AI). */
+  near: { lat: number; lng: number } | null;
   /** "Roughly where?" for a vote, like the web form's area field. */
   area: string | null;
 }
@@ -40,6 +42,14 @@ export interface NewPlanInput {
 export type Host = { organiserName: string; organiserUserId: string | null; organiserGuestId: string | null };
 
 const clip = (v: unknown, max: number) => (typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, max) : "");
+
+/** `{ lat, lng }` from the app, rounded to ~100m like the web's locate(). Anything else: null. */
+export function readCoords(v: unknown): { lat: number; lng: number } | null {
+  if (!v || typeof v !== "object") return null;
+  const { lat, lng } = v as { lat?: unknown; lng?: unknown };
+  if (typeof lat !== "number" || typeof lng !== "number" || !Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+  return { lat: Math.round(lat * 1000) / 1000, lng: Math.round(lng * 1000) / 1000 };
+}
 
 export function readNewPlan(body: Record<string, unknown>): NewPlanInput {
   const date = clip(body.date, 10);
@@ -59,6 +69,7 @@ export function readNewPlan(body: Record<string, unknown>): NewPlanInput {
     ask: clip(body.ask, 500).replace(/^@dibby\s*/i, ""),
     spend: spend === 1 || spend === 2 || spend === 3 ? spend : null,
     aiConsent: body.ai_consent === true,
+    near: readCoords(body.near),
     area: clip(body.area, 80) || null,
   };
 }
@@ -79,7 +90,7 @@ export function checkNewPlan(p: NewPlanInput): { error: string; field: string } 
 /** Makes the plan. Returns its slug, or an error that's fine to show. */
 export async function makePlan(p: NewPlanInput, host: Host): Promise<{ slug: string } | { error: string; field?: string }> {
   const vibe: Vibe = "chill";
-  const picks: DraftPicks = { date: p.date, time: p.time, spend: p.spend, near: null };
+  const picks: DraftPicks = { date: p.date, time: p.time, spend: p.spend, near: p.near };
   const startLocal = resolveStart(null, picks);
   const startsAt = startLocal ? localToIso(startLocal) : null;
   const base = { ...host, category: p.category, description: null, extrasOff: [], vibe, plusOnes: true };

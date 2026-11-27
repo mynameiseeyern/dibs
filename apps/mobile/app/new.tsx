@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ComponentProps } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
 import { Platform, Pressable, ScrollView, Share, Text, TextInput, View } from "react-native";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { Image } from "expo-image";
@@ -31,6 +31,7 @@ import { API_URL, ApiError, createPlan, editPlan, getPlan } from "@/lib/api";
 import { sydneyToday, whenLong } from "@/lib/dates";
 import { lc, sydneyHhmm, sydneyInstant, timeLabel, whenLine } from "@/lib/when-words";
 import { useSession } from "@/lib/session";
+import { locate, type Coords } from "@/lib/locate";
 import { useColour } from "@/lib/theme";
 
 /**
@@ -118,6 +119,15 @@ function PlanFlow() {
   const [placeId, setPlaceId] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
   const [area, setArea] = useState("");
+  // Deciding where: ask where they are first (the system prompt shows once), so the place search
+  // and Dibby look nearby. Rounded, only a search bias, never saved.
+  const [near, setNear] = useState<Coords | null>(null);
+  const askedNear = useRef(false);
+  useEffect(() => {
+    if ((step !== "where" && step !== "dibby") || askedNear.current) return;
+    askedNear.current = true;
+    locate({ ask: true }).then(setNear);
+  }, [step]);
   const [ask, setAsk] = useState("");
   const [spend, setSpend] = useState<1 | 2 | 3 | null>(null);
   const [first, setFirst] = useState("");
@@ -222,6 +232,8 @@ function PlanFlow() {
       ask: w === "dibby" ? ask.trim() : undefined,
       spend: w === "dibby" ? spend : null,
       ai_consent: w === "dibby" ? aiOk : undefined,
+      // A place they named wins; otherwise Dibby looks near them.
+      ...(w === "dibby" && near && !area.trim() ? { near } : {}),
       area: w !== "place" ? area.trim() || null : null,
       ...(crewId ? { crew_id: crewId } : {}),
       ...(needName ? { first: first.trim(), last: last.trim() } : {}),

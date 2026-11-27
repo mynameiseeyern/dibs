@@ -15,6 +15,7 @@ import { Icon } from "@/components/ui/icon";
 import * as Input from "@/components/ui/input";
 import { toast } from "@/components/ui/toast";
 import { dibbyAction, reactTo, sendMessage, toggleDibbyMute } from "@/lib/api";
+import { locate } from "@/lib/locate";
 import { AI_CONSENT_CHAT, AiConsent, hasAiConsent } from "@/components/dibby/ai-consent";
 import * as LinkButton from "@/components/ui/link-button";
 import { chatStamp } from "@/lib/dates";
@@ -106,7 +107,8 @@ function PlanChat() {
     setDraft("");
     Haptics.selectionAsync();
     try {
-      apply(await sendMessage(slug, body, ok));
+      // Dibby looks near you if you've already let the app see where you are (no prompt mid-chat).
+      apply(await sendMessage(slug, body, ok, ok ? await locate({ ask: false }) : null));
     } catch (e) {
       setDraft(body);
       toast.error((e as Error).message);

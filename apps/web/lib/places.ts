@@ -75,6 +75,9 @@ const DEMO_PLACES: Place[] = [
  * to an area name. Only open businesses with a location come back. Null when search isn't set up
  * or the call fails, so the picker can say so.
  */
+/** Sydney CBD: the default lean for a search with no location and no place named. */
+const HOME_CITY = { latitude: -33.8688, longitude: 151.2093 };
+
 export async function searchPlaces(query: string, near: { lat: number; lng: number } | null, area: string | null): Promise<Place[] | null> {
   const q = query.trim().slice(0, 120);
   if (!q) return [];
@@ -94,7 +97,13 @@ export async function searchPlaces(query: string, near: { lat: number; lng: numb
         // Only a fully open search leans Australian; a named place or where you are decides otherwise.
         ...(near || area ? {} : { regionCode: "AU" }),
         pageSize: 8,
-        ...(near ? { locationBias: { circle: { center: { latitude: near.lat, longitude: near.lng }, radius: 8000 } } } : {}),
+        // Near you when we know where you are. With no location and no place named, lean towards
+        // Sydney, where people are using it, or "mexican" comes back from anywhere in Australia.
+        ...(near
+          ? { locationBias: { circle: { center: { latitude: near.lat, longitude: near.lng }, radius: 8000 } } }
+          : area
+            ? {}
+            : { locationBias: { circle: { center: HOME_CITY, radius: 50_000 } } }),
       }),
       signal: AbortSignal.timeout(8000),
     });
