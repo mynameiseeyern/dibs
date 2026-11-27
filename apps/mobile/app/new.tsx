@@ -1,3 +1,4 @@
+import type { ComponentRef } from "react";
 import { useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
 import { Platform, Pressable, ScrollView, Share, Text, TextInput, View } from "react-native";
 import { router, Stack, useLocalSearchParams } from "expo-router";
@@ -31,6 +32,7 @@ import { API_URL, ApiError, createPlan, editPlan, getPlan } from "@/lib/api";
 import { sydneyToday, whenLong } from "@/lib/dates";
 import { lc, sydneyHhmm, sydneyInstant, timeLabel, whenLine } from "@/lib/when-words";
 import { useSession } from "@/lib/session";
+import { useFocusOnOpen } from "@/lib/use-focus-on-open";
 import { locate, type Coords } from "@/lib/locate";
 import { useColour } from "@/lib/theme";
 
@@ -535,6 +537,7 @@ function Done({ slug, plan, title }: { slug: string; plan: PlanSummary | null; t
   const [addingDetails, setAddingDetails] = useState(false);
   const [draft, setDraft] = useState("");
   const [savingDetails, setSavingDetails] = useState(false);
+  const detailsBox = useFocusOnOpen<ComponentRef<typeof TextInput>>(addingDetails);
 
   const facts: PlanFact[] = [];
   const when = whenLong(plan?.starts_at ?? null) ?? plan?.when;
@@ -596,7 +599,7 @@ function Done({ slug, plan, title }: { slug: string; plan: PlanSummary | null; t
         <Modal.Content>
           <Modal.Header title="Add details" description="What to bring, where to meet. Anyone with the link sees this, like the name." />
           <Modal.Body>
-            <Textarea.Root value={draft} onChangeText={setDraft} maxLength={500} placeholder="Bring cash, meet out the front…" autoFocus>
+            <Textarea.Root value={draft} onChangeText={setDraft} maxLength={500} placeholder="Bring cash, meet out the front…" ref={detailsBox}>
               <Textarea.CharCounter current={draft.length} max={500} />
             </Textarea.Root>
           </Modal.Body>

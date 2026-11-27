@@ -1,9 +1,11 @@
+import type { ComponentRef } from "react";
 // "Turn this into a crew?" (ARV-96), on a plan's page for its host: the same people keep turning
 // up, so make them a crew. Name + emoji, then each of them gets a personal invite that lets them
 // straight in, and this plan becomes the crew's first.
 
 import { useEffect, useState } from "react";
-import { Text, View } from "react-native";
+import { Text, TextInput, View } from "react-native";
+import { useFocusOnOpen } from "@/lib/use-focus-on-open";
 import { Image } from "expo-image";
 import { cleanCrew, CREW_EMOJI } from "@dibs/shared/crews";
 import type { PlanDetail } from "@dibs/shared/api";
@@ -87,6 +89,7 @@ export function CrewPrompt({ slug, detail, apply }: { slug: string; detail: Plan
 }
 
 function MakeSheet({ open, onOpenChange, who, onMake }: { open: boolean; onOpenChange: (o: boolean) => void; who: string; onMake: (name: string, emoji: string) => Promise<void> }) {
+  const nameBox = useFocusOnOpen<ComponentRef<typeof TextInput>>(open);
   const [name, setName] = useState("");
   const [emoji, setEmoji] = useState<string>(CREW_EMOJI[0]);
   const [busy, setBusy] = useState(false);
@@ -101,7 +104,7 @@ function MakeSheet({ open, onOpenChange, who, onMake }: { open: boolean; onOpenC
               <Label.Root>Crew name</Label.Root>
               <Input.Root size="large">
                 <Input.Wrapper>
-                  <Input.Input value={name} onChangeText={setName} placeholder="Dumpling Gang" maxLength={40} autoFocus />
+                  <Input.Input ref={nameBox} value={name} onChangeText={setName} placeholder="Dumpling Gang" maxLength={40} />
                 </Input.Wrapper>
               </Input.Root>
             </View>
