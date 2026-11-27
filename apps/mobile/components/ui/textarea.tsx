@@ -4,7 +4,7 @@
 //   <Textarea.CharCounter current={note.length} max={500} />
 // </Textarea.Root>
 
-import { useState, type ReactNode } from "react";
+import { useState, type ComponentRef, type ReactNode, type Ref } from "react";
 import { Text, TextInput, View, type TextInputProps } from "react-native";
 import { tv } from "@/utils/tv";
 import { useColour, useShadow } from "@/lib/theme";
@@ -32,9 +32,11 @@ type TextareaProps = TextInputProps & {
   className?: string;
   inputClassName?: string;
   children?: ReactNode;
+  /** The text box itself, to focus it (lib/use-focus-on-open.ts). */
+  ref?: Ref<ComponentRef<typeof TextInput>>;
 };
 
-function TextareaRoot({ hasError, disabled, rows = 3, className, inputClassName, children, onFocus, onBlur, onChangeText, placeholder, style, ...rest }: TextareaProps) {
+function TextareaRoot({ hasError, disabled, rows = 3, className, inputClassName, children, onFocus, onBlur, onChangeText, placeholder, style, ref, ...rest }: TextareaProps) {
   const [focused, setFocused] = useState(false);
   const { root, input, placeholder: placeholderClass } = textareaVariants({ focused, hasError, disabled });
   const [typed, setTyped] = useState(rest.defaultValue ?? "");
@@ -48,6 +50,7 @@ function TextareaRoot({ hasError, disabled, rows = 3, className, inputClassName,
         {placeholder}
       </Placeholder>
       <TextInput
+        ref={ref}
         multiline
         textAlignVertical="top"
         editable={!disabled}

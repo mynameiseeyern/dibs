@@ -1,5 +1,7 @@
+import type { ComponentRef } from "react";
 import { Children, Fragment, isValidElement, useCallback, useState, type ReactNode } from "react";
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from "react-native";
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { useFocusOnOpen } from "@/lib/use-focus-on-open";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { PlanEditRequest, PlanEditState } from "@dibs/shared/api";
@@ -325,6 +327,7 @@ function TextSheet({
     if (open) setV(initial);
   }
   const ok = allowEmpty || v.trim().length > 0;
+  const box = useFocusOnOpen<ComponentRef<typeof TextInput>>(open);
   return (
     <SheetShell
       open={open}
@@ -338,13 +341,13 @@ function TextSheet({
       }
     >
       {multiline ? (
-        <Textarea.Root value={v} onChangeText={setV} maxLength={max} placeholder="Bring cash, meet out the front…" autoFocus>
+        <Textarea.Root value={v} onChangeText={setV} maxLength={max} placeholder="Bring cash, meet out the front…" ref={box}>
           <Textarea.CharCounter current={v.length} max={max} />
         </Textarea.Root>
       ) : (
         <Input.Root size="large">
           <Input.Wrapper>
-            <Input.Input value={v} onChangeText={setV} maxLength={max} autoFocus returnKeyType="done" onSubmitEditing={() => ok && onSave(v.trim())} />
+            <Input.Input ref={box} value={v} onChangeText={setV} maxLength={max} returnKeyType="done" onSubmitEditing={() => ok && onSave(v.trim())} />
           </Input.Wrapper>
         </Input.Root>
       )}
